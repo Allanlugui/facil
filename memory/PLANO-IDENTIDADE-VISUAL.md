@@ -1,8 +1,11 @@
 # Fase — Identidade visual e acabamento (preparação em 18/10/2026)
 
-**Estado: MARCA APLICADA (19/10/2026 — D-36)** — o funcional foi fechado (F-01..F-20) e as imagens
-chegaram em `branding/`; foram processadas e aplicadas: logo no menu e no login, papel de parede do
-login, favicon, tela de abertura e **capas no topo das homes por perfil** (+ variante mobile).
+**Estado: MARCA APLICADA (19/10/2026 — D-36/D-37/D-38)** — o funcional foi fechado (F-01..F-20) e as
+imagens chegaram em `branding/`; foram processadas e aplicadas: logo no menu e no login (variante
+invertida no tema Noturno), papel de parede do login, favicon, tela de abertura (**HTML**: logo +
+spinner) e **capas no topo das homes por perfil** (+ variante mobile). A **D-38** removeu a
+**bolinha laranja** do logo e da capa: ela não existe no mestre vetorial (`logo.svg`) e só aparecia
+nos exports/mockups.
 Decisões do usuário (18/10/2026, D-25..D-28): fechar todo o funcional antes da identidade, cotação
 por propostas (D-26), assinatura pela trilha atual (D-27) e capas no topo dos painéis iniciais +
 login (D-28). **Falta:** refinar os ícones internos, motion (transições/microinterações) e o aceite
@@ -38,7 +41,8 @@ e o deploy:
    (copiados no build; servidos pelo binding de assets do Worker).
 2. **Integrações:** login (papel de parede + logo no lugar do "F" atual), menu lateral
    (logo + variante para o tema Noturno), favicon/aba do navegador, splash de carregamento
-   (estático no `index.html` + tela de carregamento), capas de topo das homes.
+   (estático no `index.html` + tela de carregamento — virou **HTML com o logo + spinner** na
+   D-38), capas de topo das homes.
 3. **Ícones internos:** refinar o conjunto atual (traço 1.6) ou aplicar conjunto novo do
    usuário (SVGs aceitos no mesmo depósito).
 4. **Motion:** transições de página, abertura de diálogos e microinterações — com

@@ -5,7 +5,7 @@ import type { AppContext, AppEnv, AuthUser } from "../types";
 import { currentUser, requireAuth, requirePermission } from "../auth";
 import { auditStatement, clientInfo } from "../audit";
 import { allRows, countRows, insertStatement, normalizePage, offsetOf, oneRow, updateStatement } from "../db";
-import { badRequest, conflict, forbidden, notFound, parseBody } from "../errors";
+import { ApiError, badRequest, conflict, forbidden, notFound, parseBody } from "../errors";
 import { ALLOWED_MIME_PREFIXES, PUBLIC_ALLOWED_MIME_PREFIXES, humanSize, mimeAllowed } from "../files";
 import { readMailConfig, mailConfigured, queueEmail, deliverOutbox, type QueuedEmailStatement } from "../mailer";
 import { notificationStatements, usersWithPermission } from "../notify";
@@ -275,6 +275,22 @@ function attachmentEmailLines(files: File[]): string[] {
 }
 
 /**
+ * Anexos do suporte vivem no R2. Se o bucket ainda não existir (R2 não
+ * habilitado na conta) devolvemos 503 com mensagem clara, em vez de 500.
+ */
+function attachmentsBucket(env: Env): R2Bucket {
+  const bucket = env.ATTACHMENTS;
+  if (!bucket) {
+    throw new ApiError(
+      503,
+      "R2_UNAVAILABLE",
+      "Anexos do suporte indisponíveis: o bucket R2 não está configurado neste ambiente.",
+    );
+  }
+  return bucket;
+}
+
+/**
  * Envia os binários ao R2 e devolve os INSERTs (entram no MESMO batch da
  * mensagem) + as chaves gravadas, para limpeza se o batch falhar.
  */
@@ -293,7 +309,16 @@ async function storeAttachments(
       const key = `anexos/${id}`;
       const mimeType = file.type || "application/octet-stream";
       const bytes = new Uint8Array(await file.arrayBuffer());
-      await env.ATTACHMENTS.put(key, bytes, { httpMetadata: { contentType: mimeType } });
+      try {
+        await attachmentsBucket(env).put(key, bytes, { httpMetadata: { contentType: mimeType } });
+      } catch (error) {
+        if (error instanceof ApiError) throw error;
+        throw new ApiError(
+          503,
+          "R2_UNAVAILABLE",
+          "Não foi possível gravar o anexo no R2. Verifique se o bucket facil-attachments foi criado.",
+        );
+      }
       keys.push(key);
       statements.push(
         env.DB.prepare(
@@ -316,7 +341,7 @@ async function storeAttachments(
     }
   } catch (error) {
     // Nenhum metadado foi gravado ainda; remove o que subiu para não deixar órfãos.
-    await Promise.allSettled(keys.map((key) => env.ATTACHMENTS.delete(key)));
+    await Promise.allSettled(keys.map((key) => env.ATTACHMENTS?.delete(key)));
     throw error;
   }
   return { statements, keys };
@@ -394,7 +419,13 @@ async function sendSupportAttachment(env: Env, row: SupportAttachmentRow): Promi
   };
 
   if (row.storage === "r2" && row.r2_key) {
-    const object = await env.ATTACHMENTS.get(row.r2_key);
+    let object: R2ObjectBody | null;
+    try {
+      object = await attachmentsBucket(env).get(row.r2_key);
+    } catch (error) {
+      if (error instanceof ApiError) throw error;
+      throw new ApiError(503, "R2_UNAVAILABLE", "Armazenamento de anexos indisponível (R2).");
+    }
     if (!object) throw notFound("Arquivo não encontrado no armazenamento.");
     return new Response(object.body, {
       headers: { ...headers, "content-length": String(object.size), etag: object.httpEtag },
@@ -840,7 +871,7 @@ router.post("/track/:token/messages", async (c) => {
       ...stored.statements,
     ]);
   } catch (error) {
-    await Promise.allSettled(stored.keys.map((key) => c.env.ATTACHMENTS.delete(key)));
+    await Promise.allSettled(stored.keys.map((key) => c.env.ATTACHMENTS?.delete(key)));
     throw error;
   }
 
@@ -1100,7 +1131,7 @@ router.post("/requests/:id/messages", requireAuth, async (c) => {
       ...stored.statements,
     ]);
   } catch (error) {
-    await Promise.allSettled(stored.keys.map((key) => c.env.ATTACHMENTS.delete(key)));
+    await Promise.allSettled(stored.keys.map((key) => c.env.ATTACHMENTS?.delete(key)));
     throw error;
   }
 
@@ -1135,7 +1166,13 @@ router.delete("/attachments/:id", requirePermission(MANAGE), async (c) => {
   const id = c.req.param("id");
   const row = await loadSupportAttachment(c.env.DB, id);
 
-  if (row.r2_key) await c.env.ATTACHMENTS.delete(row.r2_key);
+  if (row.r2_key) {
+    try {
+      await c.env.ATTACHMENTS?.delete(row.r2_key);
+    } catch {
+      // Bucket ausente/indisponível: remove só os metadados (o binário não existe mais).
+    }
+  }
 
   await c.env.DB.batch([
     c.env.DB.prepare(`DELETE FROM attachments WHERE id = ?`).bind(id),

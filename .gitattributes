@@ -1,0 +1,15 @@
+# Normaliza fim de linha para LF no repositorio e no checkout (Windows incluido).
+# Isso mantem o SHA-256 dos arquivos igual em qualquer maquina, o que e exigido
+# pela verificacao da assinatura (docs/ASSINATURA.md).
+* text=auto eol=lf
+
+# Binarios nunca sao convertidos.
+*.png binary
+*.webp binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.pdf binary

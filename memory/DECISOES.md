@@ -736,3 +736,30 @@
 - **Lição (reutilizável):** marca com fundo chapado e **texto branco sobre shape escuro** não pode
   ser extraída por chave de cor (a chave leva junto as letras). A extração correta é
   **geométrica** (máscara do shape) ou vetorial — nunca `colorkey` no miolo.
+
+## D-38 — Logo sem a bolinha laranja: o mestre vetorial não tem o ponto (19/10/2026) — VALIDADO
+
+- **Problema apontado pelo usuário:** "você adicionou uma bolinha laranja que não existe na logo
+  original". Conferido **pixel a pixel**: o mestre `branding/logo.svg` (que embute um raster 194×94
+  RGBA) **não tem nenhum pixel laranja** — é o círculo preto + "Corp" branco + "Services" cinza.
+  O ponto laranja existia só nos **exports/mockups** (`logo.png`, `logo-escuro.png`, `marca.png`,
+  todos JPEG) e na arte da capa (`capa.jpg`) — e foi ele que entrou no logo do sistema.
+- **Correção (processamento em canvas, no navegador):** logo reconstruído a partir de
+  `branding/logo.png` (2752×1536) com a **geometria do círculo medida** (centro 706,750; raio 642):
+  o disco do ponto (bbox x 1008..1335, y 1066..1392) foi **reconstruído** — dentro do círculo →
+  preto, fora → transparente — o que apaga também o **anel fantasma** deixado pelo ringing do JPEG
+  (pintar só os pixels laranja não bastava). Variante escura = **inversão do RGB** (círculo branco,
+  "Corp" preto). Favicon e Apple touch refeitos a partir da variante invertida sobre `#252525`
+  (o favicon transparente sumia em aba clara).
+- **Capa:** o disco do ponto foi preenchido com amostragem do fundo local (fora do círculo) e preto
+  (dentro do círculo); o resultado some no tamanho de exibição. **Tela de abertura:** deixou de usar
+  a arte vertical do usuário (que tinha a bolinha embutida) e passou a ser **HTML** — logo + spinner +
+  "Carregando...", com `prefers-reduced-motion` respeitado.
+- **Princípio:** antes de extrair uma marca, **comparar com o mestre vetorial** (o SVG). O original
+  do usuário nunca é editado; todo processamento vai para `src/client/public/branding/`.
+  Assets finais: `logo.webp`, `logo-dark.webp`, `favicon.png`, `apple-touch-icon.png`,
+  `login-bg.webp`, `cover.webp`, `cover-mobile.webp` (7 arquivos, ~300 KB).
+- **Evidência:** verificação real no navegador (login, home desktop, home no tema Noturno) —
+  nenhuma bolinha laranja em menu, login, capa ou favicon; capturas `ux-shots/vi-1-login.png`,
+  `vi-3-home-mobile.png`, `vi-6-home-desktop.png` e `vi-7-home-noturno.png` (as capturas antigas
+  que mostravam o ponto foram descartadas).

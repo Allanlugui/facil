@@ -33,12 +33,14 @@ ou apagado.
 
 | Original (aqui) | Processado (em `src/client/public/branding/`) | Como foi feito |
 |---|---|---|
-| `logo.png` (2752×1536, fundo branco) | `logo.webp` e `logo-dark.webp` (1200×580, com transparência) | Geometria do círculo medida no original e extração **pixel a pixel em canvas**: dentro do círculo o pixel é intacto (círculo preto + "Corp" em branco + ponto laranja); fora, o branco vira transparente e o cinza do "Services" é preservado. A variante escura é a **inversão** fora do laranja (círculo branco, "Corp" preto, ponto laranja intacto). Ver D-37. |
-| `marca.png` (2048×2048) | `favicon.png` (64 px) e `apple-touch-icon.png` (180 px) | Recorte do símbolo com fundo próprio (a versão transparente some em aba clara). |
-| `capa.jpg` (2752×1536) | `cover.webp` (1920 px) e `cover-mobile.webp` | Pré-corte em faixa com a marca centralizada, para o `object-fit: cover` não cortar o logo em telas largas. |
+| `logo.png` (2752×1536, fundo branco) | `logo.webp` e `logo-dark.webp` (1200×580, com transparência) | Geometria do círculo medida no original e extração **pixel a pixel em canvas**: dentro do círculo o pixel é intacto (círculo preto + "Corp" em branco); fora, o branco e o brilho vão a transparente e o cinza do "Services" é preservado. A variante escura é a **inversão** do RGB (círculo branco, "Corp" preto). Ver D-37/D-38. |
+| `marca.png` (2048×2048) | `favicon.png` (64 px) e `apple-touch-icon.png` (180 px) | Recorte do símbolo **da variante invertida**, sobre fundo `#252525` (a versão transparente some em aba clara). Ver D-38. |
+| `capa.jpg` (2752×1536) | `cover.webp` (1920 px) e `cover-mobile.webp` | Pré-corte em faixa com a marca centralizada, para o `object-fit: cover` não cortar o logo em telas largas; a bolinha laranja embutida na arte foi removida por preenchimento do fundo local. Ver D-38. |
 | `login-fundo.jpg` (2752×1536) | `login-bg.webp` (1920 px) | Conversão para WebP. |
-| `splash.png` (1536×2752) | `splash.webp` | Conversão para WebP. |
+| `splash.png` (1536×2752) | — (não usado) | A tela de abertura passou a ser **HTML** (logo + spinner + "Carregando...", com `prefers-reduced-motion`), porque a arte vertical trazia a bolinha embutida. Ver D-38. |
 
 Observação: `logo-escuro.png` **não é mais usado** — o logo do tema escuro é a variante invertida
 do próprio `logo.png` (o arquivo original tinha o círculo preto sobre fundo escuro e sumia no
-menu Noturno). `logo.svg` também saiu do build; ele continua aqui como original do usuário.
+menu Noturno). `logo.svg` também saiu do build; ele continua aqui como original do usuário — e é
+ele que manda quando há divergência: o **mestre vetorial não tem a bolinha laranja**; o acento
+aparece só nos exports/mockups (D-38).

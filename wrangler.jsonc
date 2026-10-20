@@ -19,9 +19,8 @@
     {
       "binding": "DB",
       "database_name": "facil-db",
-      // Placeholder: substituir pelo id real retornado por `wrangler d1 create facil-db`
-      // antes do primeiro deploy remoto. O desenvolvimento local nao depende disso.
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      // ID real do D1 criado em 19/10/2026 (conta Cloudflare do autor).
+      "database_id": "10365b4d-7ed0-4e8e-8aba-65ebf354cb25",
       "migrations_dir": "migrations"
     }
   ],

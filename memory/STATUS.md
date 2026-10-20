@@ -123,22 +123,23 @@
    Camarim criados pela tela em dois níveis; collapse/expand; "Mais opções"); capturas
    `ux-shots/f14-*.png`. Pendente: aceite do usuário da nova UX.
     **Plano de complementos fechado** (F-01 a F-20 resolvidos).
-    **FASE DE IDENTIDADE VISUAL APLICADA (19/10/2026 — D-36/D-37):** a marca do cliente foi processada e
+    **FASE DE IDENTIDADE VISUAL APLICADA (19/10/2026 — D-36/D-37/D-38):** a marca do cliente foi processada e
     aplicada — **logo** no menu lateral e no cartão do login (variante clara no tema Noturno, por um
     hook único de tema efetivo), **papel de parede** do login (foto da operação + véu escuro),
-    **favicon/Apple touch**, **tela de abertura** antes do primeiro JavaScript e **capa no topo de
-    todas as homes por perfil** (desktop + variante mobile via `<picture>`).
+    **favicon/Apple touch**, **tela de abertura** (HTML: logo + spinner, com `prefers-reduced-motion`)
+    e **capa no topo de todas as homes por perfil** (desktop + variante mobile via `<picture>`).
     **D-37 (correção do logo):** o logo foi **reconstruído do original de alta resolução**
-    (`branding/logo.png`, 2752×1536) por extração **geométrica** em canvas (fundo transparente real
-    e **ponto laranja preservado**) — o anterior **sumia no tema Noturno** (círculo preto sobre
-    superfície escura) e o claro vinha do `logo.svg` do usuário, **sem o ponto laranja** (a marca do
-    menu diferia da marca do favicon). Agora: `logo.webp` (claro) e `logo-dark.webp` (invertido:
-    círculo branco, "Corp" preto, ponto laranja), 28 KB cada; o `logo.svg` saiu do build (o original
-    segue em `branding/`). Pipeline verde **153/153** (15 arquivos), `check:api` 50×119,
-    typecheck/lint/build; verificação real no navegador (login, home desktop, home em 390 px, tema
-    Noturno com o logo legível); capturas `ux-shots/vi-1-login.png`, `ux-shots/vi-2-home-cover.png`,
-    `ux-shots/vi-3-home-mobile.png`, `ux-shots/vi-4-sidebar-escuro.png` e
-    `ux-shots/vi-5-logo-escuro-detalhe.png`. **Falta:** refinar ícones internos, motion
+    (`branding/logo.png`, 2752×1536) por extração **geométrica** em canvas (fundo transparente real);
+    o anterior **sumia no tema Noturno** (círculo preto sobre superfície escura). **D-38 (correção do
+    usuário):** a **bolinha laranja foi removida** — ela não existe no mestre vetorial
+    (`branding/logo.svg`, verificado pixel a pixel) e só aparecia nos exports/mockups e na arte da
+    capa; o logo, o favicon e a capa foram refeitos sem o acento. Assets finais: `logo.webp` (claro) e
+    `logo-dark.webp` (invertido: círculo branco, "Corp" preto), 32 KB cada, mais favicon,
+    Apple touch, `login-bg.webp`, `cover.webp` e `cover-mobile.webp` (7 arquivos, ~300 KB); o
+    `logo.svg` saiu do build (o original segue em `branding/`). Pipeline verde **153/153** (15
+    arquivos), `check:api` 50×119, typecheck/lint/build; verificação real no navegador (login, home
+    desktop, home em 390 px, tema Noturno com o logo legível); capturas `ux-shots/vi-*.png`.
+    **Falta:** refinar ícones internos, motion
     (transições/microinterações) e o aceite do usuário.
    **Nada foi publicado em produção.**
   Deploy continua PLANEJADO (D-10).

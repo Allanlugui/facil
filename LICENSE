@@ -1,0 +1,23 @@
+LICENÇA PROPRIETÁRIA — TODOS OS DIREITOS RESERVADOS
+
+Copyright (c) 2026 Allan Luiz (Allanlugui) — Corp Services Group.
+
+Este software, seu código-fonte, documentação, marca e demais materiais
+("Software") são propriedade confidencial do autor e da Corp Services Group.
+
+É proibido, sem autorização prévia e por escrito do autor:
+
+1. copiar, distribuir, sublicenciar ou disponibilizar o Software a terceiros;
+2. modificar, traduzir ou criar obras derivadas;
+3. usar o Software fora do escopo interno da Corp Services Group;
+4. remover avisos de autoria, assinatura ou propriedade.
+
+A Corp Services Group pode usar, implantar e manter o Software internamente e
+autorizar sua cópia pela equipe de TI da companhia para implantação corporativa.
+
+O Software é fornecido "no estado em que se encontra", sem garantias expressas
+ou implícitas. O autor não responde por lucros cessantes ou danos indiretos
+decorrentes do uso.
+
+Cada release é assinada digitalmente (Ed25519) e registrada em `SIGNATURE.json`;
+a verificação está descrita em `docs/ASSINATURA.md`.

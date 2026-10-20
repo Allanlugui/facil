@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import type { AppEnv } from "./types";
+import { BUILD_INFO } from "./build-info.generated";
 import { loadSession } from "./auth";
 import { ApiError, errorBody } from "./errors";
 import { nowIso } from "./util";
@@ -41,6 +42,11 @@ app.use("*", async (c, next) => {
   c.header("X-Content-Type-Options", "nosniff");
   c.header("Referrer-Policy", "same-origin");
   c.header("X-Request-Id", c.get("requestId"));
+  // Digital de cada deploy (D-39): release assinada em SIGNATURE.json.
+  c.header("X-Facil-Release", BUILD_INFO.version);
+  c.header("X-Facil-Signed-At", BUILD_INFO.signedAt);
+  c.header("X-Facil-Tree-Sha256", BUILD_INFO.treeHash);
+  c.header("X-Facil-Author", `${BUILD_INFO.author} <${BUILD_INFO.email}>`);
 });
 
 // Toda rota de API passa pelo carregamento de sessão. A autorização fina e
@@ -48,7 +54,20 @@ app.use("*", async (c, next) => {
 app.use("/api/*", loadSession);
 
 app.get("/api/health", (c) =>
-  c.json({ status: "ok", service: "facil", time: nowIso(), requestId: c.get("requestId") }),
+  c.json({
+    status: "ok",
+    service: "facil",
+    time: nowIso(),
+    requestId: c.get("requestId"),
+    release: {
+      version: BUILD_INFO.version,
+      author: BUILD_INFO.author,
+      company: BUILD_INFO.company,
+      signedAt: BUILD_INFO.signedAt,
+      treeHash: BUILD_INFO.treeHash,
+      keyFingerprint: BUILD_INFO.keyFingerprint,
+    },
+  }),
 );
 
 app.route("/api/auth", authRoutes);
