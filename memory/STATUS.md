@@ -147,8 +147,8 @@
    (branch `main`, commit `4c878a8`, 3 commits, push sincronizado), Worker `facil` no Cloudflare e
    D1 remoto `facil-db` (`10365b4d-7ed0-4e8e-8aba-65ebf354cb25`, ENAM) com as **18 migrations** e
    **0 usuários**. URL: **https://facil.cf-pilot-disposable.workers.dev** (`workers.dev`; sem
-   domínio próprio ainda). Release **0.1.0** assinado (Ed25519, **152 arquivos**, tree
-   `afeddb24…`, 19/10/2026 22:43:54 −03:00); `/api/health` devolve o bloco `release`,
+   domínio próprio ainda). Release **0.1.0** assinado (Ed25519, **152 arquivos**, tree atual
+   `6dae4bc3…`, 19/10/2026 23:28:49 −03:00 — versão D-40, ícones + motion); `/api/health` devolve o bloco `release`,
    `/build-info.json` é público e os cabeçalhos `X-Facil-Author/Release/Signed-At/Tree-Sha256`
    carregam a assinatura. **R2 não habilitado** na conta: o binding ficou comentado em
    `wrangler.jsonc`, os anexos do suporte respondem **503 `R2_UNAVAILABLE`** (chamados/OS usam D1)

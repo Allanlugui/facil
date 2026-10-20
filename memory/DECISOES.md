@@ -809,4 +809,7 @@
   minúscula (`…X0a=`), então a senha documentada `Demo@Facil2026` **não funcionava em banco novo**;
   corrigido para `…X0A=` (6 usuários) e revalidado por login real (200).
 - **Sem mudança de API/banco** (exceto o seed). `typecheck`, `lint`, 153 testes e build verdes;
-  release assinado e publicado.
+  release assinado e publicado — tree `6dae4bc38fcf3eb5629dd749651af0b577240b5dbaaf7a02dfd36702dbdb2713`,
+  152 arquivos, 19/10/2026 23:28:49 −03:00. O par `AGENTS.md`/`structure.tsx` foi normalizado para
+  LF antes da assinatura (CRLF quebrava o verify em clone novo) e um `.ics` que caiu em `branding/`
+  foi movido para fora do repo.
