@@ -10,11 +10,11 @@
     "author": "Allan Luiz Silveira Lima",
     "alias": "Allanlugui",
     "company": "Corp Services Group",
-    "signedAt": "2026-10-19T22:43:54-03:00",
-    "treeHash": "afeddb24e669be53d71a76fa437245c12dc289423a931aacb77bcbbaf69b6314",
+    "signedAt": "2026-10-19T23:21:48-03:00",
+    "treeHash": "685ba465859bc14134a00226e5b450b7c50ceebb0e418fc2223fc83c431ae7c1",
     "fileCount": 152
   },
-  "signature": "B8BZPZuT+k7sLqPDmhr3g5j4mV4YqHm++msWgms1RmoTgXkhzUoMu2hKnhX7EHOvVGYestoPSSRYVHcifeASCA==",
+  "signature": "MPbCoadI95aR4Wjioz957W0kEuCdk0eJaXlqaFTCf+bIhVYr5liKmsp046MlZ7a2oJaGsVZ5BymPo2R2zMjUCQ==",
   "verify": "node scripts/verify-release.mjs",
   "files": [
     {
@@ -244,7 +244,7 @@
     },
     {
       "path": "seeds/demo.sql",
-      "sha256": "26f08e8a9ef95db9041eafa25bf12f7716140345497ab2ad63b8a1ba7ea39bd4",
+      "sha256": "c94c64c580c083cae97edcb8f6c62806ffc7309dff4cfe35367358b3019d88d1",
       "bytes": 13849
     },
     {
@@ -264,8 +264,8 @@
     },
     {
       "path": "src/client/app/layout.tsx",
-      "sha256": "45553f7d6376b35e8a6d390d2d0f00d07a0f5c6bb79e18dbcda0f53c88be17b4",
-      "bytes": 21263
+      "sha256": "4dc5241cdac2b7931b4723b692212a32261622d17d2b307e8ac4d4f122d4da25",
+      "bytes": 21319
     },
     {
       "path": "src/client/app/router.tsx",
@@ -334,8 +334,8 @@
     },
     {
       "path": "src/client/lib/ui.tsx",
-      "sha256": "037fe8da924dd30e23151ac04e58e664a994f659c97526fb76a53250a262dc0e",
-      "bytes": 27892
+      "sha256": "5eac59d4181ded7f962e553757168d12d2c9f888c1ee5bc52190c9724c6a861a",
+      "bytes": 28702
     },
     {
       "path": "src/client/main.tsx",
@@ -414,18 +414,18 @@
     },
     {
       "path": "src/client/pages/structure.tsx",
-      "sha256": "675f0956c2854a778a5cf24032511652cffd4c08da6cad8fe4bf7d1075b50490",
-      "bytes": 28636
+      "sha256": "90eacc642ae174f91fd6024a81a88f698d5edde198cdfb6777edc5e2fcec84bc",
+      "bytes": 28765
     },
     {
       "path": "src/client/pages/support-public.tsx",
-      "sha256": "5d703a107a9d8ad17b655bf2f853ca619ebfe0191bf85eb153ff9c983b640109",
-      "bytes": 29416
+      "sha256": "ed9f81f9082495b143beea98813205b9a7ec4203e1a6e5ae1a9feb8ff3031da8",
+      "bytes": 29539
     },
     {
       "path": "src/client/pages/support.tsx",
-      "sha256": "8de50021d5f27cdc06318da9b51d307c4edb4912f5ec296ee5e3b87dce7a0224",
-      "bytes": 36380
+      "sha256": "f6eb84e7c3007b471b1c692a8831f6468cf29d7e2fb9387d8680d2f985c7f43a",
+      "bytes": 36529
     },
     {
       "path": "src/client/pages/tickets.tsx",
@@ -479,8 +479,8 @@
     },
     {
       "path": "src/client/styles.css",
-      "sha256": "5c4b133ac1ba44f226761956582fdbaa522e4eb99c8621099816bec2e03122bf",
-      "bytes": 9061
+      "sha256": "1bd87a2fa81c3628965d35152eac34f892498acb2fa9feb6defbf14e01b2dc83",
+      "bytes": 11404
     },
     {
       "path": "src/shared/locations.ts",

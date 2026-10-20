@@ -7,6 +7,7 @@ import { useAsync } from "../lib/hooks";
 import { useSession } from "../lib/session";
 import {
   Alert,
+  ArrowLeftIcon,
   Badge,
   Button,
   Checkbox,
@@ -895,8 +896,8 @@ export function SupportThreadPage() {
             </div>
           </div>
         </Alert>
-        <Link to="/ajuda" className="text-sm text-brand-700 hover:underline">
-          ← Voltar ao suporte
+        <Link to="/ajuda" className="inline-flex items-center gap-1 text-sm text-brand-700 hover:underline">
+          <ArrowLeftIcon className="size-3.5" /> Voltar ao suporte
         </Link>
       </div>
     );
@@ -907,8 +908,8 @@ export function SupportThreadPage() {
 
   return (
     <div className="space-y-4">
-      <Link to="/ajuda" className="text-sm text-brand-700 hover:underline">
-        ← Voltar ao suporte
+      <Link to="/ajuda" className="inline-flex items-center gap-1 text-sm text-brand-700 hover:underline">
+        <ArrowLeftIcon className="size-3.5" /> Voltar ao suporte
       </Link>
 
       <header className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">

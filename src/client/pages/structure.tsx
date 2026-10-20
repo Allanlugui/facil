@@ -7,6 +7,7 @@ import { useSession } from "../lib/session";
 import {
   Badge,
   Button,
+  ChevronIcon,
   Dialog,
   EmptyState,
   ErrorBlock,
@@ -628,7 +629,9 @@ function LocationsTree({
                 aria-label={isCollapsed ? `Expandir ${node.name}` : `Recolher ${node.name}`}
                 className="mt-0.5 inline-flex size-5 shrink-0 items-center justify-center rounded text-slate-500 hover:bg-slate-200"
               >
-                {isCollapsed ? "▸" : "▾"}
+                <ChevronIcon
+                  className={`size-3.5 transition-transform duration-150 ${isCollapsed ? "" : "rotate-90"}`}
+                />
               </button>
             ) : (
               <span className="mt-0.5 inline-block w-5 shrink-0" aria-hidden />

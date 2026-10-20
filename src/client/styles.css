@@ -310,3 +310,67 @@ body {
   --icon-linecap: round;
   --icon-linejoin: round;
 }
+
+/* -------------------------------------------------------------------------- */
+/* Movimento                                                                  */
+/*                                                                            */
+/* Regra: movimento curto, com propósito e interrompível. Overlays e gavetas  */
+/* entram em 180–260 ms; nunca animamos layout, só opacidade e transformação. */
+/* `prefers-reduced-motion` zera tudo no fim do arquivo.                      */
+/* -------------------------------------------------------------------------- */
+
+:root {
+  --motion-fast: 120ms;
+  --motion-base: 180ms;
+  --motion-slow: 260ms;
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-soft: cubic-bezier(0.4, 0, 1, 1);
+}
+
+@keyframes facil-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes facil-dialog-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes facil-drawer-in {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes facil-pop-in {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes facil-toast-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes facil-toast-out {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(6px) scale(0.98); }
+}
+
+.facil-fade-in { animation: facil-fade-in var(--motion-base) var(--ease-out-soft) both; }
+.facil-dialog-in { animation: facil-dialog-in var(--motion-slow) var(--ease-out-soft) both; }
+.facil-drawer-in { animation: facil-drawer-in var(--motion-slow) var(--ease-out-soft) both; }
+.facil-pop-in { animation: facil-pop-in var(--motion-fast) var(--ease-out-soft) both; }
+.facil-toast-in { animation: facil-toast-in var(--motion-base) var(--ease-out-soft) both; }
+.facil-toast-out { animation: facil-toast-out var(--motion-fast) var(--ease-in-soft) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

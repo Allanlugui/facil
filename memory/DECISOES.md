@@ -788,3 +788,25 @@
 - **Evidência:** `/api/health` 200 + cabeçalhos, `/build-info.json`, `/` 200 com `<meta author>`,
   `/setup` renderizado (captura `ux-shots/deploy-login.png`), D1 remoto `users=0`,
   `d1_migrations=18`.
+
+## D-40 — Fase visual concluída: ícones consistentes e movimento curto (20/10/2026) — VALIDADO
+
+- **Ícones:** o conjunto interno já era único (`ui.tsx`, traço 1.6, viewBox 24, 20 px, classe
+  `theme-icon` que respeita o tema). Faltavam três pontos: `←` e `✕` literais (suporte e anexos) e
+  `▸/▾` na árvore de estrutura. Entraram `ArrowLeftIcon`, `CloseIcon` e `ChevronIcon` (com
+  `rotate-90` animado); não sobrou glifo de ícone nas telas.
+- **Movimento:** tokens em `styles.css` (`--motion-fast 120ms`, `--motion-base 180ms`,
+  `--motion-slow 260ms`, `cubic-bezier(0.22, 1, 0.36, 1)`), keyframes de fade, diálogo, gaveta,
+  popover e toast. Diálogo entra com elevação + escala (260 ms) e véu em fade (180 ms); gaveta
+  desliza (260 ms); menus de usuário/notificações em pop (120 ms); toast entra/sai (180/120 ms) com
+  remoção após a saída; botões, abas e linhas com `transition-colors` 150 ms.
+  `prefers-reduced-motion` zera animações e transições.
+- **Validação real (Playwright, 1440×900 e 390×844):** `getComputedStyle` confirmou
+  `facil-pop-in` 0,12 s, `facil-dialog-in` 0,26 s + `facil-fade-in` 0,18 s, `facil-drawer-in`
+  0,26 s, `facil-toast-in` 0,18 s e remoção após 4,5 s; com `reducedMotion: reduce` a duração cai
+  para 0,00001 s. Capturas `ux-shots/motion-1-menu.png` … `motion-4-toast.png`.
+- **Bug encontrado no caminho:** o hash demo do `seeds/demo.sql` tinha o último caractere em
+  minúscula (`…X0a=`), então a senha documentada `Demo@Facil2026` **não funcionava em banco novo**;
+  corrigido para `…X0A=` (6 usuários) e revalidado por login real (200).
+- **Sem mudança de API/banco** (exceto o seed). `typecheck`, `lint`, 153 testes e build verdes;
+  release assinado e publicado.

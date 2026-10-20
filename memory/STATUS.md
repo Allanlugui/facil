@@ -139,8 +139,10 @@
     `logo.svg` saiu do build (o original segue em `branding/`). Pipeline verde **153/153** (15
     arquivos), `check:api` 50×119, typecheck/lint/build; verificação real no navegador (login, home
     desktop, home em 390 px, tema Noturno com o logo legível); capturas `ux-shots/vi-*.png`.
-    **Falta:** refinar ícones internos, motion
-    (transições/microinterações) e o aceite do usuário.
+    **Falta:** ~~refinar ícones internos, motion~~ **FEITO (20/10/2026 — D-40):** ícones literais
+    (`←`, `✕`, `▸/▾`) substituídos pelo conjunto interno; movimento curto em diálogo, gaveta,
+    menus e toasts, com `prefers-reduced-motion`; validado no navegador real. Resta apenas o
+    **aceite visual do usuário**.
    **PUBLICADO (20/10/2026 — D-39):** repositório **privado** `Allanlugui/facil` no GitHub
    (branch `main`, commit `4c878a8`, 3 commits, push sincronizado), Worker `facil` no Cloudflare e
    D1 remoto `facil-db` (`10365b4d-7ed0-4e8e-8aba-65ebf354cb25`, ENAM) com as **18 migrations** e

@@ -215,6 +215,10 @@ Frontend (React Router 7, SPA com chunks por página):
       imagens em `branding/` (com `README.md`) e plano em `memory/PLANO-IDENTIDADE-VISUAL.md`;
       decisões D-25 (fechar o funcional antes), D-28 (capas nos painéis iniciais + login) e
       D-36/D-37 (marca aplicada e logo reconstruído). **Concluída** — ver o item acima.
+- [x] **Ícones internos + motion (20/10/2026 — D-40):** glifos `←`, `✕` e `▸/▾` trocados por
+      `ArrowLeftIcon`, `CloseIcon` e `ChevronIcon`; tokens de movimento (120/180/260 ms) e animações
+      de diálogo, gaveta, popover e toast; `prefers-reduced-motion` respeitado; validado no
+      navegador real (1440×900 e 390×844). Falta só o **aceite visual do usuário**.
 - [x] **P-03 (RESOLVIDO 17/10/2026):** predecessor arquivado por decisão do usuário como
       `D:\DEV\Opencode\_arquivo-facilities-management` (nada apagado; timestamp preservado).
 - [x] **P-10 (RESOLVIDO 17/10/2026):** relatório `/api/reports/inventory-variances`

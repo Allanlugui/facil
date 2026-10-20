@@ -241,10 +241,10 @@ export function AppShell() {
           <button
             type="button"
             aria-label="Fechar menu"
-            className="absolute inset-0 bg-overlay"
+            className="facil-fade-in absolute inset-0 bg-overlay"
             onClick={closeSidebar}
           />
-          <div className="absolute inset-y-0 left-0 flex w-72 max-w-[85%] flex-col bg-surface shadow-xl">
+          <div className="facil-drawer-in absolute inset-y-0 left-0 flex w-72 max-w-[85%] flex-col bg-surface shadow-xl">
             <div className="flex items-center justify-between pr-2">
               <Brand />
               <button
@@ -313,7 +313,7 @@ export function AppShell() {
             {menuOpen ? (
               <div
                 role="menu"
-                className="absolute right-0 mt-1 w-56 overflow-hidden rounded-xl border border-slate-200 bg-surface py-1 shadow-lg"
+                className="facil-pop-in absolute right-0 mt-1 w-56 overflow-hidden rounded-xl border border-slate-200 bg-surface py-1 shadow-lg"
               >
                 <div className="border-b border-slate-100 px-3 py-2">
                   <p className="truncate text-sm font-medium text-slate-800">{user?.name}</p>
@@ -477,7 +477,7 @@ function NotificationsBell({ open, onToggle }: { open: boolean; onToggle: () => 
       {open ? (
         <div
           role="menu"
-          className="absolute right-0 mt-1 w-[22rem] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-xl border border-slate-200 bg-surface shadow-lg"
+          className="facil-pop-in absolute right-0 mt-1 w-[22rem] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-xl border border-slate-200 bg-surface shadow-lg"
         >
           <header className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
             <p className="text-sm font-semibold text-slate-800">Notificações</p>

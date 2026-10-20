@@ -152,7 +152,7 @@ export function Button({
     <button
       type={type}
       disabled={disabled || loading}
-      className={`inline-flex items-center justify-center gap-1.5 rounded-lg font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${sizing} ${BUTTON_VARIANT[variant]} ${className}`}
+      className={`inline-flex items-center justify-center gap-1.5 rounded-lg font-medium transition-colors duration-150 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${sizing} ${BUTTON_VARIANT[variant]} ${className}`}
       {...rest}
     >
       {loading ? <Spinner className="size-3.5" /> : icon}
@@ -482,7 +482,7 @@ export function Table<T>({
             <tr
               key={keyOf(row)}
               onClick={onRowClick ? () => onRowClick(row) : undefined}
-              className={onRowClick ? "cursor-pointer hover:bg-slate-50" : "hover:bg-slate-50/60"}
+              className={onRowClick ? "cursor-pointer transition-colors duration-150 hover:bg-slate-50" : "transition-colors duration-150 hover:bg-slate-50/60"}
             >
               {columns.map((column) => (
                 <td
@@ -557,7 +557,7 @@ export function Tabs<T extends string>({
           role="tab"
           aria-selected={value === tab.value}
           onClick={() => onChange(tab.value)}
-          className={`-mb-px whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium transition ${
+          className={`-mb-px whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium transition-colors duration-150 ${
             value === tab.value
               ? "border-brand-700 text-brand-800"
               : "border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700"
@@ -615,13 +615,13 @@ export function Dialog({
         type="button"
         aria-label="Fechar"
         onClick={onClose}
-        className="absolute inset-0 bg-overlay backdrop-blur-[1px]"
+        className="facil-fade-in absolute inset-0 bg-overlay backdrop-blur-[1px]"
       />
       <div
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`relative flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-2xl bg-surface shadow-xl sm:rounded-2xl ${
+        className={`facil-dialog-in relative flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-2xl bg-surface shadow-xl sm:rounded-2xl ${
           wide ? "sm:max-w-3xl" : "sm:max-w-lg"
         }`}
       >
@@ -658,6 +658,7 @@ interface Toast {
   id: number;
   tone: Tone;
   message: string;
+  closing: boolean;
 }
 
 interface ToastValue {
@@ -674,9 +675,15 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   const push = useCallback((message: string, tone: Tone = "slate") => {
     const id = (counter.current += 1);
-    setToasts((current) => [...current, { id, tone, message }]);
+    setToasts((current) => [...current, { id, tone, message, closing: false }]);
     window.setTimeout(() => {
-      setToasts((current) => current.filter((toast) => toast.id !== id));
+      // Marca a saída (120 ms) antes de remover: o aviso não "pisca" para fora.
+      setToasts((current) =>
+        current.map((toast) => (toast.id === id ? { ...toast, closing: true } : toast)),
+      );
+      window.setTimeout(() => {
+        setToasts((current) => current.filter((toast) => toast.id !== id));
+      }, 140);
     }, 4500);
   }, []);
 
@@ -697,7 +704,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <div
             key={toast.id}
             role="status"
-            className={`pointer-events-auto w-full max-w-sm rounded-lg border px-3 py-2 text-sm shadow-lg ${TONE_ALERT[toast.tone]}`}
+            className={`${toast.closing ? "facil-toast-out" : "facil-toast-in"} pointer-events-auto w-full max-w-sm rounded-lg border px-3 py-2 text-sm shadow-lg ${TONE_ALERT[toast.tone]}`}
           >
             {toast.message}
           </div>
@@ -787,6 +794,18 @@ export const ArrowIcon = () =>
       <path d="m13 6 6 6-6 6" />
     </>,
   );
+
+export const ArrowLeftIcon = ({ className = "size-4" }: { className?: string }) =>
+  icon(
+    <>
+      <path d="M19 12H5" />
+      <path d="m11 18-6-6 6-6" />
+    </>,
+    className,
+  );
+
+export const ChevronIcon = ({ className = "size-4" }: { className?: string }) =>
+  icon(<path d="m9 6 6 6-6 6" />, className);
 
 export const ClipboardIcon = () =>
   icon(

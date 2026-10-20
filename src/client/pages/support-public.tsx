@@ -7,6 +7,7 @@ import {
   Alert,
   Badge,
   Button,
+  CloseIcon,
   Dialog,
   EmptyState,
   ErrorBlock,
@@ -184,11 +185,11 @@ export function MessageBubble({
                       type="button"
                       onClick={() => onRemoveAttachment(attachment)}
                       title="Remover anexo"
-                      className={`ml-1 rounded px-1.5 py-0.5 text-xs transition ${
+                      className={`ml-1 inline-flex items-center rounded px-1.5 py-0.5 text-xs transition ${
                         mine ? "text-white/70 hover:bg-white/15 hover:text-white" : "text-slate-400 hover:bg-slate-100 hover:text-red-600"
                       }`}
                     >
-                      ✕
+                      <CloseIcon className="size-3" />
                     </button>
                   ) : null}
                 </li>
@@ -301,9 +302,9 @@ export function MessageComposer({
                 type="button"
                 title="Remover"
                 onClick={() => setFiles((current) => current.filter((_, position) => position !== index))}
-                className="text-slate-400 transition hover:text-red-600"
+                className="inline-flex items-center text-slate-400 transition hover:text-red-600"
               >
-                ✕
+                <CloseIcon className="size-3.5" />
               </button>
             </li>
           ))}

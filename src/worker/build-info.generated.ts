@@ -8,10 +8,10 @@ export const BUILD_INFO = {
   "author": "Allan Luiz Silveira Lima",
   "alias": "Allanlugui",
   "company": "Corp Services Group",
-  "signedAt": "2026-10-19T22:43:54-03:00",
-  "treeHash": "afeddb24e669be53d71a76fa437245c12dc289423a931aacb77bcbbaf69b6314",
+  "signedAt": "2026-10-19T23:21:48-03:00",
+  "treeHash": "685ba465859bc14134a00226e5b450b7c50ceebb0e418fc2223fc83c431ae7c1",
   "fileCount": 152,
   "algorithm": "Ed25519",
   "keyFingerprint": "65:BE:89:FA:CE:0D:D3:B7:B2:AF:9C:C4:46:A2:01:96:AB:D2:34:48:9C:51:FC:CB:7E:81:F3:47:B2:43:98:50",
-  "signature": "B8BZPZuT+k7sLqPDmhr3g5j4mV4YqHm++msWgms1RmoTgXkhzUoMu2hKnhX7EHOvVGYestoPSSRYVHcifeASCA=="
+  "signature": "MPbCoadI95aR4Wjioz957W0kEuCdk0eJaXlqaFTCf+bIhVYr5liKmsp046MlZ7a2oJaGsVZ5BymPo2R2zMjUCQ=="
 } as const;
