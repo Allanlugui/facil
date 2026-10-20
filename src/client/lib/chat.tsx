@@ -381,7 +381,7 @@ export function ChatThread({
   let lastDay = "";
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-surface shadow-sm">
+    <section className="self-start overflow-hidden rounded-2xl border border-slate-200 bg-surface shadow-sm">
       <header className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
         <div className="flex min-w-0 items-center gap-2.5">
           <span className="grid size-9 shrink-0 place-items-center rounded-full bg-brand-50 text-brand-600">

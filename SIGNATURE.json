@@ -10,11 +10,11 @@
     "author": "Allan Luiz Silveira Lima",
     "alias": "Allanlugui",
     "company": "Corp Services Group",
-    "signedAt": "2026-10-19T23:59:22-03:00",
-    "treeHash": "074474e0ef5e499bdc83b85fda4d197eb960ccca26ad4581e5e28442ea4f5b5c",
+    "signedAt": "2026-10-20T00:09:48-03:00",
+    "treeHash": "343524605e9828df48466a59cf1a808122ed1b442ac1e5b14d4c441747794b4e",
     "fileCount": 153
   },
-  "signature": "zxHcFp7dvILCFfuixt/v1WQTmZpxAlmGbqhtf5GUDWbtQKfmO1MvfnUgB4sSYi9xCynW2mphubh5WGFFRHiGDw==",
+  "signature": "eVkPl9qLguN8VdOv/mjA12lhF558VOlTHGHo9wEPKicRq7Rcd5atVCt2/cJCMeTFPrFuedvS43SSpKcDutfSBA==",
   "verify": "node scripts/verify-release.mjs",
   "files": [
     {
@@ -294,8 +294,8 @@
     },
     {
       "path": "src/client/lib/chat.tsx",
-      "sha256": "213a0413030635ebe0bf9ac6bdd51e4ad6456edef0f50f5ad8895619c60a2663",
-      "bytes": 20665
+      "sha256": "93719a6903f8fdab3ab6479d43fdd3acf8aef9bcd3bccb8f33d647ea625682af",
+      "bytes": 20676
     },
     {
       "path": "src/client/lib/format.ts",
