@@ -763,3 +763,28 @@
   nenhuma bolinha laranja em menu, login, capa ou favicon; capturas `ux-shots/vi-1-login.png`,
   `vi-3-home-mobile.png`, `vi-6-home-desktop.png` e `vi-7-home-noturno.png` (as capturas antigas
   que mostravam o ponto foram descartadas).
+
+## D-39 — Publicação 0.1.0: GitHub privado, Cloudflare Workers/D1 e assinatura sem dados pessoais (20/10/2026) — VALIDADO
+
+- **Identidade e privacidade:** o autor é **Allan Luiz Silveira Lima**; **CPF e e-mail não são
+  gravados no projeto nem exibidos no sistema** (LGPD). A prova de autoria é a chave **Ed25519**
+  (fingerprint `65:BE:89:…:98:50`), o manifesto SHA-256 de 152 arquivos e a data/hora de cada
+  release. O nome aparece no `/build-info.json`, nos cabeçalhos `X-Facil-*`, no rodapé do login e
+  em `<meta name="author">`; o Git registra o nome completo como autor.
+- **Repositório:** privado `Allanlugui/facil`, branch `main`, commit `4c878a8`; `.gitattributes`
+  força **LF** para o SHA-256 do manifesto bater em qualquer SO (Windows incluído).
+- **Infra:** Worker `facil` + D1 `facil-db` (`10365b4d-7ed0-4e8e-8aba-65ebf354cb25`, ENAM) com as
+  migrations 0001–0018 e **0 usuários**. URL `https://facil.cf-pilot-disposable.workers.dev`;
+  sem domínio próprio → sem Cloudflare Access (o login do app protege o acesso).
+- **R2:** o bucket não existe (erro 10042 — R2 exige ativação no painel). Para não bloquear o
+  deploy, o binding ficou **comentado** em `wrangler.jsonc`, `attachmentsBucket()` responde
+  **503 `R2_UNAVAILABLE`** e os testes usam `r2Buckets: ["ATTACHMENTS"]` no Miniflare. Ativar:
+  painel → R2 → criar `facil-attachments` → descomentar → `npm run types` → `npm run deploy`.
+- **Release:** `npm run release` (sign + typecheck + lint + check:api + 153 testes + build) verde;
+  `npm run verify` confere 152 arquivos. `wrangler deploy` publica Worker + assets; `/api/health`
+  expõe o bloco `release` (versão, autor, empresa, data, tree hash, fingerprint).
+- **Setup pendente de propósito:** `POST /api/auth/setup` não foi executado para não criar login com
+  e-mail pessoal sem consentimento; a tela `/setup` está disponível uma única vez (`needsSetup: true`).
+- **Evidência:** `/api/health` 200 + cabeçalhos, `/build-info.json`, `/` 200 com `<meta author>`,
+  `/setup` renderizado (captura `ux-shots/deploy-login.png`), D1 remoto `users=0`,
+  `d1_migrations=18`.

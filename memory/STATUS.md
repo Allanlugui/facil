@@ -141,8 +141,19 @@
     desktop, home em 390 px, tema Noturno com o logo legível); capturas `ux-shots/vi-*.png`.
     **Falta:** refinar ícones internos, motion
     (transições/microinterações) e o aceite do usuário.
-   **Nada foi publicado em produção.**
-  Deploy continua PLANEJADO (D-10).
+   **PUBLICADO (20/10/2026 — D-39):** repositório **privado** `Allanlugui/facil` no GitHub
+   (branch `main`, commit `4c878a8`, 3 commits, push sincronizado), Worker `facil` no Cloudflare e
+   D1 remoto `facil-db` (`10365b4d-7ed0-4e8e-8aba-65ebf354cb25`, ENAM) com as **18 migrations** e
+   **0 usuários**. URL: **https://facil.cf-pilot-disposable.workers.dev** (`workers.dev`; sem
+   domínio próprio ainda). Release **0.1.0** assinado (Ed25519, **152 arquivos**, tree
+   `afeddb24…`, 19/10/2026 22:43:54 −03:00); `/api/health` devolve o bloco `release`,
+   `/build-info.json` é público e os cabeçalhos `X-Facil-Author/Release/Signed-At/Tree-Sha256`
+   carregam a assinatura. **R2 não habilitado** na conta: o binding ficou comentado em
+   `wrangler.jsonc`, os anexos do suporte respondem **503 `R2_UNAVAILABLE`** (chamados/OS usam D1)
+   e os testes usam bucket simulado no Miniflare. **Instalação inicial pendente**
+   (`needsSetup: true`): o primeiro admin é criado na tela `/setup`, com o e-mail que o titular
+   escolher (o sistema não expõe CPF nem e-mail do autor).
+   Deploy: **EXECUTADO** (D-10 concluída); o guia da TI está em `docs/IMPLANTACAO.md`.
 
 ## Stack em execução (VALIDADO)
 
@@ -169,8 +180,8 @@
 | UI | Playwright desktop 1440×900 e mobile 390×844: **14 rotas sem overflow** e **sem mensagem de erro visível** (varredura de conteúdo após P-07) |
 | Fluxo E2E real | movimentação pela interface → saldo/painel/auditoria; inventário criado e encerrado; anexo enviado → baixado (200) → removido |
 | Seeds | `seeds/demo.sql` (catálogo + 6 usuários demo) e `seeds/reset.sql` (reset de fábrica) — ambos testados |
-| Repositório Git | **INICIALIZADO** (19/10/2026) — branch `main`, primeiro commit `e2c14f3` (279 arquivos, `ux-shots/` incluído como evidência visual; `node_modules/`, `dist/`, `.wrangler/` fora) — ainda **sem remoto** e sem push |
-| Deploy | **NÃO PUBLICADO** — `wrangler.jsonc` pronto, `database_id` ainda placeholder |
+| Repositório Git | **PRIVADO no GitHub** (`Allanlugui/facil`, branch `main`, 3 commits, push sincronizado em 20/10/2026) — `node_modules/`, `dist/`, `.wrangler/` fora |
+| Deploy | **PUBLICADO em 20/10/2026** — `https://facil.cf-pilot-disposable.workers.dev` (Worker `facil`, D1 remoto `facil-db`, release 0.1.0 assinado; `needsSetup: true`) |
 | Serena | projeto `Facil` ativo; onboarding completo (`core`, `tech_stack`, `suggested_commands`, `conventions`, `task_completion`) |
 
 ## Módulos implementados (todos com rota de API + tela + testes)
@@ -206,13 +217,18 @@
 
 ## Honestidade de estado
 
-- **Deploy remoto: NÃO EXECUTADO.** Sem conta Cloudflare, sem `database_id` real, sem Git, sem URL.
+- **Deploy remoto: EXECUTADO (20/10/2026).** Worker `facil` publicado em
+  `https://facil.cf-pilot-disposable.workers.dev`, D1 remoto com 18 migrations e **0 usuários**
+  (`needsSetup: true`). Limitações reais: URL `workers.dev` (sem domínio próprio nem Cloudflare
+  Access), **R2 desligado** (anexos do suporte em 503 claro; D1 atende chamados/OS) e **sem CI**
+  (deploy por `npm run deploy`; Workers Builds é opcional).
 - _"Assinatura eletrônica"_ no produto significa autoria autenticada + trilha de auditoria; **não** é
   assinatura digital ICP-Brasil e nenhuma tela a apresenta como tal.
 - ~~Aviso do wrangler "types out of date"~~ **Resolvido (18/10/2026):** `@types/node` instalado
   (dev) e `npm run types` regenerou `worker-configuration.d.ts` — agora com o binding
   `ATTACHMENTS: R2Bucket` — sem avisos; P-06 fechado.
-- `package.json` não tem CI configurado; o pipeline Workers Builds será definido no primeiro deploy.
+- `package.json` não tem CI configurado; o deploy oficial é `npm run deploy` (sign + check + build +
+  `wrangler deploy`); Workers Builds é opcional e está documentado em `docs/IMPLANTACAO.md`.
 
 ## Pendências
 

@@ -210,7 +210,7 @@ Frontend (React Router 7, SPA com chunks por página):
 - [ ] **Plano de complementos:** **fechado** (F-01 a F-20 resolvidos em
       `memory/PLANO-COMPLEMENTOS.md`);
       **feitos: F-09, F-11, F-12, F-13, F-14, F-15, F-16, F-18, F-19, F-20 (fases 1 e 2), F-01 a F-10**.
-      **Próximo:** fechar a fase visual (ícones + motion) e, depois, o deploy com autorização.
+      **Próximo:** fechar a fase visual (ícones + motion) e o aceite do usuário; deploy já publicado (D-39).
 - [x] **Fase de identidade visual (preparação 18/10/2026 → aplicada 19/10/2026):** depósito de
       imagens em `branding/` (com `README.md`) e plano em `memory/PLANO-IDENTIDADE-VISUAL.md`;
       decisões D-25 (fechar o funcional antes), D-28 (capas nos painéis iniciais + login) e
@@ -222,11 +222,20 @@ Frontend (React Router 7, SPA com chunks por página):
 - [x] **P-11 (RESOLVIDO 17/10/2026):** UI de gestão de estrutura criada
       (`structure.tsx` com 3 abas: Unidades, Tipos de local, Locais). Rota `/estrutura`
       e link no menu adicionados. Build + typecheck + lint verdes.
-- [x] `git init` + primeiro commit (19/10/2026): repositório local na branch `main`, commit `e2c14f3`
-      (279 arquivos; `node_modules/`, `dist/` e `.wrangler/` fora; `ux-shots/` versionado como
-      evidência). **Sem remoto e sem push** — o push só acontece com autorização explícita.
-- [ ] Cloudflare: criar `facil-db` real, substituir `database_id` placeholder, aplicar migrations
-      remotas, conectar Worker Builds e Publicar **somente com autorização explícita**.
+- [x] `git init` + commits locais e **push para o GitHub privado** (20/10/2026):
+      `Allanlugui/facil`, branch `main`, commit `4c878a8`; `.gitattributes` força LF para a
+      verificação da assinatura funcionar em qualquer SO.
+- [x] **Publicação Cloudflare (20/10/2026 — D-39):** `facil-db` real
+      (`10365b4d-7ed0-4e8e-8aba-65ebf354cb25`, ENAM) com migrations 0001–0018; Worker `facil`
+      publicado em **https://facil.cf-pilot-disposable.workers.dev**; release 0.1.0 assinado
+      (Ed25519, 152 arquivos), `/api/health` com bloco `release` e cabeçalhos `X-Facil-*`.
+      **R2 desligado** (binding comentado; anexos do suporte em 503 claro).
+- [ ] **Instalação inicial (titular):** abrir `/setup` na URL publicada e criar o administrador
+      (`needsSetup: true`; D1 remoto com 0 usuários). Não criar login com e-mail pessoal sem
+      consentimento explícito.
+- [ ] (Opcional para o titular) Habilitar R2: painel Cloudflare → R2 → criar `facil-attachments`
+      → descomentar o binding em `wrangler.jsonc` → `npm run types` → `npm run deploy`.
+- [ ] (Opcional) Domínio próprio na Cloudflare para habilitar Cloudflare Access na frente do login.
 - [x] **P-06 (RESOLVIDO 18/10/2026):** `@types/node` instalado (dev) e `npm run types` regenerou
       `worker-configuration.d.ts` — agora com o binding `ATTACHMENTS: R2Bucket` da F-19; sem
       avisos do wrangler.
