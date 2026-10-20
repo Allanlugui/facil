@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { PERMISSIONS } from "@shared/permissions";
 import { apiDelete, apiErrorMessage, apiGet, apiPatch, apiPost, apiUpload } from "../lib/api";
@@ -29,16 +29,20 @@ import {
   ARTICLE_CATEGORY_LABEL,
   ArticleGrid,
   KIND_LABEL,
-  MessageBubble,
-  MessageComposer,
   RequestDialog,
   StatusBadge,
-  type ChatAttachment,
-  type ChatLimits,
   type PublicArticle,
-  type SupportMessage,
   type SupportRequestSummary,
 } from "./support-public";
+import {
+  ChatThread,
+  EMPTY_MESSAGES,
+  MessageComposer,
+  useOptimisticChat,
+  type ChatAttachment,
+  type ChatLimits,
+  type SupportMessage,
+} from "../lib/chat";
 
 /**
  * Suporte dentro do sistema (`/ajuda`).
@@ -838,13 +842,19 @@ interface ThreadResponse {
 
 export function SupportThreadPage() {
   const { id = "" } = useParams();
-  const { can } = useSession();
+  const { can, user } = useSession();
   const staff = can(PERMISSIONS.SUPPORT_MANAGE);
   const toast = useToast();
   const [changingStatus, setChangingStatus] = useState(false);
   const [confirmResolve, setConfirmResolve] = useState(false);
 
   const state = useAsync(() => apiGet<ThreadResponse>(`/api/support/requests/${id}`), [id]);
+
+  // Mantém a conversa atualizada enquanto o atendimento está aberto.
+  useEffect(() => {
+    const timer = window.setInterval(state.reload, 20000);
+    return () => window.clearInterval(timer);
+  }, [state.reload]);
 
   const changeStatus = async (status: "queued" | "in_progress" | "resolved") => {
     setChangingStatus(true);
@@ -860,17 +870,25 @@ export function SupportThreadPage() {
     }
   };
 
-  const send = async (text: string, files: File[]) => {
-    if (files.length === 0) {
-      await apiPost(`/api/support/requests/${id}/messages`, { body: text });
-    } else {
-      const form = new FormData();
-      form.set("body", text);
-      for (const file of files) form.append("files", file);
-      await apiUpload(`/api/support/requests/${id}/messages`, form);
-    }
-    state.reload();
-  };
+  const { messages: threadMessages, sendMessage } = useOptimisticChat({
+    messages: state.data?.messages ?? EMPTY_MESSAGES,
+    authorType: staff ? "staff" : "requester",
+    authorName: user?.name ?? (staff ? "Suporte" : "Você"),
+    send: async (text, files) => {
+      const path = `/api/support/requests/${id}/messages`;
+      let created: { id: string };
+      if (files.length === 0) {
+        created = await apiPost<{ id: string }>(path, { body: text });
+      } else {
+        const form = new FormData();
+        form.set("body", text);
+        for (const file of files) form.append("files", file);
+        created = await apiUpload<{ id: string }>(path, form);
+      }
+      state.reload();
+      return created;
+    },
+  });
 
   const removeAttachment = async (attachment: ChatAttachment) => {
     try {
@@ -903,7 +921,7 @@ export function SupportThreadPage() {
     );
   }
 
-  const { request, messages, limits, emails } = state.data;
+  const { request, limits, emails } = state.data;
   const resolved = request.status === "resolved";
 
   return (
@@ -965,21 +983,19 @@ export function SupportThreadPage() {
       </section>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
-        <section className="flex min-h-[360px] flex-col gap-3 rounded-xl border border-slate-200 bg-slate-100/70 p-4 shadow-sm">
-          <div className="flex-1 space-y-3">
-            {messages.map((message) => (
-              <MessageBubble
-                key={message.id}
-                mine={staff ? message.authorType === "staff" : message.authorType === "requester"}
-                author={message.authorName}
-                body={message.body}
-                at={message.createdAt}
-                attachments={message.attachments}
-                onRemoveAttachment={staff ? removeAttachment : undefined}
-              />
-            ))}
-          </div>
-
+        <ChatThread
+          messages={threadMessages}
+          isMine={(message) =>
+            staff ? message.authorType === "staff" : message.authorType === "requester"
+          }
+          onRemoveAttachment={staff ? removeAttachment : undefined}
+          title={staff ? "Conversa com o solicitante" : "Conversa com o suporte"}
+          emptyText={
+            staff
+              ? "Nenhuma mensagem ainda. Escreva a primeira resposta."
+              : "Envie a primeira mensagem para o suporte."
+          }
+        >
           {resolved ? (
             <Alert tone="slate">
               Atendimento encerrado. {staff ? "Reabra na fila para continuar a conversa." : "Se precisar de algo mais, abra um novo pedido."}
@@ -993,10 +1009,10 @@ export function SupportThreadPage() {
                   : "Cada mensagem também é enviada por e-mail ao suporte."
               }
               limits={limits}
-              onSend={send}
+              onSend={sendMessage}
             />
           )}
-        </section>
+        </ChatThread>
 
         {staff ? (
           <aside className="space-y-3">

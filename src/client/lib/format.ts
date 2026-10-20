@@ -53,6 +53,47 @@ export function formatDate(iso: string | null | undefined): string {
   return dateFormat().format(date);
 }
 
+const timeFormat = () =>
+  new Intl.DateTimeFormat("pt-BR", {
+    timeZone: activeTimeZone,
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+/** Só o horário (HH:mm) no fuso configurado — usado nas conversas. */
+export function formatTime(iso: string | null | undefined): string {
+  if (!iso) return "-";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "-";
+  return timeFormat().format(date);
+}
+
+/** Dia do calendário (YYYY-MM-DD) no fuso configurado. */
+export function calendarDay(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: activeTimeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
+/** Rótulo do separador de dia numa conversa: Hoje, Ontem ou a data. */
+export function formatDayHeading(iso: string): string {
+  const day = calendarDay(iso);
+  const today = todayIsoDate();
+  if (day === today) return "Hoje";
+  const [year, month, date] = today.split("-").map(Number);
+  const yesterday = new Date(Date.UTC(year || 1970, (month || 1) - 1, (date || 1) - 1))
+    .toISOString()
+    .slice(0, 10);
+  if (day === yesterday) return "Ontem";
+  return formatDate(iso);
+}
+
 /** Valor para `<input type="date">` no fuso configurado (YYYY-MM-DD). */
 export function toDateInput(iso: string | null | undefined): string {
   if (!iso) return "";

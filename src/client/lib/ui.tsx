@@ -952,7 +952,20 @@ export const PaletteIcon = () =>
     </>,
   );
 
-export const PaperclipIcon = () =>
+export const PaperclipIcon = ({ className = "size-5" }: { className?: string }) =>
   icon(
     <path d="M21 11.5 12.6 19.9a5.5 5.5 0 0 1-7.8-7.8l8.4-8.4a3.7 3.7 0 0 1 5.2 5.2l-8.4 8.4a1.8 1.8 0 0 1-2.6-2.6l7.8-7.8" />,
+    className,
+  );
+
+export const ChatIcon = ({ className = "size-5" }: { className?: string }) =>
+  icon(<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />, className);
+
+export const SendIcon = ({ className = "size-4" }: { className?: string }) =>
+  icon(
+    <>
+      <path d="m22 2-7 20-4-9-9-4Z" />
+      <path d="M22 2 11 13" />
+    </>,
+    className,
   );

@@ -10,11 +10,11 @@
     "author": "Allan Luiz Silveira Lima",
     "alias": "Allanlugui",
     "company": "Corp Services Group",
-    "signedAt": "2026-10-19T23:28:49-03:00",
-    "treeHash": "6dae4bc38fcf3eb5629dd749651af0b577240b5dbaaf7a02dfd36702dbdb2713",
-    "fileCount": 152
+    "signedAt": "2026-10-19T23:59:22-03:00",
+    "treeHash": "074474e0ef5e499bdc83b85fda4d197eb960ccca26ad4581e5e28442ea4f5b5c",
+    "fileCount": 153
   },
-  "signature": "UjLIL+R+o+xJsBXJEcP2R9XyiAeIY8r3O0xD2l3j+NBdz6uL9K3faX2mBivRUTTp9o4eDDSSV+pBDf98+3aqBw==",
+  "signature": "zxHcFp7dvILCFfuixt/v1WQTmZpxAlmGbqhtf5GUDWbtQKfmO1MvfnUgB4sSYi9xCynW2mphubh5WGFFRHiGDw==",
   "verify": "node scripts/verify-release.mjs",
   "files": [
     {
@@ -293,9 +293,14 @@
       "bytes": 4734
     },
     {
+      "path": "src/client/lib/chat.tsx",
+      "sha256": "213a0413030635ebe0bf9ac6bdd51e4ad6456edef0f50f5ad8895619c60a2663",
+      "bytes": 20665
+    },
+    {
       "path": "src/client/lib/format.ts",
-      "sha256": "7e2f3341e7f34ca084521f380b7ebf78822991a831b62c0fe0668fb1507f3cc4",
-      "bytes": 8333
+      "sha256": "7815e5a9b106cd6e5f2f9135dd30583c16b6465e30cacd395210d2a8c7329bb4",
+      "bytes": 9635
     },
     {
       "path": "src/client/lib/hooks.ts",
@@ -334,8 +339,8 @@
     },
     {
       "path": "src/client/lib/ui.tsx",
-      "sha256": "5eac59d4181ded7f962e553757168d12d2c9f888c1ee5bc52190c9724c6a861a",
-      "bytes": 28702
+      "sha256": "f475339db16a895ffa6ef5c8528a6e93fb6799886ac667b760039e8f073814d5",
+      "bytes": 29101
     },
     {
       "path": "src/client/main.tsx",
@@ -419,13 +424,13 @@
     },
     {
       "path": "src/client/pages/support-public.tsx",
-      "sha256": "ed9f81f9082495b143beea98813205b9a7ec4203e1a6e5ae1a9feb8ff3031da8",
-      "bytes": 29539
+      "sha256": "24e052ffc98dc1ff7f5c70cf9e6c4debfcea8cd5d1c77fd8a3130c381b179a08",
+      "bytes": 20905
     },
     {
       "path": "src/client/pages/support.tsx",
-      "sha256": "f6eb84e7c3007b471b1c692a8831f6468cf29d7e2fb9387d8680d2f985c7f43a",
-      "bytes": 36529
+      "sha256": "066085290597ed7722a4a62253fc0768c16dc75112f07214efca71cef4ffc66b",
+      "bytes": 37032
     },
     {
       "path": "src/client/pages/tickets.tsx",

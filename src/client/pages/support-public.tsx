@@ -1,13 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { apiErrorMessage, apiGet, apiPost, apiUpload } from "../lib/api";
-import { formatBytes, formatDateTime } from "../lib/format";
+import { formatDateTime, plural } from "../lib/format";
 import { useAsync } from "../lib/hooks";
 import {
   Alert,
   Badge,
   Button,
-  CloseIcon,
   Dialog,
   EmptyState,
   ErrorBlock,
@@ -18,6 +17,14 @@ import {
   useToast,
   type Tone,
 } from "../lib/ui";
+import {
+  ChatThread,
+  EMPTY_MESSAGES,
+  MessageComposer,
+  useOptimisticChat,
+  type ChatLimits,
+  type SupportMessage,
+} from "../lib/chat";
 
 /**
  * Canal de suporte pelo lado do solicitante.
@@ -56,31 +63,6 @@ export interface SupportRequestSummary {
   position: number | null;
 }
 
-export interface SupportMessage {
-  id: string;
-  authorType: "requester" | "staff";
-  authorName: string;
-  body: string;
-  createdAt: string;
-  attachments: ChatAttachment[];
-}
-
-/** Arquivo preso a uma mensagem da conversa (F-19; binário no R2). */
-export interface ChatAttachment {
-  id: string;
-  filename: string;
-  mimeType: string;
-  sizeBytes: number;
-  url: string;
-}
-
-/** Limites de upload exibidos no composer; o servidor sempre revalida. */
-export interface ChatLimits {
-  maxFilesPerMessage: number;
-  maxBytesPerFile: number;
-  maxBytesPerMessage: number;
-}
-
 export interface RequestCreated {
   id: string;
   code: string;
@@ -109,244 +91,6 @@ export const STATUS_META: Record<string, { label: string; tone: Tone }> = {
 export function StatusBadge({ status }: { status: string }) {
   const meta = STATUS_META[status] ?? { label: status, tone: "slate" as Tone };
   return <Badge tone={meta.tone}>{meta.label}</Badge>;
-}
-
-function fileBadgeLabel(filename: string): string {
-  const extension = filename.split(".").pop() ?? "";
-  return extension.length > 0 && extension.length <= 4 ? extension.toUpperCase() : "ARQ";
-}
-
-export function MessageBubble({
-  mine,
-  author,
-  body,
-  at,
-  attachments = [],
-  onRemoveAttachment,
-}: {
-  mine: boolean;
-  author: string;
-  body: string;
-  at: string;
-  attachments?: ChatAttachment[];
-  onRemoveAttachment?: (attachment: ChatAttachment) => void;
-}) {
-  return (
-    <div className={`flex ${mine ? "justify-end" : "justify-start"}`}>
-      <div
-        className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm shadow-sm ${
-          mine ? "bg-brand-700 text-white" : "border border-slate-200 bg-surface text-slate-700"
-        }`}
-      >
-        <p className={`text-[11px] font-medium ${mine ? "text-brand-50/90" : "text-slate-400"}`}>
-          {mine ? "Você" : author} · {formatDateTime(at)}
-        </p>
-        {body ? <p className="mt-1 whitespace-pre-line break-words">{body}</p> : null}
-        {attachments.length > 0 ? (
-          <ul className="mt-2 space-y-1.5">
-            {attachments.map((attachment) => {
-              const isImage = attachment.mimeType.startsWith("image/");
-              return (
-                <li key={attachment.id} className="flex items-center gap-2">
-                  {isImage ? (
-                    <a href={attachment.url} target="_blank" rel="noreferrer" className="shrink-0">
-                      <img
-                        src={attachment.url}
-                        alt={attachment.filename}
-                        className="h-12 w-12 rounded-md border border-black/10 object-cover"
-                      />
-                    </a>
-                  ) : (
-                    <span
-                      className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-md text-[10px] font-semibold uppercase ${
-                        mine ? "bg-white/15 text-white/90" : "bg-slate-100 text-slate-500"
-                      }`}
-                    >
-                      {fileBadgeLabel(attachment.filename)}
-                    </span>
-                  )}
-                  <span className="min-w-0">
-                    <a
-                      href={attachment.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className={`block max-w-[13rem] truncate text-xs font-medium underline-offset-2 hover:underline ${
-                        mine ? "text-white" : "text-brand-700"
-                      }`}
-                    >
-                      {attachment.filename}
-                    </a>
-                    <span className={`block text-[11px] ${mine ? "text-brand-50/80" : "text-slate-400"}`}>
-                      {formatBytes(attachment.sizeBytes)}
-                    </span>
-                  </span>
-                  {onRemoveAttachment ? (
-                    <button
-                      type="button"
-                      onClick={() => onRemoveAttachment(attachment)}
-                      title="Remover anexo"
-                      className={`ml-1 inline-flex items-center rounded px-1.5 py-0.5 text-xs transition ${
-                        mine ? "text-white/70 hover:bg-white/15 hover:text-white" : "text-slate-400 hover:bg-slate-100 hover:text-red-600"
-                      }`}
-                    >
-                      <CloseIcon className="size-3" />
-                    </button>
-                  ) : null}
-                </li>
-              );
-            })}
-          </ul>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
-const ATTACHMENT_ACCEPT =
-  "image/*,application/pdf,text/plain,text/csv,.doc,.docx,.xls,.xlsx";
-
-/**
- * Composer da conversa (acompanhamento público e atendimento interno): texto +
- * arquivos numa mensagem. A validação fina é do servidor; aqui só evitamos o
- * envio obviamente inválido, usando os limites que a API devolve.
- */
-export function MessageComposer({
-  placeholder,
-  hint,
-  limits,
-  onSend,
-}: {
-  placeholder: string;
-  hint?: string;
-  limits: ChatLimits;
-  onSend: (text: string, files: File[]) => Promise<void>;
-}) {
-  const toast = useToast();
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [text, setText] = useState("");
-  const [files, setFiles] = useState<File[]>([]);
-  const [sending, setSending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const canSend = (text.trim().length > 0 || files.length > 0) && !sending;
-
-  const pickFiles = (selected: FileList | null) => {
-    if (!selected) return;
-    setError(null);
-    const next = [...files];
-    for (const file of Array.from(selected)) {
-      const name = file.name || "arquivo";
-      if (file.size === 0) {
-        setError(`"${name}" está vazio.`);
-        continue;
-      }
-      if (file.size > limits.maxBytesPerFile) {
-        setError(`"${name}" excede o limite de ${formatBytes(limits.maxBytesPerFile)} por arquivo.`);
-        continue;
-      }
-      if (next.length >= limits.maxFilesPerMessage) {
-        setError(`Cada mensagem aceita no máximo ${limits.maxFilesPerMessage} arquivos.`);
-        break;
-      }
-      const total = next.reduce((sum, item) => sum + item.size, 0) + file.size;
-      if (total > limits.maxBytesPerMessage) {
-        setError(
-          `Os arquivos somam mais que o limite de ${formatBytes(limits.maxBytesPerMessage)} por mensagem.`,
-        );
-        continue;
-      }
-      next.push(file);
-    }
-    setFiles(next);
-    if (inputRef.current) inputRef.current.value = "";
-  };
-
-  const send = async () => {
-    if (!canSend) return;
-    setSending(true);
-    setError(null);
-    try {
-      await onSend(text.trim(), files);
-      setText("");
-      setFiles([]);
-    } catch (cause) {
-      const message = apiErrorMessage(cause);
-      setError(message);
-      toast.error(message);
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const totalLabel =
-    limits.maxBytesPerMessage === limits.maxBytesPerFile
-      ? `${formatBytes(limits.maxBytesPerFile)} por arquivo`
-      : `${formatBytes(limits.maxBytesPerFile)} por arquivo (somando ${formatBytes(limits.maxBytesPerMessage)} por mensagem)`;
-
-  return (
-    <div className="space-y-2">
-      {error ? <Alert tone="red">{error}</Alert> : null}
-
-      {files.length > 0 ? (
-        <ul className="flex flex-wrap gap-2">
-          {files.map((file, index) => (
-            <li
-              key={`${file.name}-${file.size}-${index}`}
-              className="flex items-center gap-2 rounded-lg border border-slate-200 bg-surface px-2.5 py-1.5 text-xs text-slate-600 shadow-sm"
-            >
-              <span className="max-w-[12rem] truncate font-medium text-slate-700">
-                {file.name || "arquivo"}
-              </span>
-              <span className="text-slate-400">{formatBytes(file.size)}</span>
-              <button
-                type="button"
-                title="Remover"
-                onClick={() => setFiles((current) => current.filter((_, position) => position !== index))}
-                className="inline-flex items-center text-slate-400 transition hover:text-red-600"
-              >
-                <CloseIcon className="size-3.5" />
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-
-      <div className="flex items-end gap-2">
-        <input
-          ref={inputRef}
-          type="file"
-          multiple
-          accept={ATTACHMENT_ACCEPT}
-          className="hidden"
-          onChange={(event) => pickFiles(event.target.files)}
-        />
-        <Button
-          variant="secondary"
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          title="Anexar arquivos"
-        >
-          Anexar
-        </Button>
-        <Textarea
-          rows={2}
-          value={text}
-          onChange={(event) => setText(event.target.value)}
-          placeholder={placeholder}
-          maxLength={2000}
-          className="flex-1"
-        />
-        <Button onClick={send} loading={sending} disabled={!canSend}>
-          Enviar
-        </Button>
-      </div>
-
-      <p className="text-xs text-slate-500">
-        {hint ? `${hint} ` : ""}
-        {limits.maxFilesPerMessage} arquivo(s) por mensagem · {totalLabel}.
-      </p>
-    </div>
-  );
 }
 
 /** Grade de artigos com leitura em diálogo. Compartilhada com a página interna. */
@@ -754,17 +498,25 @@ export function SupportTrackPage() {
     return () => window.clearInterval(timer);
   }, [state.reload]);
 
-  const send = async (text: string, files: File[]) => {
-    if (files.length === 0) {
-      await apiPost(`/api/support/track/${encodeURIComponent(token)}/messages`, { body: text });
-    } else {
-      const form = new FormData();
-      form.set("body", text);
-      for (const file of files) form.append("files", file);
-      await apiUpload(`/api/support/track/${encodeURIComponent(token)}/messages`, form);
-    }
-    state.reload();
-  };
+  const { messages: threadMessages, sendMessage } = useOptimisticChat({
+    messages: state.data?.messages ?? EMPTY_MESSAGES,
+    authorType: "requester",
+    authorName: state.data?.request.requesterName ?? "Você",
+    send: async (text, files) => {
+      const path = `/api/support/track/${encodeURIComponent(token)}/messages`;
+      let created: { id: string };
+      if (files.length === 0) {
+        created = await apiPost<{ id: string }>(path, { body: text });
+      } else {
+        const form = new FormData();
+        form.set("body", text);
+        for (const file of files) form.append("files", file);
+        created = await apiUpload<{ id: string }>(path, form);
+      }
+      state.reload();
+      return created;
+    },
+  });
 
   if (state.loading && !state.data) {
     return (
@@ -789,7 +541,7 @@ export function SupportTrackPage() {
     );
   }
 
-  const { request, messages, limits } = state.data;
+  const { request, limits } = state.data;
   const resolved = request.status === "resolved";
 
   return (
@@ -820,20 +572,13 @@ export function SupportTrackPage() {
           ) : null}
         </div>
 
-        <div className="flex min-h-[320px] flex-col gap-3 rounded-xl border border-slate-200 bg-slate-100/70 p-4 shadow-sm">
-          <div className="flex-1 space-y-3">
-            {messages.map((message) => (
-              <MessageBubble
-                key={message.id}
-                mine={message.authorType === "requester"}
-                author={message.authorName}
-                body={message.body}
-                at={message.createdAt}
-                attachments={message.attachments}
-              />
-            ))}
-          </div>
-
+        <ChatThread
+          messages={threadMessages}
+          isMine={(message) => message.authorType === "requester"}
+          title="Conversa com o suporte"
+          subtitle={`${threadMessages.length} ${plural(threadMessages.length, "mensagem", "mensagens")} · atualiza a cada 20 s`}
+          emptyText="Envie a primeira mensagem para o suporte."
+        >
           {resolved ? (
             <Alert tone="slate">
               Este atendimento foi encerrado. Se precisar de algo mais,{" "}
@@ -847,10 +592,10 @@ export function SupportTrackPage() {
               placeholder="Escreva uma mensagem para o suporte..."
               hint="Cada mensagem também é enviada por e-mail para o suporte."
               limits={limits}
-              onSend={send}
+              onSend={sendMessage}
             />
           )}
-        </div>
+        </ChatThread>
 
         <p className="text-center text-xs text-slate-400">
           Atualização automática a cada 20 segundos. Guarde este link para voltar depois.
