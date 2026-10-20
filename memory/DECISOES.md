@@ -813,3 +813,31 @@
   152 arquivos, 19/10/2026 23:28:49 −03:00. O par `AGENTS.md`/`structure.tsx` foi normalizado para
   LF antes da assinatura (CRLF quebrava o verify em clone novo) e um `.ics` que caiu em `branding/`
   foi movido para fora do repo.
+
+## D-41 — Chat do suporte: mensagem otimista e painel de conversa (20/10/2026) — VALIDADO
+
+- **Problema:** os dois fluxos (acompanhamento público por token e atendimento interno) só
+  mostravam a mensagem depois de `POST /messages` + `GET` completo (`state.reload()`), com o
+  composer travado durante o envio. Em conexão lenta parecia que a mensagem "sumia".
+- **Solução (otimista):** `useOptimisticChat` (novo `src/client/lib/chat.tsx`) insere a mensagem
+  localmente com id temporário e `sending: true` **antes** do POST. A resposta `{ id }` troca o id
+  temporário pelo definitivo; quando a leitura seguinte contém esse id, a cópia local é descartada
+  (dedupe por id, sem bolha duplicada). Em erro, a bolha provisória sai e o texto/anexos continuam
+  no composer para nova tentativa.
+- **Painel (`ChatThread`):** área rolável própria (`clamp(320px,52vh,480px)`), mensagens ancoradas
+  no fim, separadores de dia (Hoje/Ontem/data), avatar com iniciais, agrupamento de mensagens do
+  mesmo autor em até 5 min, horário `HH:mm`, estado "enviando" com spinner, anexos como miniatura
+  (imagem) ou cartão com extensão/tamanho. Rolagem automática só quando o leitor está no fim (ou
+  ao enviar); `prefers-reduced-motion` usa salto instantâneo.
+- **Composer:** anexo com contador de limites, `Enter` envia e `Shift+Enter` quebra linha no desktop
+  (no toque, `Enter` quebra linha), contador de caracteres a partir de 1800 e erro mantendo o texto.
+- **Tempo real possível sem WebSocket:** acompanhamento público e atendimento interno releem a
+  conversa a cada 20 s; o otimista cobre o intervalo do envio. `useAsync.reload()` continua `void`.
+- **Validação real (Playwright):** com `fetch` desacelerado em 1,5 s, a bolha apareceu com
+  "enviando" e o textarea ainda preenchido; depois do POST o texto limpou, o estado virou horário e
+  **não houve duplicata** (2 mensagens → 3). Testado nos dois fluxos (público e staff) e em
+  390×844. Capturas `ux-shots/chat-1-enviando.png` … `chat-7-mobile.png`.
+- **Release:** 153 arquivos (entrou `chat.tsx`), tree
+  `074474e0ef5e499bdc83b85fda4d197eb960ccca26ad4581e5e28442ea4f5b5c`, assinado
+  2026-10-19T23:59:22−03:00, Worker version `e490f47e-ba20-4ff6-bcad-da2f9def888e`;
+  typecheck, lint, 153 testes e build verdes. Sem mudança de API/banco.

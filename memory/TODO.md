@@ -234,6 +234,12 @@ Frontend (React Router 7, SPA com chunks por página):
       publicado em **https://facil.cf-pilot-disposable.workers.dev**; release 0.1.0 assinado
       (Ed25519, 152 arquivos), `/api/health` com bloco `release` e cabeçalhos `X-Facil-*`.
       **R2 desligado** (binding comentado; anexos do suporte em 503 claro).
+- [x] **Chat do suporte (20/10/2026 — D-41):** mensagem otimista nos fluxos público e interno
+      (`useOptimisticChat` + dedupe por id), painel `ChatThread` (bolhas com avatar/horário,
+      separadores de dia, rolagem própria) e composer com Enter/anexos; releitura a cada 20 s.
+      Release 153 arquivos / tree `074474e0…`, Worker `e490f47e…`; Playwright com POST
+      desacelerado provou bolha "enviando" antes da resposta e ausência de duplicata.
+- [ ] **Aceite visual (titular):** revisar a fase visual D-40 e o chat D-41 na URL publicada.
 - [ ] **Instalação inicial (titular):** abrir `/setup` na URL publicada e criar o administrador
       (`needsSetup: true`; D1 remoto com 0 usuários). Não criar login com e-mail pessoal sem
       consentimento explícito.
