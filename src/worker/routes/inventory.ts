@@ -166,9 +166,11 @@ router.get("/", requirePermission(PERMISSIONS.INVENTORY_VIEW), async (c) => {
 });
 
 router.get("/:id", requirePermission(PERMISSIONS.INVENTORY_VIEW), async (c) => {
+  const user = currentUser(c);
   const id = c.req.param("id");
   const row = await oneRow<Record<string, unknown>>(c.env.DB, `${INVENTORY_SELECT} WHERE i.id = ?`, [id]);
   if (!row) throw notFound("Inventário não encontrado.");
+  assertLocationAllowed(user, row.location_id ? String(row.location_id) : null);
   return c.json({ inventory: mapInventory(row) });
 });
 
@@ -198,7 +200,9 @@ router.get("/:id/items", requirePermission(PERMISSIONS.INVENTORY_VIEW), async (c
   const status = url.searchParams.get("status")?.trim();
   const search = url.searchParams.get("search")?.trim();
 
-  await requireInventory(c.env.DB, id);
+  const user = currentUser(c);
+  const inventory = await requireInventory(c.env.DB, id);
+  assertLocationAllowed(user, inventory.location_id);
 
   const clauses = ["ii.inventory_id = ?"];
   const params: (string | number)[] = [id];
@@ -221,9 +225,11 @@ router.get("/:id/items", requirePermission(PERMISSIONS.INVENTORY_VIEW), async (c
 
 /** Relatório de fechamento / acompanhamento do ciclo. */
 router.get("/:id/report", requirePermission(PERMISSIONS.INVENTORY_VIEW), async (c) => {
+  const user = currentUser(c);
   const id = c.req.param("id");
   const inventory = await oneRow<Record<string, unknown>>(c.env.DB, `${INVENTORY_SELECT} WHERE i.id = ?`, [id]);
   if (!inventory) throw notFound("Inventário não encontrado.");
+  assertLocationAllowed(user, inventory.location_id ? String(inventory.location_id) : null);
 
   const items = await allRows<Record<string, unknown>>(
     c.env.DB,
@@ -373,6 +379,7 @@ router.post("/", requirePermission(PERMISSIONS.INVENTORY_CREATE), async (c) => {
 router.post("/:id/sync-items", requirePermission(PERMISSIONS.INVENTORY_CREATE), async (c) => {
   const user = currentUser(c);
   const inventory = await requireInventory(c.env.DB, c.req.param("id"));
+  assertLocationAllowed(user, inventory.location_id);
   if (inventory.status !== "open") throw conflict("Somente inventários abertos podem receber novos itens.");
 
   const missing = await allRows<{ id: string; qty_milli: number; created_at: string }>(
@@ -536,6 +543,7 @@ router.post("/:id/items/:itemId/count", requirePermission(PERMISSIONS.INVENTORY_
 router.post("/:id/items/:itemId/skip", requirePermission(PERMISSIONS.INVENTORY_COUNT), async (c) => {
   const user = currentUser(c);
   const inventory = await requireInventory(c.env.DB, c.req.param("id"));
+  assertLocationAllowed(user, inventory.location_id);
   const itemId = c.req.param("itemId");
   const body = await parseBody(c, skipBody);
   if (inventory.status !== "open") throw conflict("Este inventário não está aberto.");

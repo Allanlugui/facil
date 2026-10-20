@@ -160,6 +160,9 @@ router.patch("/roles/:id", requirePermission(PERMISSIONS.USERS_PERMISSIONS), asy
   );
   if (!role) throw notFound("Perfil não encontrado.");
   if (role.code === "admin") throw conflict("O perfil Administrador não pode ser alterado.");
+  // Só altera perfis cujas permissões o ator já possui (não dá para desativar
+  // ou renomear um perfil mais poderoso e contornar a matriz).
+  await assertRoleWithinAuthority(c.env.DB, user, id);
 
   const ts = nowIso();
   const updated = {
@@ -418,6 +421,10 @@ router.patch("/users/:id", requirePermission(PERMISSIONS.USERS_MANAGE), async (c
   );
   if (!before) throw notFound("Usuário não encontrado.");
 
+  // O ator só mexe em contas cujo perfil atual ele já poderia atribuir. Sem
+  // isso, um gestor conseguiria trocar o e-mail/senha de um administrador.
+  await assertRoleWithinAuthority(c.env.DB, actor, String(before.role_id));
+
   if (body.email) {
     const duplicate = await oneRow<{ id: string }>(c.env.DB, `SELECT id FROM users WHERE email = ? AND id <> ?`, [
       body.email,
@@ -522,10 +529,23 @@ router.put("/users/:id/location-scopes", requirePermission(PERMISSIONS.USERS_MAN
   const id = c.req.param("id");
   const body = await parseBody(c, scopesBody);
 
-  const target = await oneRow<{ id: string }>(c.env.DB, `SELECT id FROM users WHERE id = ?`, [id]);
+  const target = await oneRow<{ id: string; role_id: string }>(
+    c.env.DB,
+    `SELECT id, role_id FROM users WHERE id = ?`,
+    [id],
+  );
   if (!target) throw notFound("Usuário não encontrado.");
+  // Um gestor não altera o escopo de uma conta com perfil acima do dele.
+  await assertRoleWithinAuthority(c.env.DB, actor, target.role_id);
 
   const unique = [...new Set(body.locationIds)];
+  // Lista vazia significa "sem restrição": um ator restrito não pode usar isso
+  // para se livrar do próprio escopo (nem para ampliar o de outra conta).
+  if (actor.locationScope.length > 0 && unique.length === 0) {
+    throw forbidden(
+      "Você não pode remover todo o escopo de locais. Selecione ao menos um local dentro do seu escopo.",
+    );
+  }
   if (unique.length > 0) {
     const found = await allRows<{ id: string }>(
       c.env.DB,

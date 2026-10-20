@@ -23,6 +23,8 @@ interface SettingDefinition {
   options?: string[];
   min?: number;
   max?: number;
+  /** Credencial: nunca volta no GET, nunca aparece na auditoria. */
+  secret?: boolean;
   /**
    * Grupo exibido na tela de Configurações (aba/seção). Os identificadores são
    * combinados com `SETTINGS_SECTIONS` no cliente; valor fora da lista cai em
@@ -87,7 +89,13 @@ export const SETTINGS_CATALOG: SettingDefinition[] = [
     options: ["none", "resend", "brevo", "relay", "gmail"],
     section: "suporte",
   },
-  { key: "mail.api_key", description: "Chave de API do provedor de e-mail", type: "string", section: "suporte" },
+  {
+    key: "mail.api_key",
+    description: "Chave de API do provedor de e-mail",
+    type: "string",
+    secret: true,
+    section: "suporte",
+  },
   {
     key: "mail.from",
     description: "Remetente dos e-mails de suporte (no Gmail, o próprio endereço Gmail)",
@@ -98,6 +106,7 @@ export const SETTINGS_CATALOG: SettingDefinition[] = [
     key: "mail.gmail_app_password",
     description: "Senha de app do Gmail (16 letras; espaços são ignorados)",
     type: "string",
+    secret: true,
     section: "suporte",
   },
   {
@@ -110,6 +119,7 @@ export const SETTINGS_CATALOG: SettingDefinition[] = [
     key: "mail.relay_secret",
     description: "Segredo compartilhado com o relay de e-mail",
     type: "string",
+    secret: true,
     section: "suporte",
   },
   {
@@ -136,14 +146,20 @@ router.get("/", requirePermission(PERMISSIONS.SETTINGS_VIEW), async (c) => {
   return c.json({
     items: rows
       .filter((row) => includeHidden || known.has(String(row.key)))
-      .map((row) => ({
-        key: String(row.key),
-        value: String(row.value),
-        description: row.description ? String(row.description) : null,
-        definition: CATALOG_BY_KEY.get(String(row.key)) ?? null,
-        updatedAt: String(row.updated_at),
-        updatedBy: row.updated_by ? String(row.updated_by) : null,
-      })),
+      .map((row) => {
+        const definition = CATALOG_BY_KEY.get(String(row.key)) ?? null;
+        return {
+          key: String(row.key),
+          // Credenciais nunca saem da API; o cliente só sabe se há valor.
+          value: definition?.secret ? "" : String(row.value),
+          hasValue: String(row.value).length > 0,
+          secret: Boolean(definition?.secret),
+          description: row.description ? String(row.description) : null,
+          definition,
+          updatedAt: String(row.updated_at),
+          updatedBy: row.updated_by ? String(row.updated_by) : null,
+        };
+      }),
   });
 });
 
@@ -177,7 +193,15 @@ router.patch("/", requirePermission(PERMISSIONS.SETTINGS_MANAGE), async (c) => {
     const value = normalizeSettingValue(definition, rawValue);
 
     const existing = await oneRow<{ value: string }>(c.env.DB, `SELECT value FROM settings WHERE key = ?`, [key]);
-    changes.push({ key, from: existing?.value ?? null, to: value });
+    // Auditoria é lida por mais gente que a tela de configurações: credencial
+    // entra apenas como estado ("configurado/alterado/removido"), nunca o valor.
+    const auditFrom = definition.secret
+      ? existing?.value
+        ? "[configurado]"
+        : ""
+      : (existing?.value ?? null);
+    const auditTo = definition.secret ? (value === "" ? "[removido]" : "[alterado]") : value;
+    changes.push({ key, from: auditFrom, to: auditTo });
 
     if (existing) {
       statements.push(

@@ -103,10 +103,17 @@ function visibilityClause(user: AuthUser): { clause: string; params: string[] } 
   return { clause: "(t.requester_id = ? OR t.assignee_id = ?)", params: [user.id, user.id] };
 }
 
-function assertTicketVisible(user: AuthUser, ticket: { requester_id: string; assignee_id: string | null }): void {
-  if (user.permissions.has(PERMISSIONS.TICKETS_VIEW_ALL)) return;
-  if (ticket.requester_id === user.id || ticket.assignee_id === user.id) return;
-  throw forbidden("Você só pode acessar os tickets que abriu ou que lhe foram atribuídos.");
+function assertTicketVisible(
+  user: AuthUser,
+  ticket: { requester_id: string; assignee_id: string | null; location_id?: string | null },
+): void {
+  const seesAll = user.permissions.has(PERMISSIONS.TICKETS_VIEW_ALL);
+  if (!seesAll && ticket.requester_id !== user.id && ticket.assignee_id !== user.id) {
+    throw forbidden("Você só pode acessar os tickets que abriu ou que lhe foram atribuídos.");
+  }
+  // view_all não ignora escopo de local: quem enxerga tudo continua limitado
+  // aos locais que administra.
+  if (ticket.location_id) assertLocationAllowed(user, ticket.location_id);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -233,6 +240,7 @@ router.get("/:id", requirePermission(PERMISSIONS.TICKETS_VIEW), async (c) => {
   assertTicketVisible(user, {
     requester_id: String(row.requester_id),
     assignee_id: row.assignee_id ? String(row.assignee_id) : null,
+    location_id: row.location_id ? String(row.location_id) : null,
   });
 
   const comments = await allRows<Record<string, unknown>>(
@@ -345,6 +353,17 @@ router.patch("/:id", requirePermission(PERMISSIONS.TICKETS_VIEW), async (c) => {
   if (!isOwner && !canManage) throw forbidden("Você não pode editar este ticket.");
 
   if (body.status && body.status !== before.status) {
+    // O PATCH é de edição; mudança de estado exige a permissão do fluxo, não
+    // apenas view_all (que é leitura ampla).
+    const required =
+      body.status === "cancelled" ? PERMISSIONS.TICKETS_CANCEL : PERMISSIONS.TICKETS_RESOLVE;
+    if (!user.permissions.has(required)) {
+      throw forbidden(
+        body.status === "cancelled"
+          ? "Permissão necessária para cancelar: tickets.cancel."
+          : "Permissão necessária para movimentar o atendimento: tickets.resolve.",
+      );
+    }
     assertTransition(String(before.status) as TicketStatus, body.status);
   }
   if (body.categoryId) await assertCategoryActive(c.env.DB, body.categoryId);
@@ -422,6 +441,7 @@ router.post("/:id/assign", requirePermission(PERMISSIONS.TICKETS_ASSIGN), async 
   const body = await parseBody(c, assignBody);
 
   const ticket = await requireTicket(c.env.DB, id);
+  assertTicketVisible(user, ticket);
   if (["resolved", "cancelled", "converted"].includes(ticket.status)) {
     throw conflict(`Um ticket ${ticket.status} não pode ser reatribuido.`);
   }
@@ -505,6 +525,7 @@ router.post("/:id/resolve", requirePermission(PERMISSIONS.TICKETS_RESOLVE), asyn
   const body = await parseBody(c, resolveBody);
 
   const ticket = await requireTicket(c.env.DB, id);
+  assertTicketVisible(user, ticket);
   if (["resolved", "cancelled", "converted"].includes(ticket.status)) {
     throw conflict(`Este ticket já está ${ticket.status} e não pode ser resolvido novamente.`);
   }
@@ -559,6 +580,7 @@ router.post("/:id/cancel", requirePermission(PERMISSIONS.TICKETS_CANCEL), async 
   const body = await parseBody(c, cancelBody);
 
   const ticket = await requireTicket(c.env.DB, id);
+  assertTicketVisible(user, ticket);
   if (["resolved", "cancelled", "converted"].includes(ticket.status)) {
     throw conflict(`Este ticket já está ${ticket.status}.`);
   }
@@ -604,6 +626,7 @@ router.post("/:id/convert", requirePermission(PERMISSIONS.WORKORDERS_CREATE), as
   const body = await parseBody(c, convertBody);
 
   const ticket = await requireTicket(c.env.DB, id);
+  assertTicketVisible(user, ticket);
   if (ticket.status === "cancelled") throw conflict("Um ticket cancelado não pode ser convertido.");
   if (ticket.status === "converted") {
     const existing = await oneRow<{ id: string; code: string; status: string }>(
@@ -739,6 +762,7 @@ router.post("/:id/materials", requirePermission(PERMISSIONS.WORKORDERS_MATERIAL)
   const body = await parseBody(c, materialsBody);
 
   const ticket = await requireTicket(c.env.DB, id);
+  assertTicketVisible(user, ticket);
   if (["cancelled"].includes(ticket.status)) throw conflict("Ticket cancelado não recebe material.");
   if (ticket.status === "converted") {
     throw conflict("Este ticket foi convertido em ordem de serviço. Registre o material na ordem de serviço.");

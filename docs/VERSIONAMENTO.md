@@ -1,0 +1,63 @@
+# Versionamento e releases
+
+## Regra
+
+O Facil usa **SemVer** adaptado ao estágio pré-1.0:
+
+- **patch** (`0.1.1` → `0.1.2`): correções, segurança, ajustes de interface,
+  documentação do produto e qualquer alteração em arquivo assinado;
+- **minor** (`0.1.x` → `0.2.0`): funcionalidade nova ou mudança de
+  comportamento relevante;
+- **major** (`1.0.0`): primeira versão estável, com compatibilidade e
+  operação consideradas maduras.
+
+Enquanto o produto estiver em `0.x`, mudanças incompatíveis também podem subir
+o **minor**. O número nunca é reutilizado.
+
+## O que exige bump
+
+Exige incremento de versão:
+
+- código do Worker, cliente, migrations, seeds, scripts, testes;
+- `docs/`, `CHANGELOG.md`, arquivos de marca e configuração publicada;
+- qualquer arquivo incluído no manifesto assinado.
+
+Não exige bump:
+
+- `memory/` (notas operacionais) e `ux-shots/` (evidências), que ficam fora do
+  manifesto assinado;
+- alterações apenas locais que não serão publicadas.
+
+Na dúvida, suba o patch. Uma release publicada nunca é reescrita.
+
+## Fluxo oficial
+
+1. Implementar e validar a mudança.
+2. Atualizar `CHANGELOG.md` com a versão, a data e o resumo.
+3. Rodar `npm version patch --no-git-tag-version` (ou `minor`/`major`).
+4. Rodar `npm run deploy` — assina, executa `npm run check`, compila e publica.
+5. Verificar `/api/health`, `/build-info.json` e os cabeçalhos `X-Facil-*`.
+6. Rodar `npm run verify`.
+7. Commit, tag `vX.Y.Z` e push.
+
+## Onde a versão aparece
+
+- `package.json` e `package-lock.json`;
+- `CHANGELOG.md`;
+- `SIGNATURE.json` (manifesto assinado);
+- `/build-info.json` e `/api/health`;
+- cabeçalhos `X-Facil-Release`, `X-Facil-Signed-At`, `X-Facil-Tree-Sha256` e
+  `X-Facil-Author`.
+
+## Assinatura
+
+Cada release é assinada com Ed25519 por **Allan Luiz Silveira Lima**. A chave
+privada fica fora do repositório. O manifesto SHA-256 cobre todos os arquivos
+do produto, exceto `memory/` e `ux-shots/`.
+
+Detalhes em `docs/ASSINATURA.md`.
+
+## Primeira etapa
+
+A primeira etapa foi encerrada na versão **0.1.2**, em 20/10/2026, após a
+auditoria completa de bugs, falhas e vulnerabilidades.

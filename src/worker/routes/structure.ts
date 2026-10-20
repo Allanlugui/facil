@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { PERMISSIONS } from "@shared/permissions";
 import type { AppEnv } from "../types";
-import { currentUser, requireAuth, requirePermission } from "../auth";
+import { assertLocationAllowed, currentUser, requireAuth, requirePermission } from "../auth";
 import { auditStatement, clientInfo } from "../audit";
 import { allRows, insertStatement, oneRow, updateStatement } from "../db";
 import { badRequest, conflict, notFound, parseBody } from "../errors";
@@ -355,10 +355,11 @@ interface LocationNode extends ReturnType<typeof mapLocation> {
 }
 
 router.get("/locations/:id", requirePermission(PERMISSIONS.STRUCTURE_VIEW), async (c) => {
-  const row = await oneRow<Record<string, unknown>>(c.env.DB, `${LOCATION_SELECT} WHERE l.id = ?`, [
-    c.req.param("id"),
-  ]);
+  const user = currentUser(c);
+  const id = c.req.param("id");
+  const row = await oneRow<Record<string, unknown>>(c.env.DB, `${LOCATION_SELECT} WHERE l.id = ?`, [id]);
   if (!row) throw notFound("Local não encontrado.");
+  assertLocationAllowed(user, id);
   return c.json({ location: mapLocation(row) });
 });
 

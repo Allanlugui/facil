@@ -754,7 +754,8 @@ interface TicketAttachment {
   url: string;
 }
 
-const ATTACHMENT_ACCEPT = "image/*,application/pdf,text/plain,text/csv,.doc,.docx,.xls,.xlsx";
+const IMAGE_ACCEPT = "image/png,image/jpeg,image/gif,image/webp,image/avif";
+const ATTACHMENT_ACCEPT = `${IMAGE_ACCEPT},application/pdf,text/plain,text/csv,.doc,.docx,.xls,.xlsx`;
 
 function AttachmentsCard({ ticketId }: { ticketId: string }) {
   const { user, can } = useSession();
@@ -825,7 +826,7 @@ function AttachmentsCard({ ticketId }: { ticketId: string }) {
           <input
             ref={inputRef}
             type="file"
-            accept={canAttachDocuments ? ATTACHMENT_ACCEPT : "image/*"}
+            accept={canAttachDocuments ? ATTACHMENT_ACCEPT : IMAGE_ACCEPT}
             className="hidden"
             onChange={(event) => {
               const file = event.target.files?.[0];

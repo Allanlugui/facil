@@ -40,17 +40,66 @@ app.use("*", async (c, next) => {
   await next();
 });
 
+const CONTENT_SECURITY_POLICY = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "object-src 'none'",
+  "frame-ancestors 'none'",
+  "img-src 'self' data: blob:",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' data: https://fonts.gstatic.com",
+  "script-src 'self'",
+  "connect-src 'self'",
+  "form-action 'self'",
+  "manifest-src 'self'",
+  "worker-src 'self'",
+].join("; ");
+
 app.use("*", async (c, next) => {
   c.set("requestId", crypto.randomUUID());
-  await next();
+  // Definidos antes do handler: assim também cobrem respostas de erro.
+  c.header("Content-Security-Policy", CONTENT_SECURITY_POLICY);
   c.header("X-Content-Type-Options", "nosniff");
-  c.header("Referrer-Policy", "same-origin");
+  c.header("X-Frame-Options", "DENY");
+  c.header("Referrer-Policy", "no-referrer");
+  c.header("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  c.header("Cross-Origin-Opener-Policy", "same-origin");
+  c.header("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
   c.header("X-Request-Id", c.get("requestId"));
+  if (c.req.path.startsWith("/api/")) {
+    c.header("Cache-Control", "no-store");
+  }
   // Digital de cada deploy (D-39): release assinada em SIGNATURE.json.
   c.header("X-Facil-Release", BUILD_INFO.version);
   c.header("X-Facil-Signed-At", BUILD_INFO.signedAt);
   c.header("X-Facil-Tree-Sha256", BUILD_INFO.treeHash);
   c.header("X-Facil-Author", BUILD_INFO.author);
+  await next();
+});
+
+/**
+ * Defesa em profundidade contra CSRF: a API só aceita escrita de navegador
+ * quando o `Origin` é o mesmo host da requisição (ou ausente, para clientes
+ * HTTP e testes). SameSite=Lax sozinho não basta em `*.workers.dev`, porque
+ * outro Worker no mesmo site pode disparar POSTs "same-site".
+ */
+app.use("/api/*", async (c, next) => {
+  const method = c.req.method.toUpperCase();
+  if (method !== "GET" && method !== "HEAD" && method !== "OPTIONS") {
+    const origin = c.req.header("origin");
+    if (origin) {
+      let originHost: string | null = null;
+      try {
+        originHost = new URL(origin).host;
+      } catch {
+        originHost = null;
+      }
+      if (!originHost || originHost !== new URL(c.req.url).host) {
+        throw new ApiError(403, "ORIGIN_NOT_ALLOWED", "Origem da requisição não permitida.");
+      }
+    }
+  }
+  await next();
 });
 
 // Toda rota de API passa pelo carregamento de sessão. A autorização fina e

@@ -162,6 +162,7 @@ describe("14: suporte — anexos em R2 (F-19)", () => {
     );
     expect(download.status).toBe(200);
     expect(download.headers.get("content-type")).toBe("image/png");
+    expect(download.headers.get("content-disposition")).toContain("inline");
     expect(new Uint8Array(await download.arrayBuffer()).length).toBe(700);
 
     // Staff vê a mensagem e baixa pela rota com sessão.
@@ -223,6 +224,8 @@ describe("14: suporte — anexos em R2 (F-19)", () => {
     expect(download.headers.get("content-type")).toContain(
       "application/vnd.openxmlformats-officedocument",
     );
+    // Documento de escritório não abre inline no origin do sistema.
+    expect(download.headers.get("content-disposition")).toContain("attachment");
     expect(new Uint8Array(await download.arrayBuffer()).length).toBe(900);
 
     // E-mail do solicitante também lista o anexo.
@@ -244,18 +247,30 @@ describe("14: suporte — anexos em R2 (F-19)", () => {
 
     // Acima de 5 MB por arquivo (mesmo com o padrão configurado em 20 MB).
     const big = await anon.postRaw(url, messageForm(null, [pdf(6 * 1024 * 1024)]));
-    expectError(big, "BAD_REQUEST");
+    expect([400, 413]).toContain(big.status);
+    expectError(big);
 
     // Documento de escritório não é aceito sem sessão.
     const office = await anon.postRaw(url, messageForm(null, [docx(100)]));
     expectError(office, "BAD_REQUEST");
+
+    // SVG executa script no mesmo origin: bloqueado em qualquer fluxo.
+    const svg = await anon.postRaw(
+      url,
+      messageForm(null, [
+        { name: "logo.svg", type: "image/svg+xml", bytes: new Uint8Array(120).fill(60) },
+      ]),
+    );
+    expectError(svg, "BAD_REQUEST");
 
     // A soma da mensagem também respeita o teto.
     const sum = await anon.postRaw(
       url,
       messageForm(null, [png(2 * 1024 * 1024), pdf(2 * 1024 * 1024), png(2 * 1024 * 1024)]),
     );
-    expectError(sum, "BAD_REQUEST");
+    // Pode ser recusado pelo teto da mensagem (413) ou pela validação (400).
+    expect([400, 413]).toContain(sum.status);
+    expectError(sum);
 
     // Mais de 3 arquivos.
     const tooMany = await anon.postRaw(

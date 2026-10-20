@@ -4,7 +4,7 @@ import { PURCHASE_ITEM_MODE_LABEL, PURCHASE_STATUS } from "@shared/types";
 import type { AppEnv } from "../types";
 import { currentUser, requireAuth, requirePermission } from "../auth";
 import { allRows, oneRow } from "../db";
-import { badRequest } from "../errors";
+import { badRequest, forbidden } from "../errors";
 import { normalizeRangeBound } from "../util";
 
 const router = new Hono<AppEnv>();
@@ -42,6 +42,14 @@ function scopeClause(column: string, scope: string[], params: (string | number)[
   if (scope.length === 0) return "1=1";
   params.push(...scope);
   return `${column} IN (${scope.map(() => "?").join(",")})`;
+}
+
+/** Filtro explícito de local não pode furar o escopo do usuário. */
+function assertLocationAllowed(locationId: string | null | undefined, scope: string[]): void {
+  if (!locationId || scope.length === 0) return;
+  if (!scope.includes(locationId)) {
+    throw forbidden("O local informado está fora do seu escopo de acesso.");
+  }
 }
 
 /**
@@ -128,6 +136,7 @@ router.get("/stock", requirePermission(PERMISSIONS.REPORTS_VIEW), async (c) => {
   const clauses: string[] = [];
 
   const locationId = url.searchParams.get("locationId")?.trim();
+  assertLocationAllowed(locationId, user.locationScope);
   if (locationId) {
     params.push(locationId);
     clauses.push("stock.location_id = ?");
@@ -310,6 +319,7 @@ function buildMovementFilter(url: URL, scope: string[]): MovementFilter {
     params.push(userId);
   }
   const locationId = url.searchParams.get("locationId")?.trim();
+  assertLocationAllowed(locationId, scope);
   if (locationId) {
     clauses.push("(m.from_location_id = ? OR m.to_location_id = ?)");
     params.push(locationId, locationId);
@@ -430,6 +440,7 @@ router.get("/consumption", requirePermission(PERMISSIONS.REPORTS_VIEW), async (c
   const clauses = ["cr.status = 'registered'", "cr.period_end >= ?", "cr.period_start <= ?"];
 
   const locationId = url.searchParams.get("locationId")?.trim();
+  assertLocationAllowed(locationId, user.locationScope);
   if (locationId) {
     params.push(locationId);
     clauses.push("cr.location_id = ?");
@@ -539,6 +550,7 @@ router.get("/tickets", requirePermission(PERMISSIONS.REPORTS_VIEW), async (c) =>
   const clauses = ["t.created_at >= ?", "t.created_at <= ?"];
 
   const locationId = url.searchParams.get("locationId")?.trim();
+  assertLocationAllowed(locationId, user.locationScope);
   if (locationId) {
     params.push(locationId);
     clauses.push("t.location_id = ?");
@@ -614,6 +626,7 @@ router.get("/workorders", requirePermission(PERMISSIONS.REPORTS_VIEW), async (c)
   const params: (string | number)[] = [range.from, range.to];
   const clauses = ["w.created_at >= ?", "w.created_at <= ?"];
   const locationId = url.searchParams.get("locationId")?.trim();
+  assertLocationAllowed(locationId, user.locationScope);
   if (locationId) {
     params.push(locationId);
     clauses.push("w.location_id = ?");
@@ -1019,6 +1032,7 @@ router.get("/export", requirePermission(PERMISSIONS.REPORTS_EXPORT), async (c) =
       const params: (string | number)[] = [];
       const clauses = [scopeClause("stock.location_id", user.locationScope, params)];
       const locationId = url.searchParams.get("locationId")?.trim();
+  assertLocationAllowed(locationId, user.locationScope);
       if (locationId) {
         params.push(locationId);
         clauses.push("stock.location_id = ?");

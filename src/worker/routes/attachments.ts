@@ -1,11 +1,16 @@
 import { Hono } from "hono";
 import { PERMISSIONS } from "@shared/permissions";
-import type { AppEnv } from "../types";
-import { currentUser, requireAuth, requirePermission } from "../auth";
+import type { AppEnv, AuthUser } from "../types";
+import { assertLocationAllowed, currentUser, requireAuth } from "../auth";
 import { auditStatement, clientInfo } from "../audit";
 import { allRows, oneRow } from "../db";
-import { badRequest, forbidden, notFound } from "../errors";
-import { ALLOWED_MIME_PREFIXES, mimeAllowed } from "../files";
+import { ApiError, badRequest, forbidden, notFound } from "../errors";
+import {
+  ALLOWED_MIME_PREFIXES,
+  attachmentDisposition,
+  mimeAllowed,
+  normalizeMimeType,
+} from "../files";
 import { getSetting } from "./settings";
 import { nowIso, uuid } from "../util";
 
@@ -75,7 +80,7 @@ function normalizeEntityType(value: string | null): string {
   return (value ?? "").trim().toLowerCase().replace(/[^a-z_]/g, "_");
 }
 
-router.get("/", requirePermission(PERMISSIONS.TICKETS_VIEW), async (c) => {
+router.get("/", requireAuth, async (c) => {
   // A permissão fina e checada por entidade; o filtro exige `entityType`.
   const user = currentUser(c);
   const url = new URL(c.req.url);
@@ -87,6 +92,7 @@ router.get("/", requirePermission(PERMISSIONS.TICKETS_VIEW), async (c) => {
   if (!user.permissions.has(permission)) {
     throw forbidden(`Permissão necessária: ${permission}.`);
   }
+  await assertEntityAccess(c.env.DB, user, entityType, entityId);
 
   const rows = await allRows<Record<string, unknown>>(
     c.env.DB,
@@ -117,6 +123,7 @@ router.get("/:id", async (c) => {
   const row = await oneRow<{
     id: string;
     entity_type: string;
+    entity_id: string;
     filename: string;
     mime_type: string;
     size_bytes: number;
@@ -125,7 +132,7 @@ router.get("/:id", async (c) => {
     created_at: string;
   }>(
     c.env.DB,
-    `SELECT id, entity_type, filename, mime_type, size_bytes, content, uploaded_by, created_at
+    `SELECT id, entity_type, entity_id, filename, mime_type, size_bytes, content, uploaded_by, created_at
        FROM attachments WHERE id = ?`,
     [id],
   );
@@ -137,6 +144,7 @@ router.get("/:id", async (c) => {
   if (!user.permissions.has(permission)) {
     throw forbidden(`Permissão necessária: ${permission}.`);
   }
+  await assertEntityAccess(c.env.DB, user, row.entity_type, row.entity_id);
 
   if (row.content === null) {
     throw notFound("O arquivo deste anexo não está armazenado neste módulo.");
@@ -153,8 +161,9 @@ router.get("/:id", async (c) => {
     headers: {
       "content-type": row.mime_type,
       "content-length": String(bytes.byteLength),
-      "content-disposition": `inline; filename="${encodeURIComponent(row.filename)}"`,
-      "cache-control": "private, max-age=300",
+      // SVG e formatos não visuais nunca abrem inline; o navegador baixa.
+      "content-disposition": `${attachmentDisposition(row.mime_type)}; filename="${encodeURIComponent(row.filename)}"`,
+      "cache-control": "private, no-store",
     },
   });
 });
@@ -163,7 +172,7 @@ router.get("/:id", async (c) => {
  * Aceita `multipart/form-data` (campo `file`, mais `entityType`/`entityId`) ou
  * corpo binário cru com os metadados na query string.
  */
-router.post("/", requirePermission(PERMISSIONS.TICKETS_VIEW), async (c) => {
+router.post("/", requireAuth, async (c) => {
   const user = currentUser(c);
   const url = new URL(c.req.url);
 
@@ -172,6 +181,14 @@ router.post("/", requirePermission(PERMISSIONS.TICKETS_VIEW), async (c) => {
   let filename = url.searchParams.get("filename")?.trim() ?? "";
   let mimeType = url.searchParams.get("mimeType")?.trim() ?? "";
   let bytes: Uint8Array;
+
+  // O limite é lido antes de materializar o corpo: um Content-Length acima do
+  // teto é recusado sem carregar o arquivo inteiro na memória do Worker.
+  const maxBytes = Number(await getSetting(c.env.DB, "attachments.max_bytes", "20971520"));
+  const declaredLength = Number(c.req.header("content-length") ?? 0);
+  if (Number.isFinite(declaredLength) && declaredLength > maxBytes + 1_048_576) {
+    throw new ApiError(413, "PAYLOAD_TOO_LARGE", "O arquivo enviado excede o limite configurado.");
+  }
 
   const contentType = c.req.header("content-type") ?? "";
   if (contentType.includes("multipart/form-data")) {
@@ -186,20 +203,19 @@ router.post("/", requirePermission(PERMISSIONS.TICKETS_VIEW), async (c) => {
     entityType = normalizeEntityType(String(form.get("entityType") ?? entityType));
     entityId = String(form.get("entityId") ?? entityId).trim();
     filename = file.name || filename || "anexo";
-    mimeType = file.type || mimeType || "application/octet-stream";
+    mimeType = normalizeMimeType(file.type || mimeType || "application/octet-stream");
     bytes = new Uint8Array(await file.arrayBuffer());
   } else {
     const buffer = await c.req.arrayBuffer();
     bytes = new Uint8Array(buffer);
     filename = filename || "anexo";
-    mimeType = mimeType || c.req.header("content-type") || "application/octet-stream";
+    mimeType = normalizeMimeType(mimeType || c.req.header("content-type") || "application/octet-stream");
   }
 
   if (!entityType || !entityId) throw badRequest("Informe entityType e entityId.");
   const permission = entityPermission(entityType);
   if (!user.permissions.has(permission)) throw forbidden(`Permissão necessária: ${permission}.`);
 
-  const maxBytes = Number(await getSetting(c.env.DB, "attachments.max_bytes", "20971520"));
   if (bytes.byteLength === 0) throw badRequest("O arquivo enviado esta vazio.");
   if (bytes.byteLength > maxBytes) {
     throw badRequest(
@@ -225,7 +241,7 @@ router.post("/", requirePermission(PERMISSIONS.TICKETS_VIEW), async (c) => {
     );
   }
 
-  await assertEntityExists(c.env.DB, entityType, entityId);
+  await assertEntityAccess(c.env.DB, user, entityType, entityId);
 
   const id = uuid();
   const ts = nowIso();
@@ -267,6 +283,7 @@ router.delete("/:id", async (c) => {
   // Anexos com armazenamento próprio (suporte em R2) saem pelo módulo de
   // origem, que também apaga o objeto no bucket -- aqui só entrariam órfãos.
   assertGenericEntity(row.entity_type);
+  await assertEntityAccess(c.env.DB, user, row.entity_type, row.entity_id);
 
   const isOwner = row.uploaded_by === user.id;
   const canManage = user.permissions.has(PERMISSIONS.SETTINGS_MANAGE);
@@ -289,23 +306,103 @@ router.delete("/:id", async (c) => {
   return c.json({ ok: true });
 });
 
-async function assertEntityExists(db: D1Database, entityType: string, entityId: string): Promise<void> {
-  const table = ENTITY_TABLES[entityType];
-  if (!table) return;
-  const row = await oneRow<{ id: string }>(db, `SELECT id FROM ${table} WHERE id = ?`, [entityId]);
-  if (!row) throw notFound("O registro informado não existe.");
-}
+/**
+ * A permissão do módulo não basta: o anexo segue a visibilidade da entidade.
+ * Sem isso, conhecer o UUID de um ticket/OS alheio permitiria listar e baixar
+ * os arquivos correspondentes.
+ */
+async function assertEntityAccess(
+  db: D1Database,
+  user: AuthUser,
+  entityType: string,
+  entityId: string,
+): Promise<void> {
+  const location = async (row: { location_id: string | null } | null): Promise<void> => {
+    if (!row) throw notFound("O registro informado não existe.");
+    assertLocationAllowed(user, row.location_id);
+  };
 
-const ENTITY_TABLES: Record<string, string> = {
-  ticket: "tickets",
-  work_order: "work_orders",
-  work_order_checklist_item: "work_order_checklist_items",
-  purchase_request: "purchase_requests",
-  purchase_receipt: "purchase_receipts",
-  inventory: "inventories",
-  consumption_record: "consumption_records",
-  product: "products",
-  location: "locations",
-};
+  switch (entityType) {
+    case "ticket": {
+      const row = await oneRow<{ requester_id: string; assignee_id: string | null; location_id: string | null }>(
+        db,
+        `SELECT requester_id, assignee_id, location_id FROM tickets WHERE id = ?`,
+        [entityId],
+      );
+      if (!row) throw notFound("Ticket não encontrado.");
+      const seesAll = user.permissions.has(PERMISSIONS.TICKETS_VIEW_ALL);
+      if (!seesAll && row.requester_id !== user.id && row.assignee_id !== user.id) {
+        throw forbidden("Você só pode acessar anexos dos tickets que abriu ou que lhe foram atribuídos.");
+      }
+      assertLocationAllowed(user, row.location_id);
+      return;
+    }
+    case "work_order":
+      await location(
+        await oneRow<{ location_id: string | null }>(db, `SELECT location_id FROM work_orders WHERE id = ?`, [
+          entityId,
+        ]),
+      );
+      return;
+    case "work_order_checklist_item":
+      await location(
+        await oneRow<{ location_id: string | null }>(
+          db,
+          `SELECT w.location_id FROM work_order_checklist_items ci
+             JOIN work_orders w ON w.id = ci.work_order_id WHERE ci.id = ?`,
+          [entityId],
+        ),
+      );
+      return;
+    case "purchase_request":
+      await location(
+        await oneRow<{ location_id: string | null }>(
+          db,
+          `SELECT location_id FROM purchase_requests WHERE id = ?`,
+          [entityId],
+        ),
+      );
+      return;
+    case "purchase_receipt":
+      await location(
+        await oneRow<{ location_id: string | null }>(
+          db,
+          `SELECT r.location_id FROM purchase_receipts rc
+             LEFT JOIN purchase_requests r ON r.id = rc.request_id WHERE rc.id = ?`,
+          [entityId],
+        ),
+      );
+      return;
+    case "inventory":
+      await location(
+        await oneRow<{ location_id: string | null }>(db, `SELECT location_id FROM inventories WHERE id = ?`, [
+          entityId,
+        ]),
+      );
+      return;
+    case "consumption_record":
+      await location(
+        await oneRow<{ location_id: string | null }>(
+          db,
+          `SELECT location_id FROM consumption_records WHERE id = ?`,
+          [entityId],
+        ),
+      );
+      return;
+    case "location": {
+      const row = await oneRow<{ id: string }>(db, `SELECT id FROM locations WHERE id = ?`, [entityId]);
+      if (!row) throw notFound("Local não encontrado.");
+      assertLocationAllowed(user, entityId);
+      return;
+    }
+    case "product": {
+      const row = await oneRow<{ id: string }>(db, `SELECT id FROM products WHERE id = ?`, [entityId]);
+      if (!row) throw notFound("Produto não encontrado.");
+      return;
+    }
+    default:
+      return;
+  }
+}
 
 export default router;

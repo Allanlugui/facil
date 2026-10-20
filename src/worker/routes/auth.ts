@@ -48,7 +48,7 @@ const setupSchema = z.object({
 
 const loginSchema = z.object({
   email: emailSchema,
-  password: z.string().min(1, "Informe a senha."),
+  password: z.string().min(1, "Informe a senha.").max(200, "Senha muito longa."),
 });
 
 const changePasswordSchema = z.object({

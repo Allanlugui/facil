@@ -6,11 +6,11 @@ import {
   WORK_ORDER_TRANSITIONS,
   type WorkOrderStatus,
 } from "@shared/types";
-import type { AppEnv } from "../types";
+import type { AppEnv, AuthUser } from "../types";
 import { assertLocationAllowed, currentUser, requireAuth, requirePermission } from "../auth";
 import { auditStatement, clientInfo } from "../audit";
 import { allRows, countRows, insertStatement, normalizePage, offsetOf, oneRow, updateStatement } from "../db";
-import { badRequest, conflict, notFound, parseBody } from "../errors";
+import { badRequest, conflict, forbidden, notFound, parseBody } from "../errors";
 import { listMaterialUse, recordMaterialUse } from "../materials";
 import { notificationStatement } from "../notify";
 import { buildCode, nextCounter, nowIso, uuid } from "../util";
@@ -213,6 +213,7 @@ router.get("/:id", requirePermission(PERMISSIONS.WORKORDERS_VIEW), async (c) => 
   const id = c.req.param("id");
   const row = await oneRow<Record<string, unknown>>(c.env.DB, `${WORK_ORDER_SELECT} WHERE w.id = ?`, [id]);
   if (!row) throw notFound("Ordem de serviço não encontrada.");
+  assertLocationAllowed(user, row.location_id ? String(row.location_id) : null);
 
   const events = await allRows<Record<string, unknown>>(
     c.env.DB,
@@ -421,6 +422,8 @@ router.patch("/:id", requirePermission(PERMISSIONS.WORKORDERS_EXECUTE), async (c
   const body = await parseBody(c, updateBody);
 
   const before = await requireWorkOrder(c.env.DB, id);
+  assertLocationAllowed(user, before.location_id);
+  assertWorkOrderExecutor(user, before);
   if (["done", "cancelled"].includes(before.status)) {
     throw conflict(`Uma ordem ${before.status} não pode ser editada.`);
   }
@@ -477,6 +480,20 @@ router.post("/:id/status", requirePermission(PERMISSIONS.WORKORDERS_EXECUTE), as
   const body = await parseBody(c, statusBody);
 
   const before = await requireWorkOrder(c.env.DB, id);
+  assertLocationAllowed(user, before.location_id);
+  assertWorkOrderExecutor(user, before);
+
+  // Concluir e cancelar têm permissões próprias; o atalho de status não pode
+  // contorná-las (nem pular resultado/checklist da conclusão).
+  if (body.status === "done") {
+    throw badRequest(
+      "Conclua a ordem pela ação de conclusão, que registra o resultado e valida o checklist.",
+    );
+  }
+  if (body.status === "cancelled" && !user.permissions.has(PERMISSIONS.WORKORDERS_CANCEL)) {
+    throw forbidden("Permissão necessária para cancelar: workorders.cancel.");
+  }
+
   if (before.status === body.status) {
     return c.json({ ok: true, status: before.status, unchanged: true });
   }
@@ -529,6 +546,8 @@ router.post("/:id/assign", requirePermission(PERMISSIONS.WORKORDERS_EXECUTE), as
   const body = await parseBody(c, assignBody);
 
   const before = await requireWorkOrder(c.env.DB, id);
+  assertLocationAllowed(user, before.location_id);
+  assertWorkOrderExecutor(user, before);
   if (["done", "cancelled"].includes(before.status)) {
     throw conflict(`Uma ordem ${before.status} não pode ser reatribuida.`);
   }
@@ -586,6 +605,7 @@ router.post("/:id/comments", requirePermission(PERMISSIONS.WORKORDERS_VIEW), asy
   const body = await parseBody(c, commentBody);
 
   const workOrder = await requireWorkOrder(c.env.DB, id);
+  assertLocationAllowed(user, workOrder.location_id);
   const ts = nowIso();
   const info = clientInfo(c);
   await c.env.DB.batch([
@@ -634,6 +654,8 @@ router.post("/:id/checklist", requirePermission(PERMISSIONS.WORKORDERS_EXECUTE),
   const body = await parseBody(c, checklistCreateBody);
 
   const workOrder = await requireWorkOrder(c.env.DB, id);
+  assertLocationAllowed(user, workOrder.location_id);
+  assertChecklistOwner(user, workOrder);
   if (workOrder.status === "cancelled") {
     throw conflict("Ordem cancelada não recebe itens de checklist.");
   }
@@ -712,7 +734,9 @@ router.patch(
     const itemId = c.req.param("itemId");
     const body = await parseBody(c, checklistUpdateBody);
 
-    await requireWorkOrder(c.env.DB, id);
+    const workOrder = await requireWorkOrder(c.env.DB, id);
+    assertLocationAllowed(user, workOrder.location_id);
+    assertChecklistOwner(user, workOrder);
     const item = await requireChecklistItem(c.env.DB, id, itemId);
 
     const ts = nowIso();
@@ -782,7 +806,9 @@ router.delete(
     const id = c.req.param("id");
     const itemId = c.req.param("itemId");
 
-    await requireWorkOrder(c.env.DB, id);
+    const workOrder = await requireWorkOrder(c.env.DB, id);
+    assertLocationAllowed(user, workOrder.location_id);
+    assertChecklistOwner(user, workOrder);
     const item = await requireChecklistItem(c.env.DB, id, itemId);
     const ts = nowIso();
     const info = clientInfo(c);
@@ -840,6 +866,8 @@ router.post("/:id/materials", requirePermission(PERMISSIONS.WORKORDERS_MATERIAL)
   const body = await parseBody(c, materialBody);
 
   const workOrder = await requireWorkOrder(c.env.DB, id);
+  assertLocationAllowed(user, workOrder.location_id);
+  assertWorkOrderExecutor(user, workOrder);
   if (workOrder.status === "cancelled") throw conflict("Ordem cancelada não recebe material.");
   if (workOrder.status === "done") {
     throw conflict("A ordem já foi concluída. Reabra o fluxo antes de registrar novo material.");
@@ -942,6 +970,8 @@ router.post("/:id/close", requirePermission(PERMISSIONS.WORKORDERS_CLOSE), async
   const body = await parseBody(c, closeBody);
 
   const before = await requireWorkOrder(c.env.DB, id);
+  assertLocationAllowed(user, before.location_id);
+  assertWorkOrderExecutor(user, before);
   if (before.status === "done") throw conflict("Esta ordem de serviço já foi concluída.");
   if (before.status === "cancelled") throw conflict("Ordem cancelada não pode ser concluída.");
 
@@ -1023,6 +1053,7 @@ router.post("/:id/cancel", requirePermission(PERMISSIONS.WORKORDERS_CANCEL), asy
   const body = await parseBody(c, cancelBody);
 
   const before = await requireWorkOrder(c.env.DB, id);
+  assertLocationAllowed(user, before.location_id);
   if (before.status === "done") {
     throw conflict("Uma ordem concluída não pode ser cancelada. Registre um novo atendimento se necessário.");
   }
@@ -1106,6 +1137,25 @@ async function requireWorkOrder(db: D1Database, id: string | undefined): Promise
   );
   if (!row) throw notFound("Ordem de serviço não encontrada.");
   return row;
+}
+
+function isManagerRole(user: AuthUser): boolean {
+  return user.roleCode === "admin" || user.roleCode === "facilities_manager";
+}
+
+/** Execução/edição: o responsável atual ou um gestor; OS sem dono é livre. */
+function assertWorkOrderExecutor(user: AuthUser, workOrder: WorkOrderRow): void {
+  if (isManagerRole(user)) return;
+  if (workOrder.assignee_id && workOrder.assignee_id !== user.id) {
+    throw forbidden("Apenas o responsável pela ordem (ou um gestor) pode executar esta ação.");
+  }
+}
+
+function assertChecklistOwner(user: AuthUser, workOrder: WorkOrderRow): void {
+  if (isManagerRole(user)) return;
+  if (workOrder.assignee_id && workOrder.assignee_id !== user.id) {
+    throw forbidden("Apenas o responsável pela ordem (ou um gestor) pode alterar o checklist.");
+  }
 }
 
 interface ChecklistItemRow {

@@ -568,19 +568,27 @@ router.get("/products/low-stock", requirePermission(PERMISSIONS.STOCK_VIEW), asy
 });
 
 router.get("/products/:id", requirePermission(PERMISSIONS.CATALOG_VIEW), async (c) => {
+  const user = currentUser(c);
   const row = await oneRow<Record<string, unknown>>(c.env.DB, `${PRODUCT_SELECT} WHERE p.id = ?`, [
     c.req.param("id"),
   ]);
   if (!row) throw notFound("Produto não encontrado.");
+
+  const params: string[] = [String(row.id)];
+  const scopeClause =
+    user.locationScope.length > 0
+      ? ` AND s.location_id IN (${user.locationScope.map(() => "?").join(",")})`
+      : "";
+  if (user.locationScope.length > 0) params.push(...user.locationScope);
 
   const byLocation = await allRows<Record<string, unknown>>(
     c.env.DB,
     `SELECT l.id AS location_id, l.name AS location_name, l.path AS location_path,
             l.is_active AS location_active, s.qty_milli
        FROM stock s JOIN locations l ON l.id = s.location_id
-      WHERE s.product_id = ? AND s.qty_milli <> 0
+      WHERE s.product_id = ? AND s.qty_milli <> 0${scopeClause}
       ORDER BY s.qty_milli DESC, l.path`,
-    [String(row.id)],
+    params,
   );
 
   return c.json({

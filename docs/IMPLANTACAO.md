@@ -1,4 +1,4 @@
-# Implantação corporativa — Facil na Corp Services Group
+# Implantação corporativa - Facil na CorpServices Group
 
 Guia para a equipe de TI copiar, implantar e manter o sistema na companhia.
 Tudo roda no **plano gratuito** da Cloudflare, sem servidor próprio.
@@ -117,7 +117,7 @@ Ao final, o Wrangler imprime a URL `https://facil.<sua-conta>.workers.dev`.
 Abra a URL publicada. Enquanto não existir usuário, o sistema mostra a tela
 **Instalação inicial**:
 
-- nome da empresa (ex.: `Corp Services Group`);
+- nome da empresa (ex.: `CorpServices Group`);
 - nome, e-mail e senha do administrador;
 - opção de criar a estrutura inicial (matriz + almoxarifado).
 

@@ -450,8 +450,9 @@ export function ChatThread({
 /* Composer                                                                   */
 /* -------------------------------------------------------------------------- */
 
+// SVG fica de fora de propósito: é documento com script e viraria XSS.
 const ATTACHMENT_ACCEPT =
-  "image/*,application/pdf,text/plain,text/csv,.doc,.docx,.xls,.xlsx";
+  "image/png,image/jpeg,image/gif,image/webp,image/avif,application/pdf,text/plain,text/csv,.doc,.docx,.xls,.xlsx";
 
 export function MessageComposer({
   placeholder,

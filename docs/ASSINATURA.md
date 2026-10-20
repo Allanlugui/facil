@@ -2,7 +2,7 @@
 
 **Projeto:** Facil — Plataforma de Gestão de Facilities
 **Autor:** Allan Luiz Silveira Lima (Allanlugui)
-**Empresa:** Corp Services Group
+**Empresa:** CorpServices Group
 **Formato:** manifesto SHA-256 de todo o código-fonte assinado com **Ed25519**.
 
 > **Privacidade:** CPF e e-mail do autor **não** são gravados no projeto nem no

@@ -199,9 +199,11 @@ router.get("/summary", requirePermission(PERMISSIONS.CONSUMPTION_VIEW), async (c
 });
 
 router.get("/:id", requirePermission(PERMISSIONS.CONSUMPTION_VIEW), async (c) => {
+  const user = currentUser(c);
   const id = c.req.param("id");
   const row = await oneRow<Record<string, unknown>>(c.env.DB, `${CONSUMPTION_SELECT} WHERE cr.id = ?`, [id]);
   if (!row) throw notFound("Lançamento de consumo não encontrado.");
+  assertLocationAllowed(user, row.location_id ? String(row.location_id) : null);
 
   const items = await allRows<Record<string, unknown>>(
     c.env.DB,

@@ -56,6 +56,12 @@ export function json<T>(c: Context, data: T, status = 200): Response {
  * a lista de campos inválidos, o que o frontend usa para exibir mensagens úteis.
  */
 export async function parseBody<T>(c: Context<AppEnv>, schema: ZodType<T>): Promise<T> {
+  // Nenhum JSON da API chega perto de 1 MB; recusar pelo Content-Length evita
+  // materializar corpos enormes só para o Zod rejeitar depois.
+  const declaredLength = Number(c.req.header("content-length") ?? 0);
+  if (Number.isFinite(declaredLength) && declaredLength > 1_000_000) {
+    throw new ApiError(413, "PAYLOAD_TOO_LARGE", "Corpo da requisição muito grande.");
+  }
   let raw: unknown;
   try {
     raw = await c.req.json();

@@ -27,7 +27,7 @@ const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"))
 const AUTHOR = {
   name: "Allan Luiz Silveira Lima",
   alias: "Allanlugui",
-  company: "Corp Services Group",
+  company: "CorpServices Group",
 };
 
 const PROJECT = "Facil — Plataforma de Gestão de Facilities";

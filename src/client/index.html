@@ -9,18 +9,7 @@
     <meta name="description" content="Plataforma unificada de gestão de Facilities" />
     <meta name="author" content="Allan Luiz Silveira Lima" />
     <title>Facil - Gestão de Facilities</title>
-    <script>
-      // Evita "piscar" o tema Clássico antes do aplicativo carregar: o último
-      // tema efetivo fica em localStorage e o valor real (sessão ou padrão do
-      // sistema) é aplicado logo depois pelo cliente. Sem internet ou sem a
-      // chave, o padrão continua valendo.
-      try {
-        var savedTheme = localStorage.getItem("facil.theme");
-        if (savedTheme) document.documentElement.setAttribute("data-theme", savedTheme);
-      } catch (error) {
-        /* navegador sem localStorage: segue com o tema padrão */
-      }
-    </script>
+    <script src="/theme-boot.js"></script>
     <!--
       Fontes dos temas (Clássico/Noturno: Inter; Corporativo: IBM Plex Sans;
       Violeta: Manrope; Âmbar: Nunito Sans). Cada navegador baixa apenas a

@@ -1,6 +1,6 @@
 {
   "name": "facil",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "private": true,
   "type": "module",
   "description": "Plataforma Unificada de Gestao de Facilities - estoque, consumo, inventario, manutencao, compras, permissoes e auditoria.",

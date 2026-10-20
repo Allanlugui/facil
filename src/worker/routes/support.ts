@@ -6,7 +6,14 @@ import { currentUser, requireAuth, requirePermission } from "../auth";
 import { auditStatement, clientInfo } from "../audit";
 import { allRows, countRows, insertStatement, normalizePage, offsetOf, oneRow, updateStatement } from "../db";
 import { ApiError, badRequest, conflict, forbidden, notFound, parseBody } from "../errors";
-import { ALLOWED_MIME_PREFIXES, PUBLIC_ALLOWED_MIME_PREFIXES, humanSize, mimeAllowed } from "../files";
+import {
+  ALLOWED_MIME_PREFIXES,
+  PUBLIC_ALLOWED_MIME_PREFIXES,
+  attachmentDisposition,
+  humanSize,
+  mimeAllowed,
+  normalizeMimeType,
+} from "../files";
 import { readMailConfig, mailConfigured, queueEmail, deliverOutbox, type QueuedEmailStatement } from "../mailer";
 import { notificationStatements, usersWithPermission } from "../notify";
 import { getSetting } from "./settings";
@@ -186,9 +193,15 @@ interface MessageInput {
  * Aceita `application/json` (campo `body`, como antes) ou
  * `multipart/form-data` (campo `body` opcional + `files` repetido).
  */
-async function parseMessageInput(c: AppContext): Promise<MessageInput> {
+async function parseMessageInput(c: AppContext, limits: AttachmentLimits): Promise<MessageInput> {
   const contentType = c.req.header("content-type") ?? "";
   if (contentType.includes("multipart/form-data")) {
+    // Recusa antes de materializar o FormData: multipart tem overhead de
+    // boundary/campos, daí a folga de 1 MB sobre o limite da mensagem.
+    const declaredLength = Number(c.req.header("content-length") ?? 0);
+    if (Number.isFinite(declaredLength) && declaredLength > limits.maxBytesPerMessage + 1_048_576) {
+      throw new ApiError(413, "PAYLOAD_TOO_LARGE", "Os arquivos enviados excedem o limite da mensagem.");
+    }
     let form: FormData;
     try {
       form = await c.req.formData();
@@ -225,7 +238,7 @@ async function validateAttachments(
   let total = 0;
   for (const file of files) {
     const name = file.name || "anexo";
-    const mimeType = file.type || "application/octet-stream";
+    const mimeType = normalizeMimeType(file.type || "application/octet-stream");
     if (file.size === 0) throw badRequest(`O arquivo "${name}" está vazio.`);
     if (file.size > limits.maxBytesPerFile) {
       throw badRequest(
@@ -312,7 +325,7 @@ async function storeAttachments(
     for (const file of files) {
       const id = uuid();
       const key = `anexos/${id}`;
-      const mimeType = file.type || "application/octet-stream";
+      const mimeType = normalizeMimeType(file.type || "application/octet-stream");
       const bytes = new Uint8Array(await file.arrayBuffer());
       try {
         await attachmentsBucket(env).put(key, bytes, { httpMetadata: { contentType: mimeType } });
@@ -419,8 +432,9 @@ async function messageRequestId(db: D1Database, messageId: string): Promise<stri
 async function sendSupportAttachment(env: Env, row: SupportAttachmentRow): Promise<Response> {
   const headers: Record<string, string> = {
     "content-type": row.mime_type,
-    "content-disposition": `inline; filename="${encodeURIComponent(row.filename)}"`,
-    "cache-control": "private, max-age=300",
+    // SVG e formatos não visuais nunca abrem inline; o navegador baixa.
+    "content-disposition": `${attachmentDisposition(row.mime_type)}; filename="${encodeURIComponent(row.filename)}"`,
+    "cache-control": "private, no-store",
   };
 
   if (row.storage === "r2" && row.r2_key) {
@@ -611,9 +625,30 @@ const createSchema = z.object({
 
 const MAX_OPEN_PER_EMAIL = 3;
 const MAX_MESSAGES_PER_REQUEST = 80;
+/** Freio por IP para pedidos anônimos enquanto o captcha não existe. */
+const PUBLIC_REQUESTS_PER_HOUR = 10;
 
 router.post("/requests", async (c) => {
   const user = c.get("user");
+  const info = clientInfo(c);
+
+  if (!user && info.ip) {
+    const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const recent = await countRows(
+      c.env.DB,
+      `SELECT COUNT(*) FROM audit_log
+        WHERE action = 'support.request.create' AND ip = ? AND created_at >= ?`,
+      [info.ip, since],
+    );
+    if (recent >= PUBLIC_REQUESTS_PER_HOUR) {
+      throw new ApiError(
+        429,
+        "RATE_LIMITED",
+        "Muitos pedidos de suporte deste endereço. Aguarde alguns minutos e tente de novo.",
+      );
+    }
+  }
+
   const body = await parseBody(c, createSchema);
   const sector = body.sector?.trim() || null;
   const registration = body.registration?.trim() || null;
@@ -642,7 +677,6 @@ router.post("/requests", async (c) => {
   const token = randomToken(32);
   const tokenHash = await sha256Hex(token);
   const origin = new URL(c.req.url).origin;
-  const info = clientInfo(c);
 
   const staff = await staffIds(c.env.DB);
   const emails = await staffEmails(c.env.DB);
@@ -791,7 +825,8 @@ router.post("/track/:token/messages", async (c) => {
   if (String(row.status) === "resolved") {
     throw conflict("Este atendimento foi encerrado. Se precisar, abra um novo pedido de suporte.");
   }
-  const input = await parseMessageInput(c);
+  const limits = await attachmentLimits(c.env.DB, true);
+  const input = await parseMessageInput(c, limits);
   const requestId = String(row.id);
 
   const total = await countRows(
@@ -1032,7 +1067,8 @@ router.post("/requests/:id/messages", requireAuth, async (c) => {
     throw conflict("Este atendimento foi encerrado. Reabra com um novo pedido se precisar.");
   }
 
-  const input = await parseMessageInput(c);
+  const limits = await attachmentLimits(c.env.DB, false);
+  const input = await parseMessageInput(c, limits);
   await validateAttachments(c.env.DB, id, input.files, false);
 
   const fromStaff = isStaff(user);

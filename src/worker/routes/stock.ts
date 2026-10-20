@@ -315,10 +315,21 @@ router.get("/movements", requirePermission(PERMISSIONS.STOCK_VIEW), async (c) =>
 });
 
 router.get("/movements/:id", requirePermission(PERMISSIONS.STOCK_VIEW), async (c) => {
+  const user = currentUser(c);
   const row = await oneRow<Record<string, unknown>>(c.env.DB, `${MOVEMENT_SELECT} WHERE m.id = ?`, [
     c.req.param("id"),
   ]);
   if (!row) throw notFound("Movimentação não encontrada.");
+
+  if (user.locationScope.length > 0) {
+    const scope = user.locationScope;
+    const from = row.from_location_id ? String(row.from_location_id) : null;
+    const to = row.to_location_id ? String(row.to_location_id) : null;
+    const inScope = (id: string | null) => !id || scope.includes(id);
+    if (!inScope(from) && !inScope(to)) {
+      throw forbidden("Esta movimentação está fora do seu escopo de locais.");
+    }
+  }
 
   const reversals = await allRows<Record<string, unknown>>(
     c.env.DB,

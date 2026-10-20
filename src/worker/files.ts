@@ -24,8 +24,47 @@ export const PUBLIC_ALLOWED_MIME_PREFIXES = [
   "text/csv",
 ];
 
+/**
+ * Tipos que nunca podem ser exibidos inline: SVG é um documento e executa
+ * script no mesmo origin, então um upload com `image/svg+xml` viraria XSS
+ * armazenado. HTML/XHTML já não passam pelas listas, mas ficam explícitos.
+ */
+const BLOCKED_MIME_TYPES = new Set([
+  "image/svg+xml",
+  "image/svg",
+  "text/html",
+  "application/xhtml+xml",
+]);
+
+/** Remove parâmetros (`; charset=...`), espaços e caixa alta do MIME. */
+export function normalizeMimeType(mimeType: string): string {
+  return (mimeType.split(";")[0] ?? "").trim().toLowerCase();
+}
+
 export function mimeAllowed(prefixes: string[], mimeType: string): boolean {
-  return prefixes.some((prefix) => mimeType.startsWith(prefix));
+  const normalized = normalizeMimeType(mimeType);
+  if (!normalized || BLOCKED_MIME_TYPES.has(normalized)) return false;
+  return prefixes.some((prefix) => normalized.startsWith(prefix));
+}
+
+/**
+ * Imagens raster, PDF e texto podem abrir no navegador; o resto (Office,
+ * formatos exóticos) baixa como anexo. SVG nunca entra nesta lista.
+ */
+const INLINE_SAFE_MIME_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+  "image/gif",
+  "image/webp",
+  "image/avif",
+  "application/pdf",
+  "text/plain",
+  "text/csv",
+]);
+
+export function attachmentDisposition(mimeType: string): "inline" | "attachment" {
+  return INLINE_SAFE_MIME_TYPES.has(normalizeMimeType(mimeType)) ? "inline" : "attachment";
 }
 
 /** Tamanho legível para mensagens e e-mails ("1,2 MB", "300 KB"). */

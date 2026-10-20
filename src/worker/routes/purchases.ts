@@ -270,9 +270,11 @@ const REQUEST_ITEM_SELECT = `
     LEFT JOIN suppliers s ON s.id = i.supplier_id`;
 
 router.get("/:id", requirePermission(PERMISSIONS.PURCHASES_VIEW), async (c) => {
+  const user = currentUser(c);
   const id = c.req.param("id");
   const row = await oneRow<Record<string, unknown>>(c.env.DB, `${REQUEST_SELECT} WHERE r.id = ?`, [id]);
   if (!row) throw notFound("Solicitação de compra não encontrada.");
+  assertLocationAllowed(user, row.location_id ? String(row.location_id) : null);
 
   const items = await allRows<Record<string, unknown>>(
     c.env.DB,
@@ -437,7 +439,10 @@ router.get("/:id", requirePermission(PERMISSIONS.PURCHASES_VIEW), async (c) => {
 });
 
 router.get("/:id/receipts", requirePermission(PERMISSIONS.PURCHASES_VIEW), async (c) => {
+  const user = currentUser(c);
   const id = c.req.param("id");
+  const request = await requireRequest(c.env.DB, id);
+  assertLocationAllowed(user, request.location_id);
   const receipts = await allRows<Record<string, unknown>>(
     c.env.DB,
     `SELECT rc.id, rc.code, rc.received_at, rc.document_ref, rc.notes, rc.status,
@@ -589,6 +594,7 @@ router.patch("/:id", requirePermission(PERMISSIONS.PURCHASES_CREATE), async (c) 
   const body = await parseBody(c, updateBody);
 
   const before = await requireRequest(c.env.DB, id);
+  assertLocationAllowed(user, before.location_id);
   if (!["draft", "pending_approval"].includes(before.status)) {
     throw conflict(`Uma solicitação ${before.status} não pode ser editada.`);
   }
@@ -632,6 +638,7 @@ router.post("/:id/submit", requirePermission(PERMISSIONS.PURCHASES_CREATE), asyn
   const user = currentUser(c);
   const id = c.req.param("id");
   const request = await requireRequest(c.env.DB, id);
+  assertLocationAllowed(user, request.location_id);
   if (request.status !== "draft") throw conflict(`Somente rascunhos podem ser enviados para aprovação.`);
   if (request.requester_id !== user.id && !user.permissions.has(PERMISSIONS.PURCHASES_APPROVE)) {
     throw conflict("Somente o solicitante pode enviar esta solicitação.");
@@ -737,6 +744,7 @@ router.post("/:id/decide", async (c) => {
   const body = await parseBody(c, decideBody);
 
   const request = await requireRequest(c.env.DB, id);
+  assertLocationAllowed(user, request.location_id);
   if (["received", "cancelled"].includes(request.status)) {
     throw conflict(`Uma solicitação ${request.status} não pode receber novas decisões.`);
   }
@@ -898,6 +906,7 @@ router.post("/:id/quotes", requirePermission(PERMISSIONS.PURCHASES_ORDER), async
   const body = await parseBody(c, quoteBody);
 
   const request = await requireRequest(c.env.DB, id);
+  assertLocationAllowed(user, request.location_id);
   if (!["quoting", "quote_returned"].includes(request.status)) {
     throw conflict(`Propostas são registradas durante a cotação. Status atual: ${request.status}.`);
   }
@@ -1017,6 +1026,7 @@ router.post("/:id/quotes/return", requirePermission(PERMISSIONS.PURCHASES_ORDER)
   const id = c.req.param("id");
 
   const request = await requireRequest(c.env.DB, id);
+  assertLocationAllowed(user, request.location_id);
   if (request.status !== "quoting") {
     throw conflict(`Somente solicitações em cotação podem ser devolvidas para aprovação. Status atual: ${request.status}.`);
   }
@@ -1078,6 +1088,7 @@ router.post("/:id/quotes/:quoteId/approve", requirePermission(PERMISSIONS.PURCHA
   const body = await parseBody(c, quoteDecisionBody);
 
   const request = await requireRequest(c.env.DB, id);
+  assertLocationAllowed(user, request.location_id);
   if (request.status !== "quote_returned") {
     throw conflict(`A cotação só pode ser aprovada depois de devolvida pelo comprador. Status atual: ${request.status}.`);
   }
@@ -1158,6 +1169,7 @@ router.post("/:id/quotes/:quoteId/reject", requirePermission(PERMISSIONS.PURCHAS
   const body = await parseBody(c, quoteDecisionBody);
 
   const request = await requireRequest(c.env.DB, id);
+  assertLocationAllowed(user, request.location_id);
   if (request.status !== "quote_returned") {
     throw conflict(`A cotação só pode ser recusada depois de devolvida pelo comprador. Status atual: ${request.status}.`);
   }
@@ -1222,6 +1234,7 @@ router.post("/:id/order", requirePermission(PERMISSIONS.PURCHASES_ORDER), async 
   const body = await parseBody(c, orderBody);
 
   const request = await requireRequest(c.env.DB, id);
+  assertLocationAllowed(user, request.location_id);
   if (!["approved", "purchasing", "quote_approved"].includes(request.status)) {
     throw conflict(
       request.status === "quoting" || request.status === "quote_returned"
@@ -1343,6 +1356,7 @@ router.post("/:id/cancel", requirePermission(PERMISSIONS.PURCHASES_CANCEL), asyn
   const body = await parseBody(c, cancelBody);
 
   const request = await requireRequest(c.env.DB, id);
+  assertLocationAllowed(user, request.location_id);
   if (request.status === "cancelled") throw conflict("Esta solicitação já está cancelada.");
   if (request.status === "received") {
     throw conflict("Solicitação já recebida não pode ser cancelada. Registre uma devolução ou correção de estoque.");
@@ -1423,6 +1437,7 @@ router.post("/:id/receipts", requirePermission(PERMISSIONS.PURCHASES_RECEIVE), a
   const body = await parseBody(c, receiptBody);
 
   const request = await requireRequest(c.env.DB, id);
+  assertLocationAllowed(user, request.location_id);
 
   // Reenvio da mesma confirmação (retry após timeout, duplo clique): devolve o
   // recebimento já registrado em vez de recusar pelo status atual -- a recusa

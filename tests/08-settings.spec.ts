@@ -89,6 +89,49 @@ describe("configurações: efeito real na operação", () => {
     expect(await countRows("SELECT COUNT(*) AS total FROM audit_log WHERE action = 'permission_denied'")).toBe(1);
   });
 
+  it("credenciais não voltam pela API nem para a auditoria", async () => {
+    const saved = await admin.api.patch("/api/settings", {
+      values: {
+        "mail.gmail_app_password": "abcd efgh ijkl mnop",
+        "mail.relay_secret": "segredo-relay",
+      },
+    });
+    expect(saved.status).toBe(200);
+
+    type Item = { key: string; value: string; hasValue?: boolean; secret?: boolean };
+    const asAdmin = await admin.api.get<{ items: Item[] }>("/api/settings");
+    const gmail = asAdmin.body.items.find((item) => item.key === "mail.gmail_app_password");
+    expect(gmail?.secret).toBe(true);
+    expect(gmail?.value).toBe("");
+    expect(gmail?.hasValue).toBe(true);
+
+    const manager = await createUser(admin, {
+      name: "Gerente",
+      email: "gerente.credenciais@facil.test",
+      roleId: await findRoleId("facilities_manager"),
+    });
+    const asManager = await manager.api.get<{ items: Item[] }>("/api/settings");
+    const relay = asManager.body.items.find((item) => item.key === "mail.relay_secret");
+    expect(relay?.secret).toBe(true);
+    expect(relay?.value).toBe("");
+    expect(relay?.hasValue).toBe(true);
+
+    // O log registra que a credencial mudou, nunca o valor em si.
+    const audit = await queryOne<{ after_json: string }>(
+      `SELECT after_json FROM audit_log WHERE action = 'settings.update' ORDER BY created_at DESC LIMIT 1`,
+    );
+    expect(audit?.after_json).not.toContain("abcd efgh ijkl mnop");
+    expect(audit?.after_json).not.toContain("segredo-relay");
+    expect(audit?.after_json).toContain("[alterado]");
+
+    // Vazio continua removendo a credencial (comportamento explícito do editor).
+    await admin.api.patch("/api/settings", { values: { "mail.gmail_app_password": "" } });
+    const cleared = await admin.api.get<{ items: Item[] }>("/api/settings");
+    expect(cleared.body.items.find((item) => item.key === "mail.gmail_app_password")?.hasValue).toBe(
+      false,
+    );
+  });
+
   it("válida tipo, opções e fuso horário antes de gravar", async () => {
     const booleanInvalid = await admin.api.patch("/api/settings", {
       values: { "stock.allow_negative": "talvez" },

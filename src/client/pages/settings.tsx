@@ -51,12 +51,16 @@ interface SettingDefinition {
   options?: string[];
   min?: number;
   max?: number;
+  secret?: boolean;
   section: string;
 }
 
 interface SettingItem {
   key: string;
   value: string;
+  /** Credencial configurada: o valor em si nunca vem da API. */
+  hasValue?: boolean;
+  secret?: boolean;
   description: string | null;
   definition: SettingDefinition | null;
   updatedAt: string;
@@ -386,6 +390,7 @@ function SettingsSectionEditor({ section }: { section: string }) {
     return result.items;
   }, []);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [clearedSecrets, setClearedSecrets] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -406,19 +411,44 @@ function SettingsSectionEditor({ section }: { section: string }) {
     [drafts, state.data],
   );
 
+  const pendingKeys = useMemo(
+    () => new Set([...dirtyKeys, ...clearedSecrets]),
+    [dirtyKeys, clearedSecrets],
+  );
+
   const setValue = (key: string, value: string) => {
+    // Digitar de novo cancela um "limpar credencial" pendente.
+    setClearedSecrets((current) => {
+      if (!current.has(key)) return current;
+      const next = new Set(current);
+      next.delete(key);
+      return next;
+    });
     setDrafts((current) => ({ ...current, [key]: value }));
   };
 
+  const clearSecret = (key: string) => {
+    setDrafts((current) => ({ ...current, [key]: "" }));
+    setClearedSecrets((current) => new Set(current).add(key));
+  };
+
+  const cancelClear = (key: string) => {
+    setClearedSecrets((current) => {
+      const next = new Set(current);
+      next.delete(key);
+      return next;
+    });
+  };
+
   const save = async () => {
-    if (dirtyKeys.length === 0) return;
+    if (pendingKeys.size === 0) return;
     setSaving(true);
     setError(null);
     setErrors({});
     try {
       const values: Record<string, string> = {};
-      for (const key of dirtyKeys) {
-        const value = drafts[key];
+      for (const key of pendingKeys) {
+        const value = clearedSecrets.has(key) ? "" : drafts[key];
         if (value !== undefined) values[key] = value;
       }
       await apiPatch("/api/settings", { values });
@@ -429,6 +459,7 @@ function SettingsSectionEditor({ section }: { section: string }) {
           : "Configurações salvas e valendo imediatamente.",
       );
       setDrafts({});
+      setClearedSecrets(new Set());
       state.reload();
       if (touchedSession) {
         await refresh();
@@ -451,8 +482,8 @@ function SettingsSectionEditor({ section }: { section: string }) {
           Alterações entram em vigor na hora para todos os usuários e ficam registradas na auditoria.
         </p>
         {manage ? (
-          <Button onClick={() => void save()} loading={saving} disabled={dirtyKeys.length === 0}>
-            Salvar alterações{dirtyKeys.length > 0 ? ` (${dirtyKeys.length})` : ""}
+          <Button onClick={() => void save()} loading={saving} disabled={pendingKeys.size === 0}>
+            Salvar alterações{pendingKeys.size > 0 ? ` (${pendingKeys.size})` : ""}
           </Button>
         ) : null}
       </div>
@@ -515,6 +546,48 @@ function SettingsSectionEditor({ section }: { section: string }) {
                           onChange={(event) => setValue(item.key, event.target.value)}
                           aria-label={definition.description}
                         />
+                      ) : definition.secret ? (
+                        manage ? (
+                          <div className="space-y-1">
+                            <Input
+                              type="password"
+                              autoComplete="new-password"
+                              value={value}
+                              placeholder={
+                                item.hasValue
+                                  ? "•••••••• (configurado — digite para substituir)"
+                                  : "Não configurado"
+                              }
+                              invalid={Boolean(errors[item.key])}
+                              onChange={(event) => setValue(item.key, event.target.value)}
+                              aria-label={definition.description}
+                            />
+                            {item.hasValue && value === "" ? (
+                              <button
+                                type="button"
+                                className="text-xs font-medium text-red-700 underline-offset-2 hover:underline"
+                                onClick={() =>
+                                  clearedSecrets.has(item.key)
+                                    ? cancelClear(item.key)
+                                    : clearSecret(item.key)
+                                }
+                              >
+                                {clearedSecrets.has(item.key)
+                                  ? "Cancelar remoção"
+                                  : "Limpar credencial"}
+                              </button>
+                            ) : null}
+                            {clearedSecrets.has(item.key) ? (
+                              <p className="text-xs text-amber-700">
+                                A credencial será removida ao salvar.
+                              </p>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <p className="rounded bg-slate-50 px-3 py-2 text-sm text-slate-600">
+                            {item.hasValue ? "Configurado (valor oculto)" : "Não configurado"}
+                          </p>
+                        )
                       ) : (
                         <Input
                           value={value}

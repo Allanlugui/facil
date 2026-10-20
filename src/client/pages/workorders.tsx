@@ -575,7 +575,13 @@ export function WorkOrderDetailPage() {
 
   const { workOrder, events, checklist, materials, parent, children } = state.data;
   const active = !["done", "closed", "cancelled"].includes(workOrder.status);
-  const transitions = WORK_ORDER_TRANSITIONS[workOrder.status] ?? [];
+  // "done" só pela ação de conclusão (resultado + checklist); cancelar exige
+  // a permissão própria, então não aparece para quem não pode.
+  const transitions = (WORK_ORDER_TRANSITIONS[workOrder.status] ?? []).filter(
+    (status) =>
+      status !== "done" &&
+      (status !== "cancelled" || can(PERMISSIONS.WORKORDERS_CANCEL)),
+  );
   // F-10: a árvore pai/filha é informação de gestão (mesmo critério do painel).
   const isManagerView = user?.roleCode === "facilities_manager" || user?.roleCode === "admin";
 
