@@ -847,3 +847,9 @@
   `blankBelowComposer = 1 px`. Re-assinado: tree
   `343524605e9828df48466a59cf1a808122ed1b442ac1e5b14d4c441747794b4e`, 00:09:48 −03:00, Worker
   version `e94bbf0b-b4d2-4c76-b015-15a2b29cd685`; captura `ux-shots/chat-8-sem-espaco-vazio.png`.
+- **Segunda correção (20/10/2026):** a lista “E-mails do pedido” crescia sem limite na coluna
+  lateral (um e-mail por destinatário/mensagem). Ganhou teto de `16rem` com rolagem própria,
+  contador no cabeçalho e ordem do mais recente primeiro; medido: 11 itens, lista 256 px visível /
+  718 px de conteúdo. Novo tree
+  `e9f9c44c14e1b3d709605bb126511ee03ae3626694446c3195a05ae5f55131aa`, 00:15:08 −03:00, Worker
+  version `76aa6993-47a7-40a4-ab7e-12c5037b1715`; captura `ux-shots/chat-9-emails-limitados.png`.
