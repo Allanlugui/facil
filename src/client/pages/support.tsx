@@ -1021,12 +1021,15 @@ export function SupportThreadPage() {
               <p className="mt-2 whitespace-pre-line text-sm text-slate-600">{request.reason}</p>
             </section>
             <section className="rounded-xl border border-slate-200 bg-surface p-4 shadow-sm">
-              <h2 className="text-sm font-semibold text-slate-900">E-mails do pedido</h2>
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="text-sm font-semibold text-slate-900">E-mails do pedido</h2>
+                {emails.length > 0 ? <Badge tone="slate">{emails.length}</Badge> : null}
+              </div>
               {emails.length === 0 ? (
                 <p className="mt-2 text-xs text-slate-500">Nenhum e-mail registrado.</p>
               ) : (
-                <ul className="mt-2 space-y-2">
-                  {emails.map((email) => {
+                <ul className="mt-2 max-h-64 space-y-2 overflow-y-auto overscroll-contain pr-1">
+                  {[...emails].reverse().map((email) => {
                     const meta = OUTBOX_STATUS[email.status] ?? { label: email.status, tone: "amber" as const };
                     return (
                       <li key={email.id} className="text-xs text-slate-600">
