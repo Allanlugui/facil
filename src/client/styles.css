@@ -1,0 +1,312 @@
+@import "tailwindcss";
+
+/* -------------------------------------------------------------------------- */
+/* Tokens padrão (tema Clássico)                                              */
+/*                                                                            */
+/* Os valores abaixo valem para a página inteira; cada tema em `[data-theme]`  */
+/* reescreve os mesmos tokens e os utilitários passam a usar os valores novos  */
+/* (utilidades do Tailwind v4 referenciam as variáveis CSS, não valores fixos).*/
+/* -------------------------------------------------------------------------- */
+
+@theme {
+  --color-brand-50: #f0fdfa;
+  --color-brand-100: #ccfbf1;
+  --color-brand-200: #99f6e4;
+  --color-brand-300: #5eead4;
+  --color-brand-400: #2dd4bf;
+  --color-brand-500: #14b8a6;
+  --color-brand-600: #0d9488;
+  --color-brand-700: #0f766e;
+  --color-brand-800: #115e59;
+  --color-brand-900: #134e4a;
+
+  /* Superfície de cartões, diálogos e campos. `bg-white` continua branco
+     literal (texto em botões coloridos); o tema escuro troca `surface`. */
+  --color-surface: #ffffff;
+  /* Véu sobre o conteúdo quando há gaveta/diálogo aberto. */
+  --color-overlay: rgb(15 23 42 / 0.45);
+
+  --font-sans:
+    "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  background-color: var(--color-slate-50);
+  color: var(--color-slate-900);
+  font-family: var(--font-sans);
+  font-feature-settings: "cv11", "ss01";
+}
+
+/* Rolagem horizontal de tabelas sem quebrar o layout no celular. */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Temas (F-18)                                                               */
+/*                                                                            */
+/* Um bloco por tema. Além das cores, cada tema ajusta fonte, cantos          */
+/* (--radius-*) e o tratamento dos ícones (peso e formato do traço).          */
+/*                                                                            */
+/* O atributo `data-theme` fica no `<html>` (tema ativo) e também pode ser    */
+/* usado em qualquer elemento para pré-visualizar um tema dentro da página.   */
+/* -------------------------------------------------------------------------- */
+
+:root {
+  --icon-stroke: 1.6;
+  --icon-linecap: round;
+  --icon-linejoin: round;
+}
+
+/* Ícones do sistema: o CSS sobrepõe os atributos de traço definidos no
+   componente, então cada tema dá o seu acabamento (fino/grosso, reto/curvo).
+   Outros SVGs (ex.: carregando) ficam de fora pelo seletor de classe. */
+[data-theme] svg.theme-icon {
+  stroke-width: var(--icon-stroke);
+  stroke-linecap: var(--icon-linecap);
+  stroke-linejoin: var(--icon-linejoin);
+}
+
+[data-theme="classico"] {
+  --color-brand-50: #f0fdfa;
+  --color-brand-100: #ccfbf1;
+  --color-brand-200: #99f6e4;
+  --color-brand-300: #5eead4;
+  --color-brand-400: #2dd4bf;
+  --color-brand-500: #14b8a6;
+  --color-brand-600: #0d9488;
+  --color-brand-700: #0f766e;
+  --color-brand-800: #115e59;
+  --color-brand-900: #134e4a;
+
+  --color-slate-50: #f8fafc;
+  --color-slate-100: #f1f5f9;
+  --color-slate-200: #e2e8f0;
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-800: #1e293b;
+  --color-slate-900: #0f172a;
+  --color-slate-950: #020617;
+
+  --color-surface: #ffffff;
+  --color-overlay: rgb(15 23 42 / 0.45);
+
+  --font-sans:
+    "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+
+  --icon-stroke: 1.6;
+  --icon-linecap: round;
+  --icon-linejoin: round;
+}
+
+/* Azul sóbrio, cantos retos e traço firme. */
+[data-theme="corporativo"] {
+  --color-brand-50: #eff6ff;
+  --color-brand-100: #dbeafe;
+  --color-brand-200: #bfdbfe;
+  --color-brand-300: #93c5fd;
+  --color-brand-400: #60a5fa;
+  --color-brand-500: #3b82f6;
+  --color-brand-600: #2563eb;
+  --color-brand-700: #1d4ed8;
+  --color-brand-800: #1e40af;
+  --color-brand-900: #1e3a8a;
+
+  --color-slate-50: #fafafa;
+  --color-slate-100: #f4f4f5;
+  --color-slate-200: #e4e4e7;
+  --color-slate-300: #d4d4d8;
+  --color-slate-400: #a1a1aa;
+  --color-slate-500: #71717a;
+  --color-slate-600: #52525b;
+  --color-slate-700: #3f3f46;
+  --color-slate-800: #27272a;
+  --color-slate-900: #18181b;
+  --color-slate-950: #09090b;
+
+  --color-surface: #ffffff;
+  --color-overlay: rgb(15 23 42 / 0.45);
+
+  --font-sans:
+    "IBM Plex Sans", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --radius-lg: 0.25rem;
+  --radius-xl: 0.375rem;
+  --radius-2xl: 0.5rem;
+
+  --icon-stroke: 1.8;
+  --icon-linecap: butt;
+  --icon-linejoin: miter;
+}
+
+/* Noturno: escala neutra invertida + alertas em tons escuros. */
+[data-theme="escuro"] {
+  color-scheme: dark;
+
+  --color-brand-50: #10312e;
+  --color-brand-100: #143f3a;
+  --color-brand-200: #1b554c;
+  --color-brand-300: #26756a;
+  --color-brand-400: #5eead4;
+  --color-brand-500: #2dd4bf;
+  --color-brand-600: #14b8a6;
+  --color-brand-700: #0f766e;
+  --color-brand-800: #5eead4;
+  --color-brand-900: #99f6e4;
+
+  --color-slate-50: #0a1120;
+  --color-slate-100: #1b2540;
+  --color-slate-200: #24314b;
+  --color-slate-300: #323f5c;
+  --color-slate-400: #6d7c93;
+  --color-slate-500: #8f9db2;
+  --color-slate-600: #aab5c6;
+  --color-slate-700: #c3ccda;
+  --color-slate-800: #dbe2ec;
+  --color-slate-900: #f2f5fa;
+  --color-slate-950: #fbfdff;
+
+  --color-surface: #131c2e;
+  --color-overlay: rgb(2 6 18 / 0.65);
+
+  --font-sans:
+    "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  --radius-lg: 0.625rem;
+  --radius-xl: 0.875rem;
+  --radius-2xl: 1.25rem;
+
+  --icon-stroke: 1.6;
+  --icon-linecap: round;
+  --icon-linejoin: round;
+
+  /* Escalas semânticas (alertas, badges): fundos escurecidos e textos claros. */
+  --color-red-50: #2b1416;
+  --color-red-100: #3d1a1e;
+  --color-red-200: #57242a;
+  --color-red-400: #f87171;
+  --color-red-500: #ef4444;
+  --color-red-600: #ef4444;
+  --color-red-700: #f87171;
+  --color-red-800: #fecaca;
+  --color-red-900: #fee2e2;
+
+  --color-amber-50: #2a1c0a;
+  --color-amber-100: #3a2810;
+  --color-amber-200: #533a17;
+  --color-amber-500: #f59e0b;
+  --color-amber-700: #fbbf24;
+  --color-amber-800: #fcd34d;
+  --color-amber-900: #fde68a;
+
+  --color-emerald-50: #0c2417;
+  --color-emerald-100: #10321f;
+  --color-emerald-200: #17452c;
+  --color-emerald-500: #10b981;
+  --color-emerald-700: #6ee7b7;
+  --color-emerald-800: #a7f3d0;
+
+  --color-blue-50: #0f1d33;
+  --color-blue-100: #14274a;
+  --color-blue-200: #1e3a5f;
+  --color-blue-500: #3b82f6;
+  --color-blue-700: #93c5fd;
+  --color-blue-800: #bfdbfe;
+}
+
+/* Roxo moderno, cantos bem arredondados e Manrope. */
+[data-theme="violeta"] {
+  --color-brand-50: #f5f3ff;
+  --color-brand-100: #ede9fe;
+  --color-brand-200: #ddd6fe;
+  --color-brand-300: #c4b5fd;
+  --color-brand-400: #a78bfa;
+  --color-brand-500: #8b5cf6;
+  --color-brand-600: #7c3aed;
+  --color-brand-700: #6d28d9;
+  --color-brand-800: #5b21b6;
+  --color-brand-900: #4c1d95;
+
+  --color-slate-50: #f8fafc;
+  --color-slate-100: #f1f5f9;
+  --color-slate-200: #e2e8f0;
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-800: #1e293b;
+  --color-slate-900: #0f172a;
+  --color-slate-950: #020617;
+
+  --color-surface: #ffffff;
+  --color-overlay: rgb(15 23 42 / 0.45);
+
+  --font-sans:
+    "Manrope", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+
+  --icon-stroke: 1.7;
+  --icon-linecap: round;
+  --icon-linejoin: round;
+}
+
+/* Tons quentes, cantos macios e Nunito Sans. */
+[data-theme="ambar"] {
+  --color-brand-50: #fff7ed;
+  --color-brand-100: #ffedd5;
+  --color-brand-200: #fed7aa;
+  --color-brand-300: #fdba74;
+  --color-brand-400: #fb923c;
+  --color-brand-500: #f97316;
+  --color-brand-600: #ea580c;
+  --color-brand-700: #c2410c;
+  --color-brand-800: #9a3412;
+  --color-brand-900: #7c2d12;
+
+  --color-slate-50: #fafaf9;
+  --color-slate-100: #f5f5f4;
+  --color-slate-200: #e7e5e4;
+  --color-slate-300: #d6d3d1;
+  --color-slate-400: #a8a29e;
+  --color-slate-500: #78716c;
+  --color-slate-600: #57534e;
+  --color-slate-700: #44403c;
+  --color-slate-800: #292524;
+  --color-slate-900: #1c1917;
+  --color-slate-950: #0c0a09;
+
+  --color-surface: #fffcf8;
+  --color-overlay: rgb(28 25 23 / 0.45);
+
+  --font-sans:
+    "Nunito Sans", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.875rem;
+  --radius-2xl: 1.25rem;
+
+  --icon-stroke: 1.5;
+  --icon-linecap: round;
+  --icon-linejoin: round;
+}

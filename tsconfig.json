@@ -1,0 +1,17 @@
+{
+  // Arquivo "solution style" para o editor e para `tsc -b`.
+  // Os `paths` abaixo existem porque o bundler do wrangler (esbuild) descobre
+  // ESTE tsconfig ao empacotar o Worker e nao le os tsconfigs de projeto.
+  // Mantenha em sincronia com tsconfig.worker.json e tsconfig.client.json.
+  "files": [],
+  "references": [
+    { "path": "./tsconfig.worker.json" },
+    { "path": "./tsconfig.client.json" }
+  ],
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@shared/*": ["src/shared/*"]
+    }
+  }
+}

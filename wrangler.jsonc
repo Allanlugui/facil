@@ -1,0 +1,41 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "facil",
+  "main": "src/worker/index.ts",
+  "compatibility_date": "2026-10-01",
+  // nodejs_compat: exigido pelo toolchain de testes (@cloudflare/vitest-plugin) e
+  // por utilitarios internos do wrangler. Nao e usado para logica de negocio.
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "assets": {
+    "directory": "./dist/client",
+    "binding": "ASSETS",
+    // Qualquer rota /api/* vai direto ao Worker (nao cai no fallback de SPA),
+    // garantindo que 404 de API retorne JSON e nao HTML.
+    "run_worker_first": ["/api/*"],
+    "not_found_handling": "single-page-application"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "facil-db",
+      // Placeholder: substituir pelo id real retornado por `wrangler d1 create facil-db`
+      // antes do primeiro deploy remoto. O desenvolvimento local nao depende disso.
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+  // Anexos do suporte (F-19): o binario vive no R2 (free tier), os metadados
+  // no D1. No `wrangler dev` o bucket e simulado localmente; no deploy,
+  // criar o bucket com `wrangler r2 bucket create facil-attachments`.
+  "r2_buckets": [
+    {
+      "binding": "ATTACHMENTS",
+      "bucket_name": "facil-attachments"
+    }
+  ],
+  "observability": {
+    "enabled": true
+  },
+  "previews": {}
+}
