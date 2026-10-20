@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "description": "Plataforma Unificada de Gestao de Facilities - estoque, consumo, inventario, manutencao, compras, permissoes e auditoria.",
-  "author": "Allan Luiz (Allanlugui) <jallanluiz@gmail.com>",
+  "author": "Allan Luiz Silveira Lima (Allanlugui)",
   "license": "SEE LICENSE IN LICENSE",
   "scripts": {
     "dev": "wrangler dev",

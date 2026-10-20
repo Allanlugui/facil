@@ -25,9 +25,8 @@ const root = path.resolve(import.meta.dirname, "..");
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
 
 const AUTHOR = {
-  name: "Allan Luiz",
+  name: "Allan Luiz Silveira Lima",
   alias: "Allanlugui",
-  email: "jallanluiz@gmail.com",
   company: "Corp Services Group",
 };
 
@@ -88,7 +87,7 @@ function ensureKeyPair() {
       "Chave privada de assinatura do projeto Facil.",
       "",
       `Criada em: ${brasiliaIso()}`,
-      `Autor: ${AUTHOR.name} <${AUTHOR.email}>`,
+      `Autor: ${AUTHOR.name}`,
       "",
       "Guarde este arquivo com cuidado: ele e a sua identidade digital neste projeto.",
       "Quem tiver esta chave pode assinar releases em seu nome.",
@@ -144,7 +143,6 @@ function main() {
     version: pkg.version,
     author: AUTHOR.name,
     alias: AUTHOR.alias,
-    email: AUTHOR.email,
     company: AUTHOR.company,
     signedAt: brasiliaIso(),
     treeHash,
@@ -175,7 +173,6 @@ function main() {
     version: pkg.version,
     author: AUTHOR.name,
     alias: AUTHOR.alias,
-    email: AUTHOR.email,
     company: AUTHOR.company,
     signedAt: payload.signedAt,
     treeHash,
@@ -210,7 +207,7 @@ function main() {
       `Arquivos assinados: ${files.length}`,
       `Tree SHA-256: ${treeHash}`,
       `Assinado em: ${payload.signedAt}`,
-      `Autor: ${AUTHOR.name} <${AUTHOR.email}>`,
+      `Autor: ${AUTHOR.name}`,
     ].join("\n"),
   );
 }

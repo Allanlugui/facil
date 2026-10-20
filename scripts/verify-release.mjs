@@ -32,7 +32,7 @@ const publicKey = createPublicKey(document.publicKeyPem);
 const ok = edVerify(null, payloadBytes, publicKey, Buffer.from(document.signature, "base64"));
 if (!ok) fail("assinatura Ed25519 invalida.");
 console.log(`assinatura Ed25519 valida (${document.algorithm})`);
-console.log(`autor: ${document.payload.author} <${document.payload.email}>`);
+console.log(`autor: ${document.payload.author}`);
 console.log(`assinado em: ${document.payload.signedAt}`);
 console.log(`tree SHA-256: ${document.payload.treeHash}`);
 console.log(`fingerprint: ${document.keyFingerprint}`);

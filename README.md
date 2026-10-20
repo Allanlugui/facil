@@ -4,7 +4,7 @@ Sistema interno de facilities da **Corp Services Group**: estrutura e locais,
 estoque e consumo, inventário, chamados, ordens de serviço, compras com cotação,
 relatórios, usuários/permissões e auditoria.
 
-**Autor:** Allan Luiz (Allanlugui) — `jallanluiz@gmail.com`
+**Autor:** Allan Luiz Silveira Lima (Allanlugui)
 **Licença:** proprietária, todos os direitos reservados (ver `LICENSE`).
 **Assinatura:** cada release é assinada com Ed25519 (ver `docs/ASSINATURA.md`).
 

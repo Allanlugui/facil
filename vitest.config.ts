@@ -25,6 +25,10 @@ export default defineConfig(async () => {
           // Cache desabilitado nos testes para evitar estado residual entre casos.
           cache: false,
           bindings: { TEST_MIGRATIONS: migrations },
+          // O R2 nao esta habilitado na conta de publicacao (o binding fica
+          // desligado em wrangler.jsonc), mas os testes de anexos do suporte
+          // precisam de um bucket simulado no Miniflare.
+          r2Buckets: ["ATTACHMENTS"],
         },
       }),
     ],

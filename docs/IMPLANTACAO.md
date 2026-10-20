@@ -3,7 +3,7 @@
 Guia para a equipe de TI copiar, implantar e manter o sistema na companhia.
 Tudo roda no **plano gratuito** da Cloudflare, sem servidor próprio.
 
-- **Autor:** Allan Luiz (Allanlugui) — `jallanluiz@gmail.com`
+- **Autor:** Allan Luiz Silveira Lima (Allanlugui)
 - **Repositório:** privado (GitHub) — peça acesso ao autor
 - **Assinatura de releases:** `docs/ASSINATURA.md`
 - **Licença:** `LICENSE` (proprietária, uso interno)
@@ -297,4 +297,4 @@ npm run deploy
 
 ## 12. Contato
 
-**Allan Luiz** — `jallanluiz@gmail.com` — autor e responsável técnico.
+**Allan Luiz Silveira Lima** — autor e responsável técnico (contato interno).

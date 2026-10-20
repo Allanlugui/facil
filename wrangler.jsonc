@@ -24,15 +24,20 @@
       "migrations_dir": "migrations"
     }
   ],
-  // Anexos do suporte (F-19): o binario vive no R2 (free tier), os metadados
-  // no D1. No `wrangler dev` o bucket e simulado localmente; no deploy,
-  // criar o bucket com `wrangler r2 bucket create facil-attachments`.
-  "r2_buckets": [
-    {
-      "binding": "ATTACHMENTS",
-      "bucket_name": "facil-attachments"
-    }
-  ],
+  // Anexos do chat de suporte (F-19): o binario vive no R2 (free tier), os
+  // metadados no D1. O R2 ainda NAO foi habilitado na conta de publicacao, e o
+  // `wrangler deploy` recusa binding para bucket inexistente. Sem o binding a
+  // API responde 503 com mensagem clara (apenas anexos do suporte; chamados/OS
+  // usam o D1). Para ativar:
+  //   1) habilite o R2 no painel da Cloudflare (exige dados de cobranca);
+  //   2) `npx wrangler r2 bucket create facil-attachments`;
+  //   3) descomente o bloco abaixo, rode `npm run types` e `npm run deploy`.
+  // "r2_buckets": [
+  //   {
+  //     "binding": "ATTACHMENTS",
+  //     "bucket_name": "facil-attachments"
+  //   }
+  // ],
   "observability": {
     "enabled": true
   },

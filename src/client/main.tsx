@@ -1,3 +1,7 @@
+/**
+ * Facil — Plataforma de Gestão de Facilities.
+ * Assinado por Allan Luiz Silveira Lima (ver SIGNATURE.json / docs/ASSINATURA.md).
+ */
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { RouterProvider } from "react-router-dom";

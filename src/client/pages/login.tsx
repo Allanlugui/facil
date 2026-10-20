@@ -98,6 +98,9 @@ export function LoginPage() {
             Instalação inicial
           </Link>
         </p>
+        <p className="mt-6 text-center text-[11px] text-white/60">
+          © 2026 Corp Services Group · desenvolvimento assinado por Allan Luiz Silveira Lima
+        </p>
       </div>
     </div>
   );

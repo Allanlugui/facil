@@ -1,3 +1,7 @@
+/**
+ * Facil — Plataforma de Gestão de Facilities.
+ * Assinado por Allan Luiz Silveira Lima (ver SIGNATURE.json / docs/ASSINATURA.md).
+ */
 import { Hono } from "hono";
 import type { AppEnv } from "./types";
 import { BUILD_INFO } from "./build-info.generated";
@@ -46,7 +50,7 @@ app.use("*", async (c, next) => {
   c.header("X-Facil-Release", BUILD_INFO.version);
   c.header("X-Facil-Signed-At", BUILD_INFO.signedAt);
   c.header("X-Facil-Tree-Sha256", BUILD_INFO.treeHash);
-  c.header("X-Facil-Author", `${BUILD_INFO.author} <${BUILD_INFO.email}>`);
+  c.header("X-Facil-Author", BUILD_INFO.author);
 });
 
 // Toda rota de API passa pelo carregamento de sessão. A autorização fina e

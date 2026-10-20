@@ -279,7 +279,8 @@ function attachmentEmailLines(files: File[]): string[] {
  * habilitado na conta) devolvemos 503 com mensagem clara, em vez de 500.
  */
 function attachmentsBucket(env: Env): R2Bucket {
-  const bucket = env.ATTACHMENTS;
+  // O binding e opcional na configuracao (R2 pode nao estar habilitado na conta).
+  const bucket = optionalBucket(env);
   if (!bucket) {
     throw new ApiError(
       503,
@@ -288,6 +289,10 @@ function attachmentsBucket(env: Env): R2Bucket {
     );
   }
   return bucket;
+}
+
+function optionalBucket(env: Env): R2Bucket | undefined {
+  return (env as { ATTACHMENTS?: R2Bucket }).ATTACHMENTS;
 }
 
 /**
@@ -341,7 +346,7 @@ async function storeAttachments(
     }
   } catch (error) {
     // Nenhum metadado foi gravado ainda; remove o que subiu para não deixar órfãos.
-    await Promise.allSettled(keys.map((key) => env.ATTACHMENTS?.delete(key)));
+    await Promise.allSettled(keys.map((key) => optionalBucket(env)?.delete(key)));
     throw error;
   }
   return { statements, keys };
@@ -871,7 +876,7 @@ router.post("/track/:token/messages", async (c) => {
       ...stored.statements,
     ]);
   } catch (error) {
-    await Promise.allSettled(stored.keys.map((key) => c.env.ATTACHMENTS?.delete(key)));
+    await Promise.allSettled(stored.keys.map((key) => optionalBucket(c.env)?.delete(key)));
     throw error;
   }
 
@@ -1131,7 +1136,7 @@ router.post("/requests/:id/messages", requireAuth, async (c) => {
       ...stored.statements,
     ]);
   } catch (error) {
-    await Promise.allSettled(stored.keys.map((key) => c.env.ATTACHMENTS?.delete(key)));
+    await Promise.allSettled(stored.keys.map((key) => optionalBucket(c.env)?.delete(key)));
     throw error;
   }
 
@@ -1168,7 +1173,7 @@ router.delete("/attachments/:id", requirePermission(MANAGE), async (c) => {
 
   if (row.r2_key) {
     try {
-      await c.env.ATTACHMENTS?.delete(row.r2_key);
+      await optionalBucket(c.env)?.delete(row.r2_key);
     } catch {
       // Bucket ausente/indisponível: remove só os metadados (o binário não existe mais).
     }

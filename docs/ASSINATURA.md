@@ -1,9 +1,13 @@
 # Autoria e assinatura digital
 
 **Projeto:** Facil — Plataforma de Gestão de Facilities
-**Autor:** Allan Luiz (Allanlugui) — `jallanluiz@gmail.com`
+**Autor:** Allan Luiz Silveira Lima (Allanlugui)
 **Empresa:** Corp Services Group
 **Formato:** manifesto SHA-256 de todo o código-fonte assinado com **Ed25519**.
+
+> **Privacidade:** CPF e e-mail do autor **não** são gravados no projeto nem no
+> sistema. A autoria é provada pela chave Ed25519, pelo manifesto de hashes e
+> pela data/hora de cada release — não por dados pessoais.
 
 ## O que é assinado
 

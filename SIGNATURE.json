@@ -7,15 +7,14 @@
     "schema": "facil.signature.v1",
     "project": "Facil — Plataforma de Gestão de Facilities",
     "version": "0.1.0",
-    "author": "Allan Luiz",
+    "author": "Allan Luiz Silveira Lima",
     "alias": "Allanlugui",
-    "email": "jallanluiz@gmail.com",
     "company": "Corp Services Group",
-    "signedAt": "2026-10-19T22:32:43-03:00",
-    "treeHash": "b4b9f0bfd0cc4c005534be31e97b517d3b0f6eef0a08681c0dbc94de7ad86da3",
+    "signedAt": "2026-10-19T22:43:54-03:00",
+    "treeHash": "afeddb24e669be53d71a76fa437245c12dc289423a931aacb77bcbbaf69b6314",
     "fileCount": 152
   },
-  "signature": "S5sMa/xM7dRYP3PbJ/ew9zTv9g1a/UANlbvnm67JLUTNwJTkvzJScaflM2/jPjId9TSihweqbBclguCpSCXdDg==",
+  "signature": "B8BZPZuT+k7sLqPDmhr3g5j4mV4YqHm++msWgms1RmoTgXkhzUoMu2hKnhX7EHOvVGYestoPSSRYVHcifeASCA==",
   "verify": "node scripts/verify-release.mjs",
   "files": [
     {
@@ -35,18 +34,18 @@
     },
     {
       "path": "AUTHORS.md",
-      "sha256": "244a4531910c9dac563a7213379dd966830684cd23fbcf42691805ff0deff68c",
-      "bytes": 466
+      "sha256": "97a38a28f6b2407c2eabb28c00db6919499e4a321f0def3aed76b645b280b294",
+      "bytes": 682
     },
     {
       "path": "LICENSE",
-      "sha256": "e72016602d77ebd0d14821066e5841e82021542dae8a1655cb43fbb23ef70f05",
-      "bytes": 1075
+      "sha256": "db58b6633d5dcaca4c1af3b9eb07a2fa6909a85cf5162f2a86059e41d654037b",
+      "bytes": 1076
     },
     {
       "path": "README.md",
-      "sha256": "4ae069e89301b9bff452ee3de308e32840c64458c7793065194f8e85641f6a96",
-      "bytes": 2768
+      "sha256": "1c3e9821c1107c6bb264b75594378def3fa1c7508d017ff0ae2a1dda73a9aebc",
+      "bytes": 2755
     },
     {
       "path": "branding/README.md",
@@ -95,13 +94,13 @@
     },
     {
       "path": "docs/ASSINATURA.md",
-      "sha256": "18e97c5584e0dbd800f95f08f43e71df724abc234c80c2e4d4ccbdc29bc41387",
-      "bytes": 2722
+      "sha256": "489cf347497e4be32243151818c0be73f834bb052519d47712969cdcbb25b51a",
+      "bytes": 2933
     },
     {
       "path": "docs/IMPLANTACAO.md",
-      "sha256": "7cb1a3f09c7423a77cb4eeeb8893428a7bbb3f87b639daca10d0dca79e819acd",
-      "bytes": 10170
+      "sha256": "0f29d0fef7948cb82fb71ad39299b38b677cf53f4a465150cfc5dacfd889686c",
+      "bytes": 10162
     },
     {
       "path": "docs/anexos-suporte.md",
@@ -220,8 +219,8 @@
     },
     {
       "path": "package.json",
-      "sha256": "e07a6f9a687ab0f91ed1ef7fd41155f4ba9a1c13281303d42c8287b192a683b0",
-      "bytes": 1870
+      "sha256": "c2131d538686c4593951367da7037df0a7152c5f42c3523bfae7facab9a612cc",
+      "bytes": 1861
     },
     {
       "path": "scripts/check-api-paths.mjs",
@@ -230,8 +229,8 @@
     },
     {
       "path": "scripts/sign-release.mjs",
-      "sha256": "f7c2068ce299d67827899001609e46afa4681451706a3b516097df6d26619f1a",
-      "bytes": 7027
+      "sha256": "4f75da05ff620abac747872865a9cc22ff4589ea7ed96de551d1b84ed8681e1f",
+      "bytes": 6922
     },
     {
       "path": "scripts/smoke.ps1",
@@ -240,8 +239,8 @@
     },
     {
       "path": "scripts/verify-release.mjs",
-      "sha256": "f2b64ae27b44cd3bb9805707062301fef8773fa588e306188d021a50238e6aa7",
-      "bytes": 2265
+      "sha256": "c1bb2591b9cf46652ba56b165695e16577f687eed26d1a8ee4f1a36a17cd7308",
+      "bytes": 2237
     },
     {
       "path": "seeds/demo.sql",
@@ -275,8 +274,8 @@
     },
     {
       "path": "src/client/index.html",
-      "sha256": "b3b0a53bd072cd474b23f594e520931ee47aad74d54b7dd75411a9f8d35fd3e8",
-      "bytes": 3256
+      "sha256": "198885f51f781e3061a9f8d0f0a11f66829df6423ff0969de9ef5a87b833fd75",
+      "bytes": 3318
     },
     {
       "path": "src/client/lib/api.ts",
@@ -340,8 +339,8 @@
     },
     {
       "path": "src/client/main.tsx",
-      "sha256": "2149520597c3ce117279035bdc4b725ad468fff72dea26e38df684934ecb053b",
-      "bytes": 612
+      "sha256": "8685ef8369d61a17dc4dfa6e438bceb0fabe1ae717fb1d4aff627693aa56f359",
+      "bytes": 754
     },
     {
       "path": "src/client/pages/audit.tsx",
@@ -375,8 +374,8 @@
     },
     {
       "path": "src/client/pages/login.tsx",
-      "sha256": "50c23074702d9951fd2ff15b124a32415774b6e99717b619bd91372beda5b1f5",
-      "bytes": 3506
+      "sha256": "a2a7590bbc3196680bdeff529ff4026c8948ba31b736dfcedb46e19f8404d5f8",
+      "bytes": 3681
     },
     {
       "path": "src/client/pages/not-found.tsx",
@@ -530,8 +529,8 @@
     },
     {
       "path": "src/worker/index.ts",
-      "sha256": "825fb2b9b35d16f981c7796d33ab00c8dccc2106c028a5942da18c103006dd03",
-      "bytes": 4365
+      "sha256": "0660fcfc3249d784047812d03fc8c87b55dff138ea09c69a44fe6efa4047340b",
+      "bytes": 4480
     },
     {
       "path": "src/worker/mailer.ts",
@@ -615,8 +614,8 @@
     },
     {
       "path": "src/worker/routes/support.ts",
-      "sha256": "4b095bb27b336015bfd97146ac23be52d12d6a9844407af86297a9f42ef9360b",
-      "bytes": 46345
+      "sha256": "19e4ab632510b147da58625b45fe42dbc59cc9ae15fe16b9def96634a8fe8eed",
+      "bytes": 46567
     },
     {
       "path": "src/worker/routes/tickets.ts",
@@ -765,18 +764,18 @@
     },
     {
       "path": "vitest.config.ts",
-      "sha256": "f9a4cc721b98ef47a491dd4d78824f1322c1cfde3322f23c3efdd5a667633a0f",
-      "bytes": 1571
+      "sha256": "94e824bf84ea71686e591a4dbe48b7cdc6914474386d0078baed3b96a777828c",
+      "bytes": 1822
     },
     {
       "path": "worker-configuration.d.ts",
-      "sha256": "e108ae743e0f32734c236c2af995b0d9f53ea4b56de441a7c2240f75c41cf009",
-      "bytes": 626251
+      "sha256": "c3c726b137231d3a065d3d7ba70b3b30d176db2ed27337877c8eef07fb2618ac",
+      "bytes": 626227
     },
     {
       "path": "wrangler.jsonc",
-      "sha256": "3a5156f8ba8851a88b74940316e8f83ca4cd1cb34c3def83cd1f6b91a8a936ea",
-      "bytes": 1342
+      "sha256": "500a289b9c550d0a865465f87d319c4e012afe7c7e432679772558704db17306",
+      "bytes": 1697
     }
   ]
 }
