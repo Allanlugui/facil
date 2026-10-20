@@ -10,11 +10,11 @@
     "author": "Allan Luiz Silveira Lima",
     "alias": "Allanlugui",
     "company": "Corp Services Group",
-    "signedAt": "2026-10-19T23:21:48-03:00",
-    "treeHash": "685ba465859bc14134a00226e5b450b7c50ceebb0e418fc2223fc83c431ae7c1",
-    "fileCount": 152
+    "signedAt": "2026-10-19T23:25:39-03:00",
+    "treeHash": "ebb8f747ee7006789a772a6d1064570415f5284532a5f5e2ef6da3df43bc5973",
+    "fileCount": 153
   },
-  "signature": "MPbCoadI95aR4Wjioz957W0kEuCdk0eJaXlqaFTCf+bIhVYr5liKmsp046MlZ7a2oJaGsVZ5BymPo2R2zMjUCQ==",
+  "signature": "i6R0o57R9NxWbKpVg5cmJZ6gurevh7UOcALytLcOo/GLwjTdhM9+MNhQyBJkp25vFpwlSiHoIopVXBx+vnD6Cg==",
   "verify": "node scripts/verify-release.mjs",
   "files": [
     {
@@ -29,8 +29,8 @@
     },
     {
       "path": "AGENTS.md",
-      "sha256": "9de0a251a4480da3bdbee216f16afa4b7334b45d82afaa86b0b688f30c267c94",
-      "bytes": 485
+      "sha256": "e65280d16e1341e929c3038045084a2fe73ed593f61bb0109c3c41491ae9ebff",
+      "bytes": 470
     },
     {
       "path": "AUTHORS.md",
@@ -46,6 +46,11 @@
       "path": "README.md",
       "sha256": "1c3e9821c1107c6bb264b75594378def3fa1c7508d017ff0ae2a1dda73a9aebc",
       "bytes": 2755
+    },
+    {
+      "path": "branding/GitHub Universe Insider_1790301143179001aJga.ics",
+      "sha256": "2ce915ee40f2da9131076bd0f130e0fdb169680843af269e3f1241bd7bfb2319",
+      "bytes": 1482
     },
     {
       "path": "branding/README.md",
@@ -414,8 +419,8 @@
     },
     {
       "path": "src/client/pages/structure.tsx",
-      "sha256": "90eacc642ae174f91fd6024a81a88f698d5edde198cdfb6777edc5e2fcec84bc",
-      "bytes": 28765
+      "sha256": "5064ff3bb47638befb81bfe69ce4579f92e2a9bd2909e8c76c6341d94bdb7150",
+      "bytes": 27956
     },
     {
       "path": "src/client/pages/support-public.tsx",
