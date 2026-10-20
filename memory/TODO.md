@@ -222,7 +222,9 @@ Frontend (React Router 7, SPA com chunks por página):
 - [x] **P-11 (RESOLVIDO 17/10/2026):** UI de gestão de estrutura criada
       (`structure.tsx` com 3 abas: Unidades, Tipos de local, Locais). Rota `/estrutura`
       e link no menu adicionados. Build + typecheck + lint verdes.
-- [ ] `git init` + primeiro commit (pré-requisito do Workers Builds).
+- [x] `git init` + primeiro commit (19/10/2026): repositório local na branch `main`, commit `e2c14f3`
+      (279 arquivos; `node_modules/`, `dist/` e `.wrangler/` fora; `ux-shots/` versionado como
+      evidência). **Sem remoto e sem push** — o push só acontece com autorização explícita.
 - [ ] Cloudflare: criar `facil-db` real, substituir `database_id` placeholder, aplicar migrations
       remotas, conectar Worker Builds e Publicar **somente com autorização explícita**.
 - [x] **P-06 (RESOLVIDO 18/10/2026):** `@types/node` instalado (dev) e `npm run types` regenerou

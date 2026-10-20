@@ -168,7 +168,7 @@
 | UI | Playwright desktop 1440×900 e mobile 390×844: **14 rotas sem overflow** e **sem mensagem de erro visível** (varredura de conteúdo após P-07) |
 | Fluxo E2E real | movimentação pela interface → saldo/painel/auditoria; inventário criado e encerrado; anexo enviado → baixado (200) → removido |
 | Seeds | `seeds/demo.sql` (catálogo + 6 usuários demo) e `seeds/reset.sql` (reset de fábrica) — ambos testados |
-| Repositório Git | **NÃO INICIALIZADO** (sem `.git`) — necessário antes do Workers Builds |
+| Repositório Git | **INICIALIZADO** (19/10/2026) — branch `main`, primeiro commit `e2c14f3` (279 arquivos, `ux-shots/` incluído como evidência visual; `node_modules/`, `dist/`, `.wrangler/` fora) — ainda **sem remoto** e sem push |
 | Deploy | **NÃO PUBLICADO** — `wrangler.jsonc` pronto, `database_id` ainda placeholder |
 | Serena | projeto `Facil` ativo; onboarding completo (`core`, `tech_stack`, `suggested_commands`, `conventions`, `task_completion`) |
 
@@ -245,7 +245,10 @@
   (compras completas, foto por câmera, anexos por gestores, OS filha, árvore de estrutura, trilha
   mantida como assinatura). Último item funcional: **F-14 (D-35)**. As 3 decisões antigas do plano
   estão resolvidas: cotação (D-26), assinatura (D-27, manter trilha) e captcha (D-15, camada final).
-  **Próximo: fase de identidade visual** (imagens em `branding/`), que depende do usuário.
+  **Próximo: o resto da fase visual** (ícones internos + motion) e, depois, o deploy — que segue
+  **PLANEJADO** (D-10): `git init` feito (commit `e2c14f3`, sem remoto); falta criar o `facil-db`
+  real, trocar o `database_id` placeholder, aplicar as migrations remotas e **publicar somente com
+  autorização explícita**.
 - ✅ **F-13 (FEITO E ATIVADO 18/10/2026 — D-20 relay / D-21 gmail):** envio para qualquer e-mail sem
   custo e sem domínio. Duas vias: Web App do Apps Script (`docs/email-relay-gmail.md`;
   `tests/12-mail-relay`) e **SMTP direto com senha de app** (`docs/email-gmail-senha-app.md`;
