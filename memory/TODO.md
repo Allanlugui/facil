@@ -1,6 +1,28 @@
 # Tarefas Pendentes: Facil
 
-Atualizado em 18/10/2026. Este é o **backlog oficial** do projeto (plano + pendências em um só lugar).
+Atualizado em 20/10/2026. Este é o **backlog oficial** do projeto (plano + pendências em um só lugar).
+
+## ETAPA 1 — ENCERRADA (20/10/2026)
+
+- [x] **Auditoria completa de bugs, falhas e vulnerabilidades:** 12 achados corrigidos (escopo por
+      local, autoridade de usuários, anexos por entidade, ações de chamado/OS, segredos, uploads,
+      cabeçalhos); nenhum crítico/alto aberto. Relatório em
+      `docs/SEGURANCA-AUDITORIA-2026-10-20.md`.
+- [x] **Endurecimento:** CSP/HSTS/COOP/frame-options/no-store, bloqueio de SVG/HTML, limites de
+      JSON/anexos, Origin guard, máscara/limpeza de credenciais e throttle do suporte público.
+- [x] **Testes:** `npm run check` **162/162 em 17 arquivos**, typecheck, lint e `check:api`
+      50×119; `npm audit` 0 vulnerabilidades.
+- [x] **Versionamento:** política em `docs/VERSIONAMENTO.md` e histórico em `CHANGELOG.md`;
+      toda alteração futura sobe a versão.
+- [x] **Release 0.1.2:** 160 arquivos, tree
+      `7e4433f6448566ae5bf6f0df97d03ec0d0fe14fbbc839e9f332745609d1ae13c`, assinada em
+      20/10/2026 01:31:40 −03:00; Worker `14b4a87b-ec15-4b70-8175-f55ef6943a6f`.
+- [x] **Produção verificada:** `/api/health` 0.1.2, CSP/HSTS/COOP/`no-store`, `_headers` estático,
+      cache imutável dos assets, Origin guard 403 e login exibindo **CorpServices Group**.
+- [x] **Git:** commit `062ea85`; tags `v0.1.0` (histórica) e `v0.1.2` (fechamento). A 0.1.1 foi
+      release intermediária, substituída pela 0.1.2 e não tagueada.
+- [x] **Dados históricos:** 0 `settings.update`, 0 anexos e segredos `mail.*` vazios no D1 de
+      produção; nenhum SVG histórico armazenado.
 
 ## FASE 0 — Preparação e inicialização (16/10/2026) — CONCLUÍDA
 
@@ -207,10 +229,11 @@ Frontend (React Router 7, SPA com chunks por página):
       invertida para o tema escuro (`logo.webp` / `logo-dark.webp`); antes o logo **sumia** no
       Noturno e o claro vinham sem o ponto laranja. **Falta:** ícones internos, motion e aceite
       do usuário.
-- [ ] **Plano de complementos:** **fechado** (F-01 a F-20 resolvidos em
+- [x] **Plano de complementos:** **fechado** (F-01 a F-20 resolvidos em
       `memory/PLANO-COMPLEMENTOS.md`);
       **feitos: F-09, F-11, F-12, F-13, F-14, F-15, F-16, F-18, F-19, F-20 (fases 1 e 2), F-01 a F-10**.
-      **Próximo:** fechar a fase visual (ícones + motion) e o aceite do usuário; deploy já publicado (D-39).
+      **Concluído depois:** fase visual (D-40), chat (D-41), deploy (D-39) e fechamento da etapa 1
+      na release **0.1.2** (20/10/2026).
 - [x] **Fase de identidade visual (preparação 18/10/2026 → aplicada 19/10/2026):** depósito de
       imagens em `branding/` (com `README.md`) e plano em `memory/PLANO-IDENTIDADE-VISUAL.md`;
       decisões D-25 (fechar o funcional antes), D-28 (capas nos painéis iniciais + login) e
@@ -239,10 +262,10 @@ Frontend (React Router 7, SPA com chunks por página):
       separadores de dia, rolagem própria) e composer com Enter/anexos; releitura a cada 20 s.
       Release 153 arquivos / tree `074474e0…`, Worker `e490f47e…`; Playwright com POST
       desacelerado provou bolha "enviando" antes da resposta e ausência de duplicata.
-- [ ] **Aceite visual (titular):** revisar a fase visual D-40 e o chat D-41 na URL publicada.
-- [ ] **Instalação inicial (titular):** abrir `/setup` na URL publicada e criar o administrador
-      (`needsSetup: true`; D1 remoto com 0 usuários). Não criar login com e-mail pessoal sem
-      consentimento explícito.
+- [x] **Aceite visual (titular):** fase visual D-40, chat D-41 e correção do nome da empresa
+      considerados aceitos no fechamento da etapa 1; melhorias futuras entram em nova versão.
+- [x] **Instalação inicial (titular):** admin **Allan Lima** criado pelo titular na URL publicada;
+      `needsSetup: false`. Sem e-mail pessoal, CPF ou outro dado do autor no sistema.
 - [ ] (Opcional para o titular) Habilitar R2: painel Cloudflare → R2 → criar `facil-attachments`
       → descomentar o binding em `wrangler.jsonc` → `npm run types` → `npm run deploy`.
 - [ ] (Opcional) Domínio próprio na Cloudflare para habilitar Cloudflare Access na frente do login.

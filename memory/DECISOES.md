@@ -853,3 +853,35 @@
   718 px de conteúdo. Novo tree
   `e9f9c44c14e1b3d709605bb126511ee03ae3626694446c3195a05ae5f55131aa`, 00:15:08 −03:00, Worker
   version `76aa6993-47a7-40a4-ab7e-12c5037b1715`; captura `ux-shots/chat-9-emails-limitados.png`.
+
+## D-42 — Auditoria de autorização e segurança (20/10/2026) — CONCLUÍDA
+
+- **Escopo:** revisão rota a rota do Worker, matriz de permissões, escopo por local, anexos,
+  configurações secretas, uploads, limites de entrada e cabeçalhos; consulta somente leitura ao D1
+  de produção.
+- **Resultado:** **12 achados corrigidos** — auto-remoção de escopo, edição de admin/autoridade
+  superior, relatórios, OS (escopo/responsável/`done`/cancelamento), PATCH e ações de chamado,
+  compras, inventário, anexos por entidade, estoque por local, consumo/movimentação/local. Nenhum
+  crítico/alto aberto.
+- **Endurecimento:** SVG/HTML bloqueados, disposição segura, 1 MB de JSON, limites multipart,
+  segredos mascarados/redigidos com limpeza explícita, CSP/HSTS/COOP/frame-options/`no-store`,
+  Origin guard, limite de senha e throttle de 10 pedidos públicos/hora/IP.
+- **Evidência:** `tests/16-security.spec.ts`, `tests/17-authorization.spec.ts`, pipeline
+  **162/162 em 17 arquivos**, `npm audit` 0, `docs/SEGURANCA-AUDITORIA-2026-10-20.md`.
+- **Dados históricos:** 0 `settings.update`, 0 anexos e chaves `mail.*` vazias no D1 de produção;
+  sem segredo histórico em auditoria e sem SVG armazenado.
+
+## D-43 — Versionamento contínuo e fechamento da etapa 1 (20/10/2026) — ATIVO
+
+- **Política:** SemVer adaptado; patch para correção/segurança/interface/documentação assinada,
+  minor para funcionalidade ou mudança relevante, major no 1.0. Toda alteração em arquivo assinado
+  sobe a versão; release publicada não é reescrita. Detalhes em `docs/VERSIONAMENTO.md`.
+- **Fluxo:** editar → atualizar `CHANGELOG.md` → `npm version patch` → `npm run deploy` (assina,
+  valida, compila, publica) → verificar `/api/health` e cabeçalhos → `npm run verify` → commit, tag
+  e push.
+- **Fechamento:** release **0.1.2** (160 arquivos, tree
+  `7e4433f6448566ae5bf6f0df97d03ec0d0fe14fbbc839e9f332745609d1ae13c`, 01:31:40 −03:00, Worker
+  `14b4a87b-ec15-4b70-8175-f55ef6943a6f`). A 0.1.1 foi release intermediária, substituída pela
+  0.1.2 e não tagueada; tags `v0.1.0` e `v0.1.2`.
+- **Marca:** login e metadados de assinatura passaram a exibir **CorpServices Group** (sem espaço),
+  alinhados ao nome configurado pelo titular.

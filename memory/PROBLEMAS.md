@@ -339,3 +339,17 @@
 - **Arquivos:** `src/worker/util.ts`, `src/worker/routes/reports.ts`,
   `src/worker/routes/consumption.ts`, `src/worker/routes/stock.ts`, `src/client/lib/format.ts`,
   `src/client/pages/reports.tsx`, `src/client/pages/consumption.tsx`, `src/client/pages/stock.tsx`.
+
+## P-20 — Auditoria de segurança e autorização (20/10/2026) — RESOLVIDO
+
+- **Achados:** 12 falhas de autorização/escopo em usuários, relatórios, OS, chamados, compras,
+  inventário, anexos, estoque, consumo, movimentação e local; todas corrigidas com revalidação no
+  servidor e regressões em `tests/16-security.spec.ts` / `tests/17-authorization.spec.ts`.
+- **Endurecimento:** SVG/HTML bloqueados, download forçado para não visuais, limites de JSON e
+  anexos, segredos mascarados/redigidos, CSP/HSTS/COOP/frame-options/`no-store`, Origin guard e
+  throttle do suporte público.
+- **Verificação:** pipeline **162/162 em 17 arquivos**, `npm audit` 0, produção 0.1.2 com
+  `/api/health` e cabeçalhos corretos; D1 de produção sem segredo histórico ou SVG armazenado.
+- **Relatório:** `docs/SEGURANCA-AUDITORIA-2026-10-20.md`; decisão D-42.
+- **Residual aceito:** R2 desligado (anexos do suporte em 503), sem domínio próprio/Access, sem WAF
+  global, auditoria append-only por convenção e anexos sem antivírus.

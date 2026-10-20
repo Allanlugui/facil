@@ -438,3 +438,19 @@ nada bloqueado por bug.
 **Estado ao final desta entrada:** requisitos dos perfis operacionais atendidos e verificados
 (D-30); o backlog funcional segue com o **Grupo 1 de compras** como próximo bloco; nada publicado
 em produção.
+
+## 20/10/2026 — Publicação, auditoria e fechamento da etapa 1 (release 0.1.2)
+
+- **Publicação:** Worker `facil` em `https://facil.cf-pilot-disposable.workers.dev`, D1 remoto
+  `facil-db` (18 migrations, ENAM) e instalação inicial concluída pelo titular (`needsSetup: false`).
+- **Auditoria:** 12 achados de autorização/escopo corrigidos; endurecimento de uploads, segredos,
+  CSP/HSTS/COOP, Origin guard e limites de entrada. Relatório em
+  `docs/SEGURANCA-AUDITORIA-2026-10-20.md`; decisão D-42.
+- **Validação:** `npm run check` **162/162 em 17 arquivos**, typecheck, lint, `check:api` 50×119,
+  `npm audit` 0; produção conferida em `/api/health`, cabeçalhos estáticos/API, cache de assets e
+  login desktop/mobile.
+- **Release:** 0.1.2, 160 arquivos, tree
+  `7e4433f6448566ae5bf6f0df97d03ec0d0fe14fbbc839e9f332745609d1ae13c`, assinada em
+  20/10/2026 01:31:40 −03:00; Worker `14b4a87b-ec15-4b70-8175-f55ef6943a6f`.
+- **Encerramento:** etapa 1 fechada; política de versionamento em `docs/VERSIONAMENTO.md` e
+  histórico em `CHANGELOG.md`. Toda alteração futura sobe a versão.

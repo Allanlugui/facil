@@ -3,7 +3,14 @@
 - **Criado em:** 16/10/2026 22:36:22 pelo bootstrap global (`D:\DEV\criar-projeto.bat`).
 - **Diretório oficial:** `D:\DEV\Opencode\Facil`
 - **Conhecimento global:** `D:\DEV\memory\Facil\`
-- **Estado atual (18/10/2026):** **FASES 1–4 concluídas** — especificação transformada em plano,
+- **Etapa 1 encerrada (20/10/2026):** release **0.1.2** assinado (Ed25519, **160 arquivos**, tree
+  `7e4433f6448566ae5bf6f0df97d03ec0d0fe14fbbc839e9f332745609d1ae13c`, 01:31:40 −03:00, Worker
+  `14b4a87b-ec15-4b70-8175-f55ef6943a6f`). Auditoria completa de bugs, falhas e vulnerabilidades:
+  **12 achados corrigidos**, nenhum crítico/alto aberto; `npm run check` **162/162 em 17 arquivos**;
+  `npm audit` 0; produção com CSP/HSTS/Origin guard e login exibindo **CorpServices Group**.
+  Relatório em `docs/SEGURANCA-AUDITORIA-2026-10-20.md`; política em `docs/VERSIONAMENTO.md`;
+  histórico em `CHANGELOG.md`. **Toda alteração futura sobe a versão.**
+- **Histórico (18/10/2026):** **FASES 1–4 concluídas** — especificação transformada em plano,
   plataforma implementada por completo, **validada localmente ponta a ponta** e com os defeitos do
   primeiro uso real corrigidos e reverificados (P-07 rota do inventário; P-08 interface de anexos).
   Auditoria de aderência ao PROMPT MESTRE concluída — relatório em `memory/AUDITORIA-2026-10-17.md`.
@@ -141,26 +148,26 @@
     desktop, home em 390 px, tema Noturno com o logo legível); capturas `ux-shots/vi-*.png`.
     **Falta:** ~~refinar ícones internos, motion~~ **FEITO (20/10/2026 — D-40):** ícones literais
     (`←`, `✕`, `▸/▾`) substituídos pelo conjunto interno; movimento curto em diálogo, gaveta,
-    menus e toasts, com `prefers-reduced-motion`; validado no navegador real. Resta apenas o
-    **aceite visual do usuário**.
+    menus e toasts, com `prefers-reduced-motion`; validado no navegador real. Aceite visual considerado no fechamento da etapa 1 (20/10/2026).
    **Chat (20/10/2026 — D-41):** mensagem otimista nos dois fluxos (bolha aparece antes do POST,
    com "enviando", e é reconciliada por id), painel `ChatThread` com bolhas/avatar/horário,
    separadores de dia, rolagem própria e composer com Enter/anexos; releitura a cada 20 s nos dois
    lados. Validado no Playwright com POST desacelerado em 1,5 s (sem duplicata) e em 390×844.
-   Falta o aceite visual do chat.
+   Aceite visual do chat considerado no fechamento da etapa 1.
    **PUBLICADO (20/10/2026 — D-39):** repositório **privado** `Allanlugui/facil` no GitHub
    (branch `main`, commit `4c878a8`, 3 commits, push sincronizado), Worker `facil` no Cloudflare e
    D1 remoto `facil-db` (`10365b4d-7ed0-4e8e-8aba-65ebf354cb25`, ENAM) com as **18 migrations** e
-   **0 usuários**. URL: **https://facil.cf-pilot-disposable.workers.dev** (`workers.dev`; sem
-   domínio próprio ainda). Release **0.1.0** assinado (Ed25519, **153 arquivos**, tree atual
-   `e9f9c44c…`, 20/10/2026 00:15:08 −03:00 — versão D-41, chat otimista + card sem esticar + lista
-   de e-mails limitada; Worker version `76aa6993-47a7-40a4-ab7e-12c5037b1715`); `/api/health` devolve o bloco `release`,
+   instalação inicial concluída. URL: **https://facil.cf-pilot-disposable.workers.dev** (`workers.dev`; sem
+   domínio próprio ainda). Release **0.1.2** assinado (Ed25519, **160 arquivos**, tree
+   `7e4433f6448566ae5bf6f0df97d03ec0d0fe14fbbc839e9f332745609d1ae13c`, 20/10/2026 01:31:40 −03:00 —
+   fechamento da etapa 1 com auditoria de autorização, anexos e endurecimento; Worker version
+   `14b4a87b-ec15-4b70-8175-f55ef6943a6f`); `/api/health` devolve o bloco `release`,
    `/build-info.json` é público e os cabeçalhos `X-Facil-Author/Release/Signed-At/Tree-Sha256`
    carregam a assinatura. **R2 não habilitado** na conta: o binding ficou comentado em
    `wrangler.jsonc`, os anexos do suporte respondem **503 `R2_UNAVAILABLE`** (chamados/OS usam D1)
-   e os testes usam bucket simulado no Miniflare. **Instalação inicial pendente**
-   (`needsSetup: true`): o primeiro admin é criado na tela `/setup`, com o e-mail que o titular
-   escolher (o sistema não expõe CPF nem e-mail do autor).
+   e os testes usam bucket simulado no Miniflare. **Instalação inicial concluída**
+   (`needsSetup: false`): o admin **Allan Lima** foi criado pelo titular; o sistema não expõe CPF
+   nem e-mail do autor.
    Deploy: **EXECUTADO** (D-10 concluída); o guia da TI está em `docs/IMPLANTACAO.md`.
 
 ## Stack em execução (VALIDADO)
@@ -168,11 +175,11 @@
 | Camada | Escolha | Evidência |
 |---|---|---|
 | Runtime | Cloudflare Workers (`compatibility_date 2026-10-01`, `nodejs_compat`) | `wrangler dev` + `wrangler deploy --dry-run` |
-| API | Hono 4 + Zod 4 | `npx tsc --noEmit` limpo; 153 testes |
+| API | Hono 4 + Zod 4 | `npx tsc --noEmit` limpo; 162 testes |
 | Banco | D1 (SQLite) + migrations `0001`–`0018` | `wrangler d1 execute` local |
 | Cliente | React 19 + Vite 7 + Tailwind v4 + React Router 7 | `vite build` (chunks por página) |
 | Auth | PBKDF2-SHA256 (WebCrypto, 100k) + token opaco em D1 + cookie HttpOnly | testes 01-auth + smoke |
-| Testes | vitest 5.0.5 + `@cloudflare/vitest-plugin` (D1 isolado por spec) | 15 arquivos, 153/153 |
+| Testes | vitest 5.0.5 + `@cloudflare/vitest-plugin` (D1 isolado por spec) | 17 arquivos, 162/162 |
 
 ## O que existe hoje (verificado em 17/10/2026)
 
@@ -180,7 +187,7 @@
 |---|---|
 | Código-fonte | `src/worker` (17 módulos de rota), `src/shared`, `src/client` (24 rotas) |
 | Banco | migrations `0001_schema` → `0018_work_order_parent` aplicadas no D1 local (+ bucket R2 `facil-attachments` simulado) |
-| Testes | **153/153** em 15 spec files (última execução 19/10/2026; ~135 s) |
+| Testes | **162/162** em 17 spec files (última execução 20/10/2026; ~145 s) |
 | Lint / typecheck | `eslint .` limpo; `tsc` **nos dois projetos** (script corrigido em 18/10 — antes era no-op; D-19) |
 | Guard de rotas | `npm run check:api` — 50 caminhos do cliente × 119 rotas do worker (P-07) |
 | Build | `vite build` conclui; asset principal 367 kB (116 kB gzip) + chunks por página |
@@ -189,7 +196,7 @@
 | Fluxo E2E real | movimentação pela interface → saldo/painel/auditoria; inventário criado e encerrado; anexo enviado → baixado (200) → removido |
 | Seeds | `seeds/demo.sql` (catálogo + 6 usuários demo) e `seeds/reset.sql` (reset de fábrica) — ambos testados |
 | Repositório Git | **PRIVADO no GitHub** (`Allanlugui/facil`, branch `main`, 3 commits, push sincronizado em 20/10/2026) — `node_modules/`, `dist/`, `.wrangler/` fora |
-| Deploy | **PUBLICADO em 20/10/2026** — `https://facil.cf-pilot-disposable.workers.dev` (Worker `facil`, D1 remoto `facil-db`, release 0.1.0 assinado; `needsSetup: true`) |
+| Deploy | **PUBLICADO em 20/10/2026** - `https://facil.cf-pilot-disposable.workers.dev` (Worker `facil`, D1 remoto `facil-db`, release 0.1.2 assinado; instalação concluída, `needsSetup: false`) |
 | Serena | projeto `Facil` ativo; onboarding completo (`core`, `tech_stack`, `suggested_commands`, `conventions`, `task_completion`) |
 
 ## Módulos implementados (todos com rota de API + tela + testes)
@@ -226,10 +233,15 @@
 ## Honestidade de estado
 
 - **Deploy remoto: EXECUTADO (20/10/2026).** Worker `facil` publicado em
-  `https://facil.cf-pilot-disposable.workers.dev`, D1 remoto com 18 migrations e **0 usuários**
-  (`needsSetup: true`). Limitações reais: URL `workers.dev` (sem domínio próprio nem Cloudflare
-  Access), **R2 desligado** (anexos do suporte em 503 claro; D1 atende chamados/OS) e **sem CI**
-  (deploy por `npm run deploy`; Workers Builds é opcional).
+  `https://facil.cf-pilot-disposable.workers.dev`, D1 remoto com 18 migrations e admin
+  **Allan Lima** (`needsSetup: false`), release **0.1.2** assinado. Limitações reais: URL
+  `workers.dev` (sem domínio próprio nem Cloudflare Access), **R2 desligado** (anexos do suporte
+  em 503 claro; D1 atende chamados/OS) e **sem CI** (deploy por `npm run deploy`; Workers Builds
+  é opcional).
+- **Dados históricos (20/10/2026):** consulta somente leitura ao D1 de produção encontrou
+  **0 linhas `settings.update`**, **0 anexos** e chaves `mail.*` vazias — não havia segredo
+  histórico exposto em auditoria nem SVG armazenado. A rotação de credenciais de e-mail segue
+  recomendada ao titular antes de configurar o envio real.
 - _"Assinatura eletrônica"_ no produto significa autoria autenticada + trilha de auditoria; **não** é
   assinatura digital ICP-Brasil e nenhuma tela a apresenta como tal.
 - ~~Aviso do wrangler "types out of date"~~ **Resolvido (18/10/2026):** `@types/node` instalado
@@ -240,6 +252,15 @@
 
 ## Pendências
 
+- ✅ **Auditoria de segurança (20/10/2026):** 12 achados corrigidos (escopo por local, autoridade
+  de usuários, anexos por entidade, ações de chamado/OS, segredos, uploads e cabeçalhos), sem
+  achado crítico/alto aberto. Relatório em `docs/SEGURANCA-AUDITORIA-2026-10-20.md`; regressões em
+  `tests/16-security.spec.ts` e `tests/17-authorization.spec.ts`; pipeline **162/162**.
+- ✅ **Etapa 1 encerrada (20/10/2026):** release **0.1.2**, commit `062ea85`, tags `v0.1.0`
+  (histórica) e `v0.1.2`; política de versionamento em `docs/VERSIONAMENTO.md` e histórico em
+  `CHANGELOG.md`. Toda alteração futura sobe a versão.
+- ⬜ **Opcionais do titular:** habilitar R2 para anexos do suporte, domínio próprio/Cloudflare
+  Access, CI no GitHub Actions e aceite visual de melhorias futuras.
 - ✅ **P-03, P-07, P-08, P-10, P-11 e P-12 resolvidos** (detalhes em `PROBLEMAS.md`): predecessor
   arquivado; rota do inventário corrigida + guard `npm run check:api`; anexos com interface
   completa; relatório de divergências; UI de estrutura; painel sem vazamento (LGPD).
@@ -270,10 +291,8 @@
   (compras completas, foto por câmera, anexos por gestores, OS filha, árvore de estrutura, trilha
   mantida como assinatura). Último item funcional: **F-14 (D-35)**. As 3 decisões antigas do plano
   estão resolvidas: cotação (D-26), assinatura (D-27, manter trilha) e captcha (D-15, camada final).
-  **Próximo: o resto da fase visual** (ícones internos + motion) e, depois, o deploy — que segue
-  **PLANEJADO** (D-10): `git init` feito (commit `e2c14f3`, sem remoto); falta criar o `facil-db`
-  real, trocar o `database_id` placeholder, aplicar as migrations remotas e **publicar somente com
-  autorização explícita**.
+  **Concluído depois:** fase visual (D-40), chat (D-41), deploy (D-39) e auditoria/fechamento da
+  etapa 1 na release **0.1.2** (20/10/2026).
 - ✅ **F-13 (FEITO E ATIVADO 18/10/2026 — D-20 relay / D-21 gmail):** envio para qualquer e-mail sem
   custo e sem domínio. Duas vias: Web App do Apps Script (`docs/email-relay-gmail.md`;
   `tests/12-mail-relay`) e **SMTP direto com senha de app** (`docs/email-gmail-senha-app.md`;

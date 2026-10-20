@@ -16,6 +16,13 @@
 - AUDITORIA-2026-10-17.md
 - PLANO-COMPLEMENTOS.md
 
+## Documentos do Produto
+
+- `CHANGELOG.md`
+- `docs/VERSIONAMENTO.md`
+- `docs/SEGURANCA-AUDITORIA-2026-10-20.md`
+- `docs/ASSINATURA.md`
+
 ## Conhecimento Global
 
 [[Facil/INDEX]]
