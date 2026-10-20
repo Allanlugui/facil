@@ -10,11 +10,11 @@
     "author": "Allan Luiz Silveira Lima",
     "alias": "Allanlugui",
     "company": "Corp Services Group",
-    "signedAt": "2026-10-19T23:25:39-03:00",
-    "treeHash": "ebb8f747ee7006789a772a6d1064570415f5284532a5f5e2ef6da3df43bc5973",
-    "fileCount": 153
+    "signedAt": "2026-10-19T23:27:04-03:00",
+    "treeHash": "eacf32f8c125df612950fcd30d27db332f59c4fa34d8178a1b38ca95aab29b90",
+    "fileCount": 152
   },
-  "signature": "i6R0o57R9NxWbKpVg5cmJZ6gurevh7UOcALytLcOo/GLwjTdhM9+MNhQyBJkp25vFpwlSiHoIopVXBx+vnD6Cg==",
+  "signature": "mtY7qmVEb8pZsQ6R/+K1fJoQLBXMD34vdYeEBZCZdaT2zce/AjpIOpOVQT5qBzRpjpl96R6JcAHghcImpgkzDg==",
   "verify": "node scripts/verify-release.mjs",
   "files": [
     {
@@ -46,11 +46,6 @@
       "path": "README.md",
       "sha256": "1c3e9821c1107c6bb264b75594378def3fa1c7508d017ff0ae2a1dda73a9aebc",
       "bytes": 2755
-    },
-    {
-      "path": "branding/GitHub Universe Insider_1790301143179001aJga.ics",
-      "sha256": "2ce915ee40f2da9131076bd0f130e0fdb169680843af269e3f1241bd7bfb2319",
-      "bytes": 1482
     },
     {
       "path": "branding/README.md",

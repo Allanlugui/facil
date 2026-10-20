@@ -4,10 +4,10 @@
   "author": "Allan Luiz Silveira Lima",
   "alias": "Allanlugui",
   "company": "Corp Services Group",
-  "signedAt": "2026-10-19T23:25:39-03:00",
-  "treeHash": "ebb8f747ee7006789a772a6d1064570415f5284532a5f5e2ef6da3df43bc5973",
-  "fileCount": 153,
+  "signedAt": "2026-10-19T23:27:04-03:00",
+  "treeHash": "eacf32f8c125df612950fcd30d27db332f59c4fa34d8178a1b38ca95aab29b90",
+  "fileCount": 152,
   "algorithm": "Ed25519",
   "keyFingerprint": "65:BE:89:FA:CE:0D:D3:B7:B2:AF:9C:C4:46:A2:01:96:AB:D2:34:48:9C:51:FC:CB:7E:81:F3:47:B2:43:98:50",
-  "signature": "i6R0o57R9NxWbKpVg5cmJZ6gurevh7UOcALytLcOo/GLwjTdhM9+MNhQyBJkp25vFpwlSiHoIopVXBx+vnD6Cg=="
+  "signature": "mtY7qmVEb8pZsQ6R/+K1fJoQLBXMD34vdYeEBZCZdaT2zce/AjpIOpOVQT5qBzRpjpl96R6JcAHghcImpgkzDg=="
 }
