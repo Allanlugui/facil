@@ -841,3 +841,9 @@
   `074474e0ef5e499bdc83b85fda4d197eb960ccca26ad4581e5e28442ea4f5b5c`, assinado
   2026-10-19T23:59:22−03:00, Worker version `e490f47e-ba20-4ff6-bcad-da2f9def888e`;
   typecheck, lint, 153 testes e build verdes. Sem mudança de API/banco.
+- **Correção após o primeiro aceite (20/10/2026):** na grade do atendimento o card do chat esticava
+  até a altura da coluna lateral (e-mails), deixando uma área branca grande abaixo do composer.
+  `self-start` no `section` resolve (o card passa a ter a altura do conteúdo); medido no navegador:
+  `blankBelowComposer = 1 px`. Re-assinado: tree
+  `343524605e9828df48466a59cf1a808122ed1b442ac1e5b14d4c441747794b4e`, 00:09:48 −03:00, Worker
+  version `e94bbf0b-b4d2-4c76-b015-15a2b29cd685`; captura `ux-shots/chat-8-sem-espaco-vazio.png`.
