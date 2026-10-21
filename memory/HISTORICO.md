@@ -479,3 +479,18 @@ em produção.
   Worker `ab266118-20a8-4fc5-a0bd-c245a79c9462`.
 - **Pendências:** R2 desativado, sem domínio/Access, `TICKET_INTAKE_KEY` ausente em produção,
   outbox sem consumidor e sem CI dedicada.
+
+## 20/10/2026 — Itens fora do catálogo e release 0.3.0
+
+- **Produto:** nova solicitação aceita item **fora do catálogo** com descrição livre, quantidade e
+  unidade; o formulário avisa que o cadastro será feito durante o processo ou no recebimento.
+- **Descoberta:** a busca de produto sem resultado mostra “Solicitar este item fora do catálogo” e
+  leva o texto digitado para o modo de descrição; o detalhe marca o item com “Fora do catálogo”.
+- **Backend:** o fluxo v2 já aceitava `product_id = NULL` com `description`; o teste de regressão
+  cobre a criação e a leitura. O recebimento mantém o cadastro rápido do produto e o vínculo ao item.
+- **Validação:** `npm run check` **169/169 em 18 arquivos**, typecheck, lint, contrato de API e
+  `npm run build`; verificação visual em desktop e mobile (formulário, aviso, atalho e detalhe).
+- **Release:** 0.3.0, 168 arquivos, tree
+  `8757a04ed013ff3425f69837af402007b1a9c1f27a0c07154dde64dfc85a9c10`, 20/10/2026 23:04:14 −03:00,
+  Worker `cf468e3f-7a2f-4b06-96c2-948e6b38243e`.
+- **Pendências:** as mesmas da etapa 2 (R2, domínio/Access, intake, consumidor do outbox e CI).

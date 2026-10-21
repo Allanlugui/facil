@@ -19,7 +19,7 @@
 - Não conectar serviços que exijam novos compromissos financeiros sem autorização.
 - Não publicar em produção sem autorização explícita.
 
-## Estado real (20/10/2026) — PUBLICADO (release 0.2.0)
+## Estado real (20/10/2026) — PUBLICADO (release 0.3.0)
 
 - **URL:** `https://facil.cf-pilot-disposable.workers.dev` (Worker `facil`; `workers.dev`, sem
   domínio próprio nem Cloudflare Access).
@@ -27,9 +27,9 @@
   (assina → `npm run check` → build → `wrangler deploy`), não por CI.
 - **Banco:** D1 remoto `facil-db` (`10365b4d-7ed0-4e8e-8aba-65ebf354cb25`, ENAM), migrations
   `0001`–`0019`; instalação inicial concluída pelo titular (`needsSetup: false`).
-- **Release:** **0.2.0**, 168 arquivos assinados (Ed25519), tree
-  `c19025940127c05cbb4bf172a706868a306e983694df7a5d183034a6a4e121f7`, 20/10/2026 21:47:54 −03:00,
-  Worker `ab266118-20a8-4fc5-a0bd-c245a79c9462`. Versões futuras seguem `docs/VERSIONAMENTO.md`.
+- **Release:** **0.3.0**, 168 arquivos assinados (Ed25519), tree
+  `8757a04ed013ff3425f69837af402007b1a9c1f27a0c07154dde64dfc85a9c10`, 20/10/2026 23:04:14 −03:00,
+  Worker `cf468e3f-7a2f-4b06-96c2-948e6b38243e`. Versões futuras seguem `docs/VERSIONAMENTO.md`.
 - **R2:** desligado nesta conta; anexos do chat de suporte respondem 503 `R2_UNAVAILABLE`. O restante
   do produto usa D1.
 - **Intake ServiceNow:** implementado; responde `503 INTAKE_DISABLED` até o segredo

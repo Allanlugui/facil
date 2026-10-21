@@ -1,8 +1,9 @@
 # Fluxo corporativo de compras (v2)
 
-Este documento descreve o fluxo de compras introduzido na versão **0.2.0**.
-Ele convive com o fluxo legado (v1), que continua disponível para solicitações
-antigas e para integrações que declarem `workflowVersion: 1`.
+Este documento descreve o fluxo de compras introduzido na versão **0.2.0** e
+ampliado na **0.3.0** com itens fora do catálogo. Ele convive com o fluxo legado
+(v1), que continua disponível para solicitações antigas e para integrações que
+declarem `workflowVersion: 1`.
 
 ## Princípios
 
@@ -17,6 +18,22 @@ antigas e para integrações que declarem `workflowVersion: 1`.
    outbox de integração na mesma transação da operação.
 5. **Valores em centavos.** Preços e totais usam inteiros (`*_cents`), evitando
    arredondamento de ponto flutuante.
+
+## Itens fora do catálogo
+
+Nem todo item comprado já existe no catálogo. O formulário de nova solicitação
+oferece duas formas de identificar o item:
+
+- **Produto do catálogo:** busca por nome ou SKU, com unidade e vínculo ao
+  produto existente;
+- **Item fora do catálogo:** o solicitante descreve o produto, informa quantidade
+  e unidade. A interface avisa que o item será cadastrado durante o processo ou
+  no recebimento, e a solicitação segue normalmente.
+
+No banco, o item aceita `product_id = NULL` desde que tenha `description`
+preenchida. A descrição acompanha cotação, adjudicação e pedido. No recebimento,
+o cadastro rápido cria o produto com o nome informado e o vincula ao item; o
+cadastro pode ser completado depois no catálogo.
 
 ## Papéis e permissões
 
@@ -195,6 +212,22 @@ O recebimento parcial mantém a etapa em `receipt`.
 | POST | `/api/purchases/:id/order` | `purchases.order` | Emite pedido legado |
 | POST | `/api/purchases/:id/receipts` | `purchases.receive` | Confirma recebimento |
 | POST | `/api/purchases/:id/cancel` | `purchases.cancel` | Cancela |
+
+## Exemplo de item fora do catálogo
+
+```json
+{
+  "workflowVersion": 2,
+  "justification": "Equipamento novo para a copa",
+  "items": [
+    {
+      "description": "Cafeteira industrial 20 litros",
+      "qty": 1,
+      "uomId": null
+    }
+  ]
+}
+```
 
 ## Exemplo de decisão do gestor
 

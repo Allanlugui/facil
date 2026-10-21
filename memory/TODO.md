@@ -2,6 +2,23 @@
 
 Atualizado em 20/10/2026. Este é o **backlog oficial** do projeto (plano + pendências em um só lugar).
 
+## ETAPA 3 — CONCLUÍDA (20/10/2026)
+
+- [x] **Item fora do catálogo:** formulário com alternativa explícita, descrição livre obrigatória,
+      quantidade/unidade e aviso de que o cadastro será feito durante o processo ou no recebimento.
+- [x] **Descoberta:** busca de produto sem resultado oferece “Solicitar este item fora do catálogo”,
+      aproveitando o texto digitado; detalhe exibe o selo “Fora do catálogo”.
+- [x] **Backend e recebimento:** item v2 aceito com `product_id = NULL` + `description`; cotação,
+      adjudicação e pedido usam a descrição; recebimento mantém o cadastro rápido do produto.
+- [x] **Qualidade:** `npm run check` **169/169 em 18 arquivos**, typecheck, lint, contrato de API;
+      `npm run build`; verificação visual desktop/mobile do formulário e do detalhe.
+- [x] **Documentação:** `CHANGELOG.md`, `README.md`, `docs/COMPRAS.md`, `docs/IMPLANTACAO.md` e
+      `docs/VERSIONAMENTO.md` atualizados para a release **0.3.0**.
+- [x] **Release 0.3.0:** assinatura Ed25519, tree
+      `8757a04ed013ff3425f69837af402007b1a9c1f27a0c07154dde64dfc85a9c10`, Worker
+      `cf468e3f-7a2f-4b06-96c2-948e6b38243e`, publicada em
+      `https://facil.cf-pilot-disposable.workers.dev`.
+
 ## ETAPA 2 — CONCLUÍDA (20/10/2026)
 
 - [x] **Fluxo corporativo de compras v2:** solicitante → gestor do setor → direção (necessidade e

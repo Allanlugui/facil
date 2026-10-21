@@ -118,7 +118,7 @@ npm run deploy
 O comando executa, nesta ordem:
 
 1. `node scripts/sign-release.mjs` — gera `SIGNATURE.json` e `build-info.json`;
-2. `npm run check` — typecheck + lint + contrato de API + 168 testes;
+2. `npm run check` — typecheck + lint + contrato de API + 169 testes;
 3. `npm run build` — interface + Worker;
 4. `wrangler deploy` — publica.
 

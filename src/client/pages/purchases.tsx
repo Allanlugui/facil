@@ -583,6 +583,8 @@ interface ItemDraft {
   qty: string;
   uomId: string;
   notes: string;
+  /** Item que ainda não existe no catálogo: a descrição é obrigatória. */
+  freeText: boolean;
 }
 
 export function CreatePurchaseDialog({
@@ -606,7 +608,7 @@ export function CreatePurchaseDialog({
   const [notes, setNotes] = useState("");
   const [submitNow, setSubmitNow] = useState(true);
   const [items, setItems] = useState<ItemDraft[]>([
-    { productId: "", description: "", qty: "", uomId: "", notes: "" },
+    { productId: "", description: "", qty: "", uomId: "", notes: "", freeText: false },
   ]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -616,11 +618,21 @@ export function CreatePurchaseDialog({
   };
 
   const submit = async () => {
+    const incomplete = items.find(
+      (item) =>
+        Number(item.qty.replace(",", ".")) > 0 &&
+        !item.productId &&
+        item.description.trim().length < 3,
+    );
+    if (incomplete) {
+      setError("Informe o produto do catálogo ou descreva o item que deve ser comprado (mínimo 3 caracteres).");
+      return;
+    }
     const parsed = items
       .filter((item) => (item.productId || item.description.trim().length > 0) && Number(item.qty.replace(",", ".")) > 0)
       .map((item) => ({
-        productId: item.productId || null,
-        description: item.description || null,
+        productId: item.freeText ? null : item.productId || null,
+        description: item.description.trim() || null,
         qty: Number(item.qty.replace(",", ".")),
         uomId: item.uomId || null,
         notes: item.notes || null,
@@ -759,7 +771,7 @@ export function CreatePurchaseDialog({
               onClick={() =>
                 setItems((current) => [
                   ...current,
-                  { productId: "", description: "", qty: "", uomId: "", notes: "" },
+                  { productId: "", description: "", qty: "", uomId: "", notes: "", freeText: false },
                 ])
               }
             >
@@ -769,25 +781,76 @@ export function CreatePurchaseDialog({
           <div className="space-y-3 p-3">
             {items.map((item, index) => (
               <div key={index} className="rounded-lg border border-slate-100 p-2">
-                <div className="grid gap-2 sm:grid-cols-[1.4fr_1fr_7rem_9rem_2rem]">
-                  <ProductPicker
-                    value={item.productId}
-                    onChange={(productId, product) =>
-                      updateItem(index, {
-                        productId,
-                        // Ajuda o comprador: a unidade do cadastro já vem escolhida.
-                        ...(product && !item.uomId ? { uomId: product.uomId } : {}),
-                      })
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                    Item {index + 1}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() =>
+                      updateItem(
+                        index,
+                        item.freeText
+                          ? { freeText: false }
+                          : { freeText: true, productId: "" },
+                      )
                     }
-                    ariaLabel={`Produto ${index + 1}`}
-                    placeholder="Produto (ou descreva ao lado)"
-                  />
-                  <Input
-                    value={item.description}
-                    onChange={(event) => updateItem(index, { description: event.target.value })}
-                    placeholder="Descrição livre"
-                    aria-label={`Descrição ${index + 1}`}
-                  />
+                  >
+                    {item.freeText ? "Voltar ao catálogo" : "Item fora do catálogo"}
+                  </Button>
+                </div>
+                {item.freeText ? (
+                  <p className="mb-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                    Este item não está no catálogo. A solicitação pode seguir normalmente; o cadastro
+                    será feito durante o processo de compra ou no recebimento.
+                  </p>
+                ) : null}
+                <div
+                  className={`grid gap-2 ${
+                    item.freeText
+                      ? "sm:grid-cols-[2.4fr_7rem_9rem_2rem]"
+                      : "sm:grid-cols-[1.4fr_1fr_7rem_9rem_2rem]"
+                  }`}
+                >
+                  {item.freeText ? (
+                    <Input
+                      value={item.description}
+                      onChange={(event) => updateItem(index, { description: event.target.value })}
+                      placeholder="Descreva o item (marca, modelo, medidas...)"
+                      aria-label={`Descrição do item fora do catálogo ${index + 1}`}
+                      maxLength={300}
+                    />
+                  ) : (
+                    <>
+                      <ProductPicker
+                        value={item.productId}
+                        onChange={(productId, product) =>
+                          updateItem(index, {
+                            productId,
+                            // Ajuda o comprador: a unidade do cadastro já vem escolhida.
+                            ...(product && !item.uomId ? { uomId: product.uomId } : {}),
+                          })
+                        }
+                        onRequestFreeText={(query) =>
+                          updateItem(index, {
+                            freeText: true,
+                            productId: "",
+                            description: query || item.description,
+                          })
+                        }
+                        ariaLabel={`Produto ${index + 1}`}
+                        placeholder="Buscar produto no catálogo..."
+                      />
+                      <Input
+                        value={item.description}
+                        onChange={(event) => updateItem(index, { description: event.target.value })}
+                        placeholder="Descrição/complemento (opcional)"
+                        aria-label={`Descrição ${index + 1}`}
+                        maxLength={300}
+                      />
+                    </>
+                  )}
                   <Input
                     value={item.qty}
                     onChange={(event) => updateItem(index, { qty: event.target.value })}
@@ -1019,6 +1082,7 @@ export function PurchaseDetailPage() {
         <div className="min-w-0">
           <p className="flex items-center gap-2 font-medium text-slate-800">
             <span className="truncate">{row.productName ?? row.description ?? "Item sem identificação"}</span>
+            {!row.productId ? <Badge tone="amber">Fora do catálogo</Badge> : null}
             {row.purchaseMode && ["pending", "approved"].includes(row.status) ? (
               <Badge tone={row.purchaseMode === "quote" ? "violet" : "slate"}>
                 {PURCHASE_ITEM_MODE_LABEL[row.purchaseMode]}

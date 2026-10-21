@@ -66,3 +66,7 @@ A segunda etapa foi entregue na versão **0.2.0**, em 20/10/2026: fluxo
 corporativo de compras, adjudicação por item, pedidos por fornecedor, outbox de
 integração e preparação de NetSuite/ServiceNow. Por ser uma funcionalidade nova
 com mudança relevante de comportamento, a versão subiu o **minor**.
+
+A terceira etapa foi entregue na versão **0.3.0**, em 20/10/2026: solicitação de
+itens que ainda não existem no catálogo, com descrição livre e cadastro rápido no
+recebimento. Também é uma funcionalidade nova, portanto subiu o **minor**.

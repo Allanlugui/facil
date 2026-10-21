@@ -945,3 +945,20 @@
 - **Documentação:** propósito, função, contexto e proposta no relatório externo
   `C:\Users\jalla\OneDrive\Desktop\Facil - Relatorio Executivo 0.2.0.md`; handoff no `README.md` e
   em `docs/COMPRAS.md`/`docs/INTEGRACOES.md`, sem afirmar construção por IA.
+
+## D-49 — Item fora do catálogo com descrição livre e cadastro no recebimento (20/10/2026) — VALIDADO
+
+- **Contexto:** compras foram abertas a mais usuários e o catálogo não cobre todos os produtos. A
+  solicitação não pode ser bloqueada só porque o item ainda não existe.
+- **Decisão:** aceitar item de compra com `product_id = NULL` e `description` obrigatória (mínimo 3
+  caracteres na interface), mantendo quantidade e unidade. O formulário ganhou o modo explícito
+  **Item fora do catálogo**, o atalho na busca sem resultado e o aviso de que o cadastro será feito
+  durante o processo ou no recebimento.
+- **Fluxo:** cotação, adjudicação e pedido usam a descrição; o recebimento mantém o cadastro rápido
+  do produto (nome informado) e o vínculo ao item, sem entrada de estoque sem produto.
+- **Rastreabilidade:** o detalhe marca o item com o selo **Fora do catálogo**; a trilha de auditoria
+  e o outbox continuam iguais.
+- **Validação:** teste v2 de criação/leitura com descrição apenas; `npm run check` **169/169**;
+  verificação visual desktop/mobile. Release **0.3.0**, tree
+  `8757a04ed013ff3425f69837af402007b1a9c1f27a0c07154dde64dfc85a9c10`, Worker
+  `cf468e3f-7a2f-4b06-96c2-948e6b38243e`.

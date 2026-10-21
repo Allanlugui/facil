@@ -312,6 +312,28 @@ describe("compras: fluxo corporativo v2, adjudicacao e integracoes", () => {
     expect(afterDirection.items[0]!.status).toBe("approved");
   });
 
+  it("aceita item fora do catalogo apenas com descricao", async () => {
+    const created = await requester.api.post<{ id: string; code: string; status: string }>(
+      "/api/purchases",
+      {
+        workflowVersion: 2,
+        locationId: structure.warehouseId,
+        justification: "Compra de equipamento que ainda nao existe no catalogo",
+        priority: "normal",
+        submit: true,
+        items: [{ description: "Cafeteira industrial 20 litros", qty: 1 }],
+      },
+    );
+    expect(created.status).toBe(201);
+
+    const data = await detail(requester, created.body.id);
+    expect(data.items[0]).toMatchObject({
+      productId: null,
+      description: "Cafeteira industrial 20 litros",
+      status: "pending",
+    });
+  });
+
   it("divide a adjudicacao por item e recebe cada pedido separadamente", async () => {
     const requestId = await createRequest(requester, [
       { productId: papelId, qty: 10 },

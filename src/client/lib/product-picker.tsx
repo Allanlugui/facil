@@ -25,6 +25,11 @@ interface ProductPickerProps {
   disabled?: boolean;
   /** Só produtos ativos (padrão). Movimentações aceitam itens desativados. */
   activeOnly?: boolean;
+  /**
+   * Quando informado, a busca sem resultado oferece solicitar o item fora do
+   * catálogo. O texto digitado é entregue para o formulário decidir o que fazer.
+   */
+  onRequestFreeText?: (query: string) => void;
   className?: string;
 }
 
@@ -39,6 +44,7 @@ export function ProductPicker({
   autoFocus,
   disabled,
   activeOnly = true,
+  onRequestFreeText,
   className = "",
 }: ProductPickerProps) {
   const listId = useId();
@@ -209,9 +215,28 @@ export function ProductPicker({
           {loading && options.length === 0 ? (
             <p className="px-3 py-2 text-sm text-slate-500">Buscando produtos...</p>
           ) : options.length === 0 ? (
-            <p className="px-3 py-2 text-sm text-slate-500">
-              Nenhum produto encontrado. {EMPTY_HINT}
-            </p>
+            <div className="px-3 py-2">
+              <p className="text-sm text-slate-500">
+                Nenhum produto encontrado{query.trim() ? ` para “${query.trim()}”` : ""}.
+              </p>
+              {onRequestFreeText ? (
+                <button
+                  type="button"
+                  onMouseDown={(event) => {
+                    // Antes do blur do input, como na seleção de um produto.
+                    event.preventDefault();
+                    const term = query.trim();
+                    close();
+                    onRequestFreeText(term);
+                  }}
+                  className="mt-1 text-sm font-medium text-brand-700 underline-offset-2 hover:underline"
+                >
+                  Solicitar este item fora do catálogo
+                </button>
+              ) : (
+                <p className="mt-1 text-sm text-slate-500">{EMPTY_HINT}</p>
+              )}
+            </div>
           ) : (
             <ul className="divide-y divide-slate-100">
               {options.map((product, index) => (

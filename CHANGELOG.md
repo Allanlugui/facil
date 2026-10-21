@@ -3,6 +3,31 @@
 Todas as alterações relevantes do Facil são registradas aqui. O projeto segue o
 versionamento descrito em `docs/VERSIONAMENTO.md`.
 
+## [0.3.0] — 2026-10-20
+
+Solicitação de itens que ainda não existem no catálogo, sem bloquear a compra.
+
+### Adicionado
+
+- Alternativa **Item fora do catálogo** no formulário de nova solicitação, com
+  descrição obrigatória, quantidade e unidade.
+- Aviso explícito de que o item será cadastrado durante o processo de compra ou
+  no recebimento.
+- A busca de produto sem resultado oferece **Solicitar este item fora do
+  catálogo**, aproveitando o texto digitado.
+- Teste do fluxo v2 para solicitação apenas com descrição.
+
+### Alterado
+
+- Itens sem `product_id` seguem cotação, adjudicação e pedido usando a descrição
+  informada; o recebimento cria o produto e o vincula ao item.
+
+### Validação
+
+- `npm run check`: typecheck, lint, contrato de API e **169/169 testes** em 18
+  arquivos.
+- `npm run build` e `npm run verify` antes da publicação.
+
 ## [0.2.0] — 2026-10-20
 
 Fluxo corporativo de compras, preparação de ERP/chamados e identidade visual da

@@ -7,7 +7,7 @@ e adjudicação, relatórios, usuários/permissões e auditoria.
 **Autor:** Allan Luiz Silveira Lima (Allanlugui)  
 **Licença:** proprietária, todos os direitos reservados (ver `LICENSE`).  
 **Assinatura:** cada release é assinada com Ed25519 (ver `docs/ASSINATURA.md`).  
-**Versão atual:** `0.2.0` (fluxo corporativo de compras e preparação de ERP).
+**Versão atual:** `0.3.0` (itens fora do catálogo no fluxo de compras).
 
 > A autoria é registrada apenas pelo nome. CPF e e-mail pessoal do autor não são
 > armazenados nem exibidos pelo sistema, pela documentação ou pelo repositório.
@@ -23,7 +23,7 @@ e adjudicação, relatórios, usuários/permissões e auditoria.
 | Chamados | Abertura, triagem, atribuição, prioridade, categoria, SLA e anexos |
 | Ordens de serviço | Checklist, materiais, responsável, execução e conclusão |
 | Compras v1 | Fluxo legado: aprovação única, cotação, pedido e recebimento |
-| Compras v2 | Gestor → direção → compras, envio direto, compra direta, adjudicação por item e pedidos por fornecedor |
+| Compras v2 | Gestor → direção → compras, envio direto, compra direta, adjudicação por item, pedidos por fornecedor e itens fora do catálogo |
 | Relatórios | Estoque, movimentos, consumo, chamados, ordens, compras e exportação |
 | Administração | Usuários, perfis, permissões, configurações, auditoria e notificações |
 | Integrações | Outbox transacional para NetSuite/ServiceNow e intake externo de chamados |
@@ -33,7 +33,7 @@ e adjudicação, relatórios, usuários/permissões e auditoria.
 - **Cloudflare Workers** (runtime) + **Hono 4** (API)
 - **D1** (banco SQLite gerenciado, plano gratuito) + **R2** (anexos do suporte, opcional)
 - **React 19 + Vite 7 + Tailwind v4 + React Router 7** (interface)
-- **Zod 4** (validação) + **Vitest 5** (168 testes em 18 arquivos)
+- **Zod 4** (validação) + **Vitest 5** (169 testes em 18 arquivos)
 - **Wrangler 4** (desenvolvimento, migrations e deploy)
 - **Ed25519** (assinatura de release, chave privada fora do repositório)
 
@@ -56,7 +56,7 @@ No Windows, use a interface pela porta **5173** (o watcher de assets do
 ## Verificações
 
 ```bash
-npm run check           # typecheck + lint + contrato de API + 168 testes
+npm run check           # typecheck + lint + contrato de API + 169 testes
 npm run build           # build da interface + Worker
 npm run verify          # confere a assinatura da release atual
 ```
@@ -114,6 +114,9 @@ Caminhos alternativos:
   marcados como `purchase_mode = direct` e seguem para o pedido.
 - **Adjudicação dividida:** fornecedores diferentes podem ganhar itens
   diferentes da mesma solicitação, gerando um pedido por fornecedor.
+- **Item fora do catálogo:** o solicitante pode descrever o produto quando ele
+  ainda não existe. A compra segue normalmente e o cadastro pode ser concluído
+  durante o processo ou no recebimento, com revisão dos dados.
 
 Regras que o backend garante:
 
@@ -255,7 +258,7 @@ memory/                     decisões, status, histórico, problemas e TODO
 - **Assinatura:** `npm run sign` gera `SIGNATURE.json`; `npm run verify` confere
   versão, árvore e autor.
 - **Produção atual:** `https://facil.cf-pilot-disposable.workers.dev`
-  (release 0.2.0; `/api/health` informa o hash da árvore em execução).
+  (release 0.3.0; `/api/health` informa o hash da árvore em execução).
 
 ## Memória e continuidade
 

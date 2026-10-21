@@ -3,6 +3,12 @@
 - **Criado em:** 16/10/2026 22:36:22 pelo bootstrap global (`D:\DEV\criar-projeto.bat`).
 - **Diretório oficial:** `D:\DEV\Opencode\Facil`
 - **Conhecimento global:** `D:\DEV\memory\Facil\`
+- **Etapa 3 concluída (20/10/2026):** release **0.3.0** assinada (Ed25519, **168 arquivos**, tree
+  `8757a04ed013ff3425f69837af402007b1a9c1f27a0c07154dde64dfc85a9c10`, 20/10/2026 23:04:14 −03:00,
+  Worker `cf468e3f-7a2f-4b06-96c2-948e6b38243e`). Entrega: solicitação de **item fora do catálogo**
+  por descrição livre, com aviso de cadastro durante o processo ou no recebimento, atalho na busca
+  sem resultado, badge no detalhe e cadastro rápido já existente no recebimento. `npm run check`
+  **169/169 em 18 arquivos**, typecheck, lint, contrato de API, build e verificação de assinatura.
 - **Etapa 2 concluída (20/10/2026):** release **0.2.0** assinada (Ed25519, **168 arquivos**, tree
   `c19025940127c05cbb4bf172a706868a306e983694df7a5d183034a6a4e121f7`, 20/10/2026 21:47:54 −03:00,
   Worker `ab266118-20a8-4fc5-a0bd-c245a79c9462`). Entrega: fluxo corporativo de compras v2
@@ -245,8 +251,8 @@
 ## Honestidade de estado
 
 - **Deploy remoto: EXECUTADO (20/10/2026).** Worker `facil` publicado em
-  `https://facil.cf-pilot-disposable.workers.dev`, D1 remoto com 18 migrations e admin
-  **Allan Lima** (`needsSetup: false`), release **0.1.2** assinado. Limitações reais: URL
+  `https://facil.cf-pilot-disposable.workers.dev`, D1 remoto com 19 migrations e admin
+  **Allan Lima** (`needsSetup: false`), release **0.3.0** assinada. Limitações reais: URL
   `workers.dev` (sem domínio próprio nem Cloudflare Access), **R2 desligado** (anexos do suporte
   em 503 claro; D1 atende chamados/OS) e **sem CI** (deploy por `npm run deploy`; Workers Builds
   é opcional).
