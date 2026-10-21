@@ -77,14 +77,18 @@ Copie o `database_id` retornado e substitua o placeholder em `wrangler.jsonc`:
 npx wrangler d1 migrations apply facil-db --remote
 ```
 
-São 19 migrations (`0001`..`0019`). Elas criam estrutura, permissões (52),
+São 20 migrations (`0001`..`0020`). Elas criam estrutura, permissões (53),
 compras/cotação, anexos, OS filha, fluxo corporativo de compras (v2), centros de
-custo, pedidos por fornecedor e outbox de integração. **Não** carregam dados
-demo.
+custo, pedidos por fornecedor, outbox de integração e compras v3 por setor
+(setores, gestores, formas de pagamento). **Não** carregam dados demo.
 
 A migration `0019_purchase_workflow.sql` é aditiva: preserva solicitações
-antigas na versão 1 e cria as tabelas do fluxo novo. Faça backup do D1 antes de
-aplicar em produção.
+antigas na versão 1 e cria as tabelas do fluxo novo. A migration
+`0020_organization_purchases.sql` também é aditiva: cria `departments`,
+`department_managers`, `payment_methods` e as colunas do v3
+(`workflow_version`, `flow_revision`, `purchase_mode`, `payment_method_id`,
+`payment_terms`, nota fiscal no recebimento e permissões do setor de Compras).
+Faça backup do D1 antes de aplicar em produção.
 
 ### 2.5 (Opcional) Bucket R2 para anexos do suporte
 

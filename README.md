@@ -292,7 +292,7 @@ memory/                     decisões, status, histórico, problemas e TODO
 - `memory/PROBLEMAS.md` — problemas conhecidos e contornos.
 - `memory/HISTORICO.md` — linha do tempo das etapas.
 - `memory/INDEX.md` — índice da memória.
-- `docs/COMPRAS.md` — fluxo v2 em detalhe.
+- `docs/COMPRAS.md` — fluxo v3 por setor em detalhe (v2 e v1 documentados junto).
 - `docs/INTEGRACOES.md` — outbox, NetSuite e ServiceNow.
 - `docs/IMPLANTACAO.md` — implantação corporativa, domínio, backup e atualização.
 - `docs/ASSINATURA.md` — assinatura digital e custódia da chave.

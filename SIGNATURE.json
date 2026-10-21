@@ -10,11 +10,11 @@
     "author": "Allan Luiz Silveira Lima",
     "alias": "Allanlugui",
     "company": "CorpServices Group",
-    "signedAt": "2026-10-21T06:31:23-03:00",
-    "treeHash": "83a7d1dcc7450cf0715fcfa51d6a537417789f5d1355e49206d238a46a5e7940",
+    "signedAt": "2026-10-21T06:48:25-03:00",
+    "treeHash": "709ac6a2d36cf8eddcb84010caf993eacebe7f24b7a36ab99f01c962bfdbc9e6",
     "fileCount": 172
   },
-  "signature": "aN1OVYo6ov7CN4D7Qsi3KmhpTq/A1YXWvJ5TtK/uwHb2QdTwD6I7/UC4BBigMA5wN56d5mgjXXPVCHttvSCDCw==",
+  "signature": "vRKLWEpiJDCF6COBM61Hy9ERBaONnqIUSEgmZUNtc/ZcKa8PEG5YkMPsokQsTiJvHQyZyJypCargiMHP7zeiDw==",
   "verify": "node scripts/verify-release.mjs",
   "files": [
     {
@@ -49,8 +49,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "39a5c1d0bb6a8a3cd85b84c567eb7516a14dbef503fc34c1a28706aea8d94c03",
-      "bytes": 16555
+      "sha256": "9c55f9ac1ad9ab98c75f7adf41f4d9c8b22b2a270c60890834d53ffde353e53c",
+      "bytes": 16594
     },
     {
       "path": "branding/README.md",
@@ -109,8 +109,8 @@
     },
     {
       "path": "docs/IMPLANTACAO.md",
-      "sha256": "49a8011c4ef99222426d61b242e2e2bf3eb97ac7174d02662518f01c71a5c044",
-      "bytes": 10818
+      "sha256": "f1ea04bc49a63d6cccaafcf951be3c36a2c0d1250eb1d9c6fba6a4d982797848",
+      "bytes": 11183
     },
     {
       "path": "docs/INTEGRACOES.md",
@@ -124,8 +124,8 @@
     },
     {
       "path": "docs/VERSIONAMENTO.md",
-      "sha256": "bdf687a2e04abf19c6c239a0f693dd6665160b1a2be4c95be9d82248924fa44b",
-      "bytes": 2702
+      "sha256": "432e5221f981f0e24424e01776eb05bd5e17892fbd07ba3c77a2991a966df71d",
+      "bytes": 3103
     },
     {
       "path": "docs/anexos-suporte.md",

@@ -27,8 +27,11 @@ Atualizado em 21/10/2026. Este é o **backlog oficial** do projeto (plano + pend
       contrato de API; `npm run build`; verificação visual do fluxo completo.
 - [x] **Documentação:** `CHANGELOG.md`, `README.md`, `docs/COMPRAS.md` e memória
       atualizados para a release **0.4.0**.
-- [ ] **Release 0.4.0:** assinatura Ed25519, migration `0020` no D1 remoto e
-      `wrangler deploy` (pendente de publicação neste momento).
+- [x] **Release 0.4.0:** assinatura Ed25519 (tree
+      `709ac6a2d36cf8eddcb84010caf993eacebe7f24b7a36ab99f01c962bfdbc9e6`, 172 arquivos,
+      21/10/2026 06:48:25 −03:00), migration `0020` aplicada no D1 remoto, Worker
+      `f0d3af42-bdfd-45f8-b7fe-39b739c8ef42`, publicada em
+      `https://facil.cf-pilot-disposable.workers.dev` (tag `v0.4.0`).
 
 ## ETAPA 3 — CONCLUÍDA (20/10/2026)
 

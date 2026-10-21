@@ -3,6 +3,22 @@
 - **Criado em:** 16/10/2026 22:36:22 pelo bootstrap global (`D:\DEV\criar-projeto.bat`).
 - **Diretório oficial:** `D:\DEV\Opencode\Facil`
 - **Conhecimento global:** `D:\DEV\memory\Facil\`
+- **Etapa 4 concluída (21/10/2026):** release **0.4.0** assinada (Ed25519, **172 arquivos**, tree
+  `709ac6a2d36cf8eddcb84010caf993eacebe7f24b7a36ab99f01c962bfdbc9e6`, 21/10/2026 06:48:25 −03:00,
+  Worker `f0d3af42-bdfd-45f8-b7fe-39b739c8ef42`). Entrega: **compras v3 por setor** — gestor do
+  setor cria/envia; responsável de Compras autoriza (cotação/orçamento/compra direta); comprador
+  cota e devolve para aprovação; responsável de Compras aprova e adjudica; comprador emite pedido;
+  responsável pelo estoque confere e lança nota fiscal. Setores (`departments`,
+  `department_managers`, `users.department_id`), formas de pagamento (`payment_methods` com
+  `requires_authorization`/`requires_quote`), compra direta respeitando a forma, recebimento com NF
+  e notificações internas/e-mail em `email_outbox` na mesma transação. **Chat de suporte em tempo
+  real**: Durable Object `SupportRoom` (WebSocket, digitação, presença) com fallback de polling de
+  60s em `/ajuda/:id` e `/suporte/acompanhar/:token`; mensagens persistidas no D1. Migration
+  `0020_organization_purchases.sql` aplicada no D1 local e remoto. `npm run check` **175/175 em 20
+  arquivos**; `npm run build`; verificação visual ponta a ponta do fluxo (gestor → Compras → 2
+  propostas → aprovação → pedido → recebimento com NF) e do chat. Docs `README.md`,
+  `CHANGELOG.md`, `docs/COMPRAS.md` atualizados. Limitações conhecidas inalteradas (R2, domínio,
+  `TICKET_INTAKE_KEY`, outbox sem consumidor, sem CI).
 - **Etapa 3 concluída (20/10/2026):** release **0.3.0** assinada (Ed25519, **168 arquivos**, tree
   `8757a04ed013ff3425f69837af402007b1a9c1f27a0c07154dde64dfc85a9c10`, 20/10/2026 23:04:14 −03:00,
   Worker `cf468e3f-7a2f-4b06-96c2-948e6b38243e`). Entrega: solicitação de **item fora do catálogo**
