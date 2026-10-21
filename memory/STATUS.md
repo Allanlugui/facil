@@ -3,6 +3,18 @@
 - **Criado em:** 16/10/2026 22:36:22 pelo bootstrap global (`D:\DEV\criar-projeto.bat`).
 - **Diretório oficial:** `D:\DEV\Opencode\Facil`
 - **Conhecimento global:** `D:\DEV\memory\Facil\`
+- **Etapa 2 concluída (20/10/2026):** release **0.2.0** assinada (Ed25519, **168 arquivos**, tree
+  `c19025940127c05cbb4bf172a706868a306e983694df7a5d183034a6a4e121f7`, 20/10/2026 21:47:54 −03:00,
+  Worker `ab266118-20a8-4fc5-a0bd-c245a79c9462`). Entrega: fluxo corporativo de compras v2
+  (gestor → direção → compras → cotação → adjudicação item a item → pedido por fornecedor →
+  recebimento), caminho direto a compras com devolução à direção ou compra direta, centros de custo,
+  orçamento e conta contábil, perfis `operations_director`/`purchasing_manager`, permissões de 48
+  para 52, outbox transacional idempotente e intake ServiceNow autenticado. Migration `0019`
+  aplicada no D1 local e remoto (backup lógico e bookmark registrados). `npm run check`
+  **168/168 em 18 arquivos**. UI com fila por perfil, progresso e identidade CorpServices Group.
+  Docs `docs/COMPRAS.md`, `docs/INTEGRACOES.md` e README de handoff. Limitações conhecidas: R2
+  desativado, sem domínio/Access, `TICKET_INTAKE_KEY` ausente em produção, outbox sem consumidor
+  NetSuite/ServiceNow e sem CI dedicada.
 - **Etapa 1 encerrada (20/10/2026):** release **0.1.2** assinado (Ed25519, **160 arquivos**, tree
   `7e4433f6448566ae5bf6f0df97d03ec0d0fe14fbbc839e9f332745609d1ae13c`, 01:31:40 −03:00, Worker
   `14b4a87b-ec15-4b70-8175-f55ef6943a6f`). Auditoria completa de bugs, falhas e vulnerabilidades:

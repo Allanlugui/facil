@@ -61,3 +61,8 @@ Detalhes em `docs/ASSINATURA.md`.
 
 A primeira etapa foi encerrada na versão **0.1.2**, em 20/10/2026, após a
 auditoria completa de bugs, falhas e vulnerabilidades.
+
+A segunda etapa foi entregue na versão **0.2.0**, em 20/10/2026: fluxo
+corporativo de compras, adjudicação por item, pedidos por fornecedor, outbox de
+integração e preparação de NetSuite/ServiceNow. Por ser uma funcionalidade nova
+com mudança relevante de comportamento, a versão subiu o **minor**.

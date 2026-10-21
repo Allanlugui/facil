@@ -2,6 +2,37 @@
 
 Atualizado em 20/10/2026. Este é o **backlog oficial** do projeto (plano + pendências em um só lugar).
 
+## ETAPA 2 — CONCLUÍDA (20/10/2026)
+
+- [x] **Fluxo corporativo de compras v2:** solicitante → gestor do setor → direção (necessidade e
+      orçamento) → compras → comprador cota → superior adjudica item a item → comprador pede e
+      recebe. Caminho alternativo gestor → compras, com devolução à direção ou compra direta.
+- [x] **Permissões e perfis:** `purchases.view_all`, `purchases.authorize`, `purchases.award` e
+      `purchases.direct`; papéis `operations_director` e `purchasing_manager`; 48 → 52 permissões.
+- [x] **Dados:** migration `0019_purchase_workflow.sql` com centros de custo, orçamento, conta
+      contábil, adjudicação, pedidos por fornecedor, recebimentos vinculados, outbox e intake.
+- [x] **Integrações preparadas:** outbox transacional idempotente, intake ServiceNow autenticado,
+      inspeção/confirmação em `/api/integrations`; consumo real fica para o integrador.
+- [x] **Interface:** fila por perfil, detalhe com progresso, diálogos de decisão/cotação/adjudicação/
+      pedido/recebimento, formulário com centro de custo e orçamento, branding CorpServices.
+- [x] **Qualidade:** `npm run check` **168/168 em 18 arquivos**, typecheck, lint e contrato de API;
+      `npm run build`; correções de destino padrão de cotação, preço adjudicado e dados financeiros
+      do pedido.
+- [x] **Documentação:** README de handoff, `docs/COMPRAS.md`, `docs/INTEGRACOES.md`,
+      `docs/IMPLANTACAO.md`, `docs/VERSIONAMENTO.md`, `CHANGELOG.md` e relatório executivo externo.
+- [x] **Release 0.2.0:** assinatura Ed25519, tree
+      `c19025940127c05cbb4bf172a706868a306e983694df7a5d183034a6a4e121f7`, Worker
+      `ab266118-20a8-4fc5-a0bd-c245a79c9462`, publicada em
+      `https://facil.cf-pilot-disposable.workers.dev`.
+
+Pendências externas (não bloqueiam o protótipo):
+
+- [ ] Configurar `TICKET_INTAKE_KEY` em produção para habilitar o intake ServiceNow.
+- [ ] Implementar o consumidor do outbox (NetSuite/ServiceNow) e confirmar os eventos.
+- [ ] Ativar R2 para anexos de suporte (`503 R2_UNAVAILABLE` enquanto desativado).
+- [ ] Definir domínio customizado e Cloudflare Access, se o piloto exigir.
+- [ ] Adicionar CI dedicada para `npm run check` e `npm run verify` antes de cada release.
+
 ## ETAPA 1 — ENCERRADA (20/10/2026)
 
 - [x] **Auditoria completa de bugs, falhas e vulnerabilidades:** 12 achados corrigidos (escopo por

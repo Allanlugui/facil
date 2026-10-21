@@ -371,6 +371,7 @@ describe("relatórios, painel, auditoria e notificações", () => {
     expect(supplier.status).toBe(201);
 
     const request = await buyer.api.post<{ id: string }>("/api/purchases", {
+      workflowVersion: 1,
       locationId: structure.warehouseId,
       justification: "Reposição de água",
       submit: true,
@@ -455,6 +456,7 @@ describe("relatórios, painel, auditoria e notificações", () => {
 
     // Solicitação em cotação com duas propostas: uma aprovada, a outra não escolhida.
     const quoted = await buyer.api.post<{ id: string; code: string }>("/api/purchases", {
+      workflowVersion: 1,
       locationId: structure.warehouseId,
       justification: "Reposição de café",
       submit: true,
@@ -619,6 +621,7 @@ describe("relatórios, painel, auditoria e notificações", () => {
     await tech.api.post(`/api/workorders/${order.body.id}/status`, { status: "in_progress" });
     // Solicitação de compra aguardando aprovação.
     await buyer.api.post("/api/purchases", {
+      workflowVersion: 1,
       locationId: structure.warehouseId,
       submit: true,
       items: [{ productId: cafeId, qty: 6 }],
@@ -795,6 +798,7 @@ describe("relatórios, painel, auditoria e notificações", () => {
 
     /* --- Comprador: a fila dupla da rotina (registrar pedido e receber) ---- */
     const request = await buyer.api.post<{ id: string; code: string }>("/api/purchases", {
+      workflowVersion: 1,
       justification: "Reposição de água para o andar",
       submit: true,
       items: [{ productId: aguaId, qty: 12 }],
@@ -1038,6 +1042,7 @@ describe("relatórios, painel, auditoria e notificações", () => {
     });
 
     const request = await buyer.api.post<{ id: string }>("/api/purchases", {
+      workflowVersion: 1,
       locationId: structure.warehouseId,
       justification: "Reposição de café",
       submit: true,
@@ -1115,6 +1120,7 @@ describe("relatórios, painel, auditoria e notificações", () => {
     });
 
     const draft = await buyer.api.post<{ id: string; code: string }>("/api/purchases", {
+      workflowVersion: 1,
       locationId: structure.warehouseId,
       justification: "Compra avulsa de água",
       items: [{ productId: aguaId, qty: 4 }],

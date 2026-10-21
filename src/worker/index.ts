@@ -25,6 +25,8 @@ import auditRoutes from "./routes/audit";
 import attachmentRoutes from "./routes/attachments";
 import notificationRoutes from "./routes/notifications";
 import supportRoutes from "./routes/support";
+import intakeRoutes from "./routes/intake";
+import integrationRoutes from "./routes/integrations";
 
 const app = new Hono<AppEnv>();
 
@@ -140,6 +142,8 @@ app.route("/api/audit", auditRoutes);
 app.route("/api/attachments", attachmentRoutes);
 app.route("/api/notifications", notificationRoutes);
 app.route("/api/support", supportRoutes);
+app.route("/api/intake", intakeRoutes);
+app.route("/api/integrations", integrationRoutes);
 
 app.notFound((c) => {
   if (c.req.path.startsWith("/api/")) {

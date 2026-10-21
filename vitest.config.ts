@@ -24,7 +24,11 @@ export default defineConfig(async () => {
         miniflare: {
           // Cache desabilitado nos testes para evitar estado residual entre casos.
           cache: false,
-          bindings: { TEST_MIGRATIONS: migrations },
+          bindings: {
+            TEST_MIGRATIONS: migrations,
+            // Chave fixa apenas no runtime de teste; producao usa wrangler secret.
+            TICKET_INTAKE_KEY: "test-intake-key",
+          },
           // O R2 nao esta habilitado na conta de publicacao (o binding fica
           // desligado em wrangler.jsonc), mas os testes de anexos do suporte
           // precisam de um bucket simulado no Miniflare.

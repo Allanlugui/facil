@@ -19,21 +19,23 @@
 - Não conectar serviços que exijam novos compromissos financeiros sem autorização.
 - Não publicar em produção sem autorização explícita.
 
-## Estado real (20/10/2026) — PUBLICADO (release 0.1.2)
+## Estado real (20/10/2026) — PUBLICADO (release 0.2.0)
 
 - **URL:** `https://facil.cf-pilot-disposable.workers.dev` (Worker `facil`; `workers.dev`, sem
   domínio próprio nem Cloudflare Access).
 - **Repositório:** privado `Allanlugui/facil`, branch `main`; deploy oficial por `npm run deploy`
   (assina → `npm run check` → build → `wrangler deploy`), não por CI.
 - **Banco:** D1 remoto `facil-db` (`10365b4d-7ed0-4e8e-8aba-65ebf354cb25`, ENAM), migrations
-  `0001`–`0018`; instalação inicial concluída pelo titular (`needsSetup: false`).
-- **Release:** **0.1.2**, 160 arquivos assinados (Ed25519), tree
-  `7e4433f6448566ae5bf6f0df97d03ec0d0fe14fbbc839e9f332745609d1ae13c`, 20/10/2026 01:31:40 −03:00,
-  Worker `14b4a87b-ec15-4b70-8175-f55ef6943a6f`. Versões futuras seguem `docs/VERSIONAMENTO.md`.
+  `0001`–`0019`; instalação inicial concluída pelo titular (`needsSetup: false`).
+- **Release:** **0.2.0**, 168 arquivos assinados (Ed25519), tree
+  `c19025940127c05cbb4bf172a706868a306e983694df7a5d183034a6a4e121f7`, 20/10/2026 21:47:54 −03:00,
+  Worker `ab266118-20a8-4fc5-a0bd-c245a79c9462`. Versões futuras seguem `docs/VERSIONAMENTO.md`.
 - **R2:** desligado nesta conta; anexos do chat de suporte respondem 503 `R2_UNAVAILABLE`. O restante
   do produto usa D1.
-- **Verificação:** `/api/health` com bloco `release`; cabeçalhos `X-Facil-*`, CSP/HSTS/COOP,
-  `_headers` estático e cache imutável dos assets conferidos em produção.
+- **Intake ServiceNow:** implementado; responde `503 INTAKE_DISABLED` até o segredo
+  `TICKET_INTAKE_KEY` ser criado no Worker.
+- **Verificação:** `/api/health` com bloco `release`; `/build-info.json`; cabeçalhos `X-Facil-*`,
+  CSP/HSTS/COOP, `_headers` estático e cache imutável dos assets conferidos em produção.
 - **Rollback:** `npx wrangler deployments list` e `npx wrangler rollback <version-id>`; o D1 não
   volta com o Worker — migrations são aditivas e o backup é responsabilidade do titular.
 

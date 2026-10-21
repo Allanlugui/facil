@@ -454,3 +454,28 @@ em produção.
   20/10/2026 01:31:40 −03:00; Worker `14b4a87b-ec15-4b70-8175-f55ef6943a6f`.
 - **Encerramento:** etapa 1 fechada; política de versionamento em `docs/VERSIONAMENTO.md` e
   histórico em `CHANGELOG.md`. Toda alteração futura sobe a versão.
+
+## 20/10/2026 — Fluxo corporativo de compras v2 e release 0.2.0
+
+- **Backend:** `purchases.ts` ganhou visão global, `/overview`, centros de custo, decisão em duas
+  etapas, envio direto a compras, devolução à direção, compra direta, adjudicação item a item,
+  pedidos por fornecedor e recebimentos vinculados; `workflow_version = 2` convive com o legado.
+- **Permissões:** `purchases.view_all`, `purchases.authorize`, `purchases.award` e
+  `purchases.direct`; papéis `operations_director` e `purchasing_manager`; 48 → 52 permissões.
+- **Integrações:** outbox transacional idempotente, intake ServiceNow com `TICKET_INTAKE_KEY`,
+  tratamento de corrida por `externalRef`, painel `/api/integrations` e usuário técnico
+  `user_intake`. Consumo NetSuite/ServiceNow permanece para o integrador.
+- **Correções do fechamento:** destino padrão de cotação quando a decisão não detalha itens;
+  preço do pedido travado na adjudicação; centro de custo/conta contábil gravados no pedido na mesma
+  transação; endpoint legado `/order` bloqueado para v2.
+- **Banco:** migration `0019_purchase_workflow.sql` aplicada no D1 local e remoto; backup lógico
+  remoto em `C:\Users\jalla\AppData\Local\Temp\opencode\facil-backup-pre-0019.sql`; bookmark anterior
+  `00000011-00000090-0000510a-ba793e01dc2ec2619602b91251860101`.
+- **Validação:** `npm run check` **168/168 em 18 arquivos**, typecheck, lint, contrato de API e
+  `npm run build`; produção conferida em `/api/health`, `/build-info.json`, login e cabeçalhos.
+- **Identidade:** logos, capas, favicon e login da CorpServices Group; capas restritas à home/login.
+- **Release:** 0.2.0, 168 arquivos, tree
+  `c19025940127c05cbb4bf172a706868a306e983694df7a5d183034a6a4e121f7`, 20/10/2026 21:47:54 −03:00,
+  Worker `ab266118-20a8-4fc5-a0bd-c245a79c9462`.
+- **Pendências:** R2 desativado, sem domínio/Access, `TICKET_INTAKE_KEY` ausente em produção,
+  outbox sem consumidor e sem CI dedicada.

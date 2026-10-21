@@ -126,6 +126,44 @@ export const PURCHASE_STATUS = [
 ] as const;
 export type PurchaseStatus = (typeof PURCHASE_STATUS)[number];
 
+/** Versão do fluxo de compras. 1 = legado (aprovação única); 2 = corporativo. */
+export const PURCHASE_WORKFLOW_VERSION = [1, 2] as const;
+export type PurchaseWorkflowVersion = (typeof PURCHASE_WORKFLOW_VERSION)[number];
+
+export const PURCHASE_APPROVAL_STAGE = [
+  "manager",
+  "direction",
+  "purchasing",
+  "buyer",
+  "award",
+  "receipt",
+  "completed",
+] as const;
+export type PurchaseApprovalStage = (typeof PURCHASE_APPROVAL_STAGE)[number];
+
+export const PURCHASE_APPROVAL_STAGE_LABEL: Record<PurchaseApprovalStage, string> = {
+  manager: "Gestor do setor",
+  direction: "Direção",
+  purchasing: "Triagem de compras",
+  buyer: "Comprador",
+  award: "Adjudicação",
+  receipt: "Recebimento",
+  completed: "Concluída",
+};
+
+export const PURCHASE_ROUTING = ["standard", "direct_to_purchasing"] as const;
+export type PurchaseRouting = (typeof PURCHASE_ROUTING)[number];
+
+export const PURCHASE_BUDGET_STATUS = ["pending", "approved", "rejected", "not_required"] as const;
+export type PurchaseBudgetStatus = (typeof PURCHASE_BUDGET_STATUS)[number];
+
+export const PURCHASE_BUDGET_STATUS_LABEL: Record<PurchaseBudgetStatus, string> = {
+  pending: "Aguardando análise",
+  approved: "Orçamento aprovado",
+  rejected: "Orçamento recusado",
+  not_required: "Não se aplica",
+};
+
 export const PURCHASE_STATUS_LABEL: Record<PurchaseStatus, string> = {
   draft: "Rascunho",
   pending_approval: "Pendente de aprovação",
@@ -185,11 +223,16 @@ export const PURCHASE_EVENT_LABEL: Record<string, string> = {
   "purchase_request.update": "Solicitação editada",
   "purchase_request.submit": "Enviada para aprovação",
   "purchase_request.approved": "Aprovada",
+  "purchase_request.send_to_purchasing": "Enviada diretamente ao setor de compras",
+  "purchase_request.send_to_direction": "Enviada à Direção para análise de orçamento",
+  "purchase_request.authorize_direct": "Compra direta autorizada pelo setor de compras",
   "purchase_request.rejected": "Recusada",
   "purchase_request.quoting": "Encaminhada para cotação",
   "purchase_request.purchasing": "Marcada em compra",
   "purchase_request.order": "Pedido registrado",
+  "purchase_request.orders": "Pedidos por fornecedor registrados",
   "purchase_request.cancel": "Solicitação cancelada",
+  "purchase_award.create": "Cotação adjudicada por item",
   "purchase_quote.create": "Proposta registrada",
   "purchase_quote.update": "Proposta atualizada",
   "purchase_quote.return": "Cotação devolvida para aprovação",

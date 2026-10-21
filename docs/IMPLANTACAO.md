@@ -77,8 +77,14 @@ Copie o `database_id` retornado e substitua o placeholder em `wrangler.jsonc`:
 npx wrangler d1 migrations apply facil-db --remote
 ```
 
-São 18 migrations (`0001`..`0018`). Elas criam estrutura, permissões (48),
-compras/cotação, anexos, OS filha etc. **Não** carregam dados demo.
+São 19 migrations (`0001`..`0019`). Elas criam estrutura, permissões (52),
+compras/cotação, anexos, OS filha, fluxo corporativo de compras (v2), centros de
+custo, pedidos por fornecedor e outbox de integração. **Não** carregam dados
+demo.
+
+A migration `0019_purchase_workflow.sql` é aditiva: preserva solicitações
+antigas na versão 1 e cria as tabelas do fluxo novo. Faça backup do D1 antes de
+aplicar em produção.
 
 ### 2.5 (Opcional) Bucket R2 para anexos do suporte
 
@@ -91,6 +97,18 @@ npx wrangler r2 bucket create facil-attachments
 - Sem o bucket, o chat de suporte continua funcionando **sem anexos**; os demais
   anexos (chamados/OS) usam o D1 e não dependem do R2.
 
+### 2.5.1 (Opcional) Chave do intake ServiceNow
+
+Para receber chamados do ServiceNow, configure uma chave longa e aleatória:
+
+```bash
+npx wrangler secret put TICKET_INTAKE_KEY
+```
+
+Sem a chave, `POST /api/intake/tickets` responde `503 INTAKE_DISABLED`. A chave
+não deve ser escrita no repositório, em `wrangler.jsonc` ou em documentação.
+Detalhes em `docs/INTEGRACOES.md`.
+
 ### 2.6 Assinar a release e publicar
 
 ```bash
@@ -100,7 +118,7 @@ npm run deploy
 O comando executa, nesta ordem:
 
 1. `node scripts/sign-release.mjs` — gera `SIGNATURE.json` e `build-info.json`;
-2. `npm run check` — typecheck + lint + contrato de API + 153 testes;
+2. `npm run check` — typecheck + lint + contrato de API + 168 testes;
 3. `npm run build` — interface + Worker;
 4. `wrangler deploy` — publica.
 

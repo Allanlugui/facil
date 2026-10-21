@@ -3,6 +3,89 @@
 Todas as alterações relevantes do Facil são registradas aqui. O projeto segue o
 versionamento descrito em `docs/VERSIONAMENTO.md`.
 
+## [0.2.0] — 2026-10-20
+
+Fluxo corporativo de compras, preparação de ERP/chamados e identidade visual da
+CorpServices Group.
+
+### Adicionado
+
+- Fluxo de compras **v2**: solicitante → gestor do setor → direção (necessidade
+  e orçamento) → compras → comprador → recebimento.
+- Caminho alternativo de envio direto do gestor para a triagem de compras.
+- A triagem de compras pode devolver a solicitação à direção ou autorizar a
+  compra direta.
+- Autorização de **compra direta** sem cotação pelo gestor de compras.
+- Centro de custo, conta contábil, observações de orçamento e situação
+  financeira na solicitação.
+- Adjudicação **item a item**, com fornecedores diferentes na mesma solicitação.
+- Pedidos por fornecedor (`purchase_orders` / `purchase_order_items`) com total
+  em centavos, centro de custo e conta contábil.
+- Recebimento vinculado ao pedido, com atualização de saldo, status do pedido e
+  conclusão automática da solicitação.
+- Novos perfis `operations_director` (Diretor de Operações) e
+  `purchasing_manager` (Gestor de Compras).
+- Novas permissões: `purchases.view_all`, `purchases.authorize`,
+  `purchases.award` e `purchases.direct`.
+- Painel “Sua fila de compras” por permissão e atualização de permissões da
+  sessão ao recuperar foco e a cada 60 segundos.
+- Outbox transacional e idempotente (`integration_outbox`) para NetSuite,
+  ServiceNow e integradores futuros.
+- Interface administrativa do outbox (`/api/integrations/outbox` e ack).
+- Intake externo de chamados (`/api/intake/tickets`) com chave de serviço,
+  idempotência por `source + externalRef`, limite por IP e evento de outbox.
+- Documentação `docs/COMPRAS.md`, `docs/INTEGRACOES.md` e README de handoff.
+- Identidade visual CorpServices Group: logos, favicon, capa da home e papel de
+  parede do login com as mídias fornecidas.
+
+### Alterado
+
+- Solicitações novas usam `workflowVersion: 2` por padrão; o fluxo v1 continua
+  disponível com `workflowVersion: 1`.
+- O perfil `manager` deixou de ter `purchases.order` e `purchases.receive`:
+  aprovação de necessidade não se confunde com execução da compra.
+- O catálogo de permissões passou de 48 para **52**.
+- A instalação inicial ignora o usuário técnico `user_intake`, que não é conta
+  de login e pode existir antes do primeiro administrador.
+- A limpeza do banco de testes preserva a ordem das chaves estrangeiras das
+  novas tabelas de compras e integrações.
+- Cobertura de testes passou a incluir o fluxo v2 e o intake externo.
+
+### Corrigido
+
+- A autorização de compra direta agora força todos os itens ativos para
+  `purchase_mode = 'direct'`, evitando item em cotação sem cotação.
+- Decisões de gestor e direção sem detalhamento de item usam **cotação** como
+  destino padrão; compra direta passa a ser uma escolha explícita.
+- O pedido usa o preço da proposta adjudicada e recusa preço divergente.
+- O centro de custo e a conta contábil da solicitação agora são gravados também
+  no pedido, como o outbox e a exportação ao ERP esperam.
+- O envio do gestor para a direção restaura o roteamento padrão.
+- O intake trata chamadas concorrentes com o mesmo `externalRef` como duplicata,
+  em vez de erro 500.
+- Testes legados de relatórios e compras declaram explicitamente o fluxo v1.
+- O reset de testes remove pedidos, recebimentos, adjudicações, outbox e eventos
+  de intake na ordem correta.
+
+### Validação
+
+- `npm run check`: typecheck, lint, contrato de API e **168/168 testes** em
+  **18 arquivos**.
+- Migration `0019_purchase_workflow.sql` aplicada no D1 local e no D1 remoto
+  `facil-db` (4 centros de custo, 52 permissões, 2 perfis novos).
+- Backup lógico do D1 remoto gerado antes da migration.
+- `npm run build` e release assinada com Ed25519.
+
+### Limitações conhecidas
+
+- R2 desativado: anexos do chat de suporte retornam `503 R2_UNAVAILABLE`.
+- Sem domínio próprio e sem Cloudflare Access; URL `*.workers.dev`.
+- `TICKET_INTAKE_KEY` não configurada em produção: intake retorna
+  `503 INTAKE_DISABLED` até o segredo ser criado.
+- Outbox sem consumidor automático; a confirmação é administrativa.
+- Sem integração NetSuite homologada e sem mapeamento fiscal.
+- Sem CI: o deploy oficial é `npm run deploy` (assina, valida, compila e publica).
+
 ## [0.1.2] — 2026-10-20
 
 ### Corrigido

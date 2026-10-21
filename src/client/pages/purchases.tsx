@@ -4,6 +4,9 @@ import { locationLabel } from "@shared/locations";
 import { PERMISSIONS } from "@shared/permissions";
 import {
   PRIORITY_LABEL,
+  PURCHASE_APPROVAL_STAGE,
+  PURCHASE_APPROVAL_STAGE_LABEL,
+  PURCHASE_BUDGET_STATUS_LABEL,
   PURCHASE_EVENT_LABEL,
   PURCHASE_ITEM_MODE_LABEL,
   PURCHASE_ITEM_STATUS_LABEL,
@@ -66,11 +69,31 @@ interface PurchaseRow {
   justification: string | null;
   priority: Priority;
   status: PurchaseStatus;
+  workflowVersion: number;
+  approvalStage: string;
+  routing: "standard" | "direct_to_purchasing";
+  budgetStatus: "pending" | "approved" | "rejected" | "not_required";
+  budgetNotes: string | null;
+  costCenterId: string | null;
+  costCenterCode: string | null;
+  costCenterName: string | null;
+  glAccount: string | null;
+  externalRef: string | null;
+  financeStatus: "pending" | "committed" | "received" | "not_required";
   desiredDate: string | null;
   approvedBy: string | null;
   approvedByName: string | null;
   approvedAt: string | null;
   approvalNotes: string | null;
+  managerApprovedBy: string | null;
+  managerApprovedByName: string | null;
+  managerApprovedAt: string | null;
+  directionApprovedBy: string | null;
+  directionApprovedByName: string | null;
+  directionApprovedAt: string | null;
+  directAuthorizedBy: string | null;
+  directAuthorizedByName: string | null;
+  directAuthorizedAt: string | null;
   cancelReason: string | null;
   notes: string | null;
   createdAt: string;
@@ -140,6 +163,84 @@ interface QuoteSummary {
   totalCents: number;
 }
 
+interface PurchaseAward {
+  id: string;
+  requestItemId: string;
+  quoteId: string;
+  quoteCode: string;
+  supplierId: string;
+  supplierName: string;
+  qtyMilli: number;
+  unitPriceCents: number;
+  awardedBy: string;
+  awardedByName: string;
+  awardedAt: string;
+  notes: string | null;
+  productName: string | null;
+  sku: string | null;
+  description: string | null;
+  uomCode: string | null;
+}
+
+interface PurchaseOrderItem {
+  id: string;
+  requestItemId: string;
+  productName: string | null;
+  sku: string | null;
+  description: string | null;
+  uomCode: string | null;
+  qtyMilli: number;
+  unitPriceCents: number;
+  receivedQtyMilli: number;
+  notes: string | null;
+}
+
+interface PurchaseOrder {
+  id: string;
+  code: string;
+  supplierId: string;
+  supplierName: string;
+  orderRef: string | null;
+  status: string;
+  currency: string;
+  totalCents: number;
+  costCenterId: string | null;
+  glAccount: string | null;
+  externalSystem: string | null;
+  externalId: string | null;
+  externalStatus: string | null;
+  syncStatus: string;
+  syncError: string | null;
+  notes: string | null;
+  createdBy: string;
+  createdByName: string;
+  createdAt: string;
+  updatedAt: string;
+  itemCount: number;
+  qtyMilli: number;
+  items: PurchaseOrderItem[];
+}
+
+interface PurchaseOverview {
+  queues: {
+    manager: number;
+    direction: number;
+    purchasing: number;
+    buyer: number;
+    award: number;
+    receipt: number;
+    quoting: number;
+  };
+  openCount: number;
+  totalCount: number;
+  financial: {
+    committedCents: number;
+    orderedValueCents: number;
+    approvedValueCents: number;
+  };
+  costCenters: Array<{ id: string; code: string; name: string }>;
+}
+
 const QUOTE_STATUS_LABEL: Record<QuoteSummary["status"], string> = {
   registered: "Registrada",
   approved: "Aprovada",
@@ -190,6 +291,7 @@ export function PurchasesPage() {
   const [search, setSearch] = useState("");
   const debounced = useDebounced(search);
   const [status, setStatus] = useState("");
+  const [stage, setStage] = useState("");
   const [priority, setPriority] = useState("");
   const [pendingApproval, setPendingApproval] = useState(false);
   const [onlyMine, setOnlyMine] = useState(false);
@@ -200,6 +302,8 @@ export function PurchasesPage() {
   // direto e limpa o parâmetro para o botão Voltar não reabrir sozinho.
   const [searchParams, setSearchParams] = useSearchParams();
   useEffect(() => {
+    const stageParam = searchParams.get("stage");
+    if (stageParam) setStage(stageParam);
     if (searchParams.get("novo") === "1") {
       setCreating(true);
       const next = new URLSearchParams(searchParams);
@@ -213,14 +317,31 @@ export function PurchasesPage() {
       apiGet<Paginated<PurchaseRow>>("/api/purchases", {
         search: debounced || undefined,
         status: status || undefined,
+        stage: stage || undefined,
         priority: priority || undefined,
         pendingApproval: pendingApproval ? "true" : undefined,
         requesterId: onlyMine ? user?.id : undefined,
         page,
         pageSize: 25,
       }),
-    [debounced, status, priority, pendingApproval, onlyMine, user?.id, page],
+    [debounced, status, stage, priority, pendingApproval, onlyMine, user?.id, page],
   );
+
+  const overview = useAsync(
+    () => apiGet<PurchaseOverview>("/api/purchases/overview"),
+    [user?.id],
+  );
+
+  const queueItems = overview.data
+    ? [
+        { key: "manager", label: "Aprovar como gestor", count: overview.data.queues.manager, show: can(PERMISSIONS.PURCHASES_APPROVE) },
+        { key: "direction", label: "Autorizar orçamento", count: overview.data.queues.direction, show: can(PERMISSIONS.PURCHASES_AUTHORIZE) },
+        { key: "purchasing", label: "Triagem de compras", count: overview.data.queues.purchasing, show: can(PERMISSIONS.PURCHASES_AWARD) || can(PERMISSIONS.PURCHASES_DIRECT) },
+        { key: "award", label: "Adjudicar cotação", count: overview.data.queues.award, show: can(PERMISSIONS.PURCHASES_AWARD) },
+        { key: "buyer", label: "Preparar pedido", count: overview.data.queues.buyer, show: can(PERMISSIONS.PURCHASES_ORDER) },
+        { key: "receipt", label: "Receber material", count: overview.data.queues.receipt, show: can(PERMISSIONS.PURCHASES_RECEIVE) },
+      ].filter((item) => item.show && item.count > 0)
+    : [];
 
   const columns: Column<PurchaseRow>[] = [
     {
@@ -261,7 +382,17 @@ export function PurchasesPage() {
     {
       key: "status",
       header: "Situação",
-      cell: (row) => <Badge tone={PURCHASE_STATUS_TONE[row.status]}>{PURCHASE_STATUS_LABEL[row.status]}</Badge>,
+      cell: (row) => (
+        <div className="space-y-1">
+          <Badge tone={PURCHASE_STATUS_TONE[row.status]}>{PURCHASE_STATUS_LABEL[row.status]}</Badge>
+          {row.status === "pending_approval" ? (
+            <p className="text-[11px] text-slate-500">
+              {PURCHASE_APPROVAL_STAGE_LABEL[row.approvalStage as keyof typeof PURCHASE_APPROVAL_STAGE_LABEL] ??
+                row.approvalStage}
+            </p>
+          ) : null}
+        </div>
+      ),
     },
     {
       key: "requester",
@@ -298,6 +429,33 @@ export function PurchasesPage() {
         }
       />
 
+      {queueItems.length > 0 ? (
+        <div className="mb-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+          {queueItems.map((queue) => (
+            <button
+              key={queue.key}
+              type="button"
+              onClick={() => {
+                setStage(queue.key);
+                setStatus("");
+                setPendingApproval(false);
+                setPage(1);
+              }}
+              className={`flex items-center justify-between rounded-xl border px-4 py-3 text-left transition ${
+                stage === queue.key
+                  ? "border-brand-300 bg-brand-50"
+                  : "border-slate-200 bg-white hover:border-brand-200 hover:bg-slate-50"
+              }`}
+            >
+              <span className="text-sm font-medium text-slate-700">{queue.label}</span>
+              <span className="rounded-full bg-slate-900 px-2 py-0.5 text-xs font-semibold text-white tabular-nums">
+                {queue.count}
+              </span>
+            </button>
+          ))}
+        </div>
+      ) : null}
+
       <Card padded={false}>
         <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 p-4">
           <SearchInput value={search} onChange={setSearch} placeholder="Código, justificativa..." className="w-full sm:w-60" />
@@ -314,6 +472,22 @@ export function PurchasesPage() {
             {Object.entries(PURCHASE_STATUS_LABEL).map(([code, label]) => (
               <option key={code} value={code}>
                 {label}
+              </option>
+            ))}
+          </Select>
+          <Select
+            value={stage}
+            onChange={(event) => {
+              setStage(event.target.value);
+              setPage(1);
+            }}
+            className="w-full sm:w-48"
+            aria-label="Filtrar por etapa"
+          >
+            <option value="">Todas as etapas</option>
+            {PURCHASE_APPROVAL_STAGE.map((code) => (
+              <option key={code} value={code}>
+                {PURCHASE_APPROVAL_STAGE_LABEL[code]}
               </option>
             ))}
           </Select>
@@ -421,10 +595,14 @@ export function CreatePurchaseDialog({
   const toast = useToast();
   const locations = useLocations();
   const uoms = useUoms();
+  const overview = useAsync(() => apiGet<PurchaseOverview>("/api/purchases/overview"), []);
   const [locationId, setLocationId] = useState("");
   const [justification, setJustification] = useState("");
   const [priority, setPriority] = useState<Priority>("normal");
   const [desiredDate, setDesiredDate] = useState(addDaysIsoDate(7));
+  const [costCenterId, setCostCenterId] = useState("");
+  const [glAccount, setGlAccount] = useState("");
+  const [budgetNotes, setBudgetNotes] = useState("");
   const [notes, setNotes] = useState("");
   const [submitNow, setSubmitNow] = useState(true);
   const [items, setItems] = useState<ItemDraft[]>([
@@ -455,17 +633,21 @@ export function CreatePurchaseDialog({
     setError(null);
     try {
       const result = await apiPost<{ id: string; code: string; status: PurchaseStatus }>("/api/purchases", {
+        workflowVersion: 2,
         locationId: locationId || null,
         justification: justification || null,
         priority,
         desiredDate: desiredDate || null,
+        costCenterId: costCenterId || null,
+        glAccount: glAccount || null,
+        budgetNotes: budgetNotes || null,
         notes: notes || null,
         submit: submitNow,
         items: parsed,
       });
       toast.success(
         result.status === "pending_approval"
-          ? `Solicitação ${result.code} enviada para aprovação.`
+          ? `Solicitação ${result.code} enviada ao gestor do setor.`
           : `Rascunho ${result.code} salvo.`,
       );
       onCreated(result.id);
@@ -481,7 +663,7 @@ export function CreatePurchaseDialog({
       open
       wide
       title="Nova solicitação de compra"
-      description="A aprovação e feita por um aprovador; o pedido vai ao fornecedor e depois o recebimento entra no estoque."
+      description="O gestor do setor aprova a necessidade; a Direção analisa o orçamento; Compras cota, escolhe fornecedores e conduz o recebimento."
       onClose={onClose}
       footer={
         <>
@@ -489,7 +671,7 @@ export function CreatePurchaseDialog({
             Cancelar
           </Button>
           <Button onClick={submit} loading={saving}>
-            {submitNow ? "Enviar para aprovação" : "Salvar rascunho"}
+            {submitNow ? "Enviar ao gestor" : "Salvar rascunho"}
           </Button>
         </>
       }
@@ -534,6 +716,36 @@ export function CreatePurchaseDialog({
               value={justification}
               onChange={(event) => setJustification(event.target.value)}
               placeholder="Ex.: reposição de estoque mínimo"
+            />
+          </Field>
+          <Field
+            label="Centro de custo"
+            hint="Usado na análise de orçamento e na exportação ao ERP."
+            htmlFor="prCostCenter"
+          >
+            <Select id="prCostCenter" value={costCenterId} onChange={(event) => setCostCenterId(event.target.value)}>
+              <option value="">Selecione...</option>
+              {(overview.data?.costCenters ?? []).map((center) => (
+                <option key={center.id} value={center.id}>
+                  {center.code} — {center.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Conta contábil" hint="Opcional; o financeiro pode completar depois." htmlFor="prGlAccount">
+            <Input
+              id="prGlAccount"
+              value={glAccount}
+              onChange={(event) => setGlAccount(event.target.value)}
+              placeholder="Ex.: 4.2.01"
+            />
+          </Field>
+          <Field label="Observação de orçamento" htmlFor="prBudgetNotes">
+            <Input
+              id="prBudgetNotes"
+              value={budgetNotes}
+              onChange={(event) => setBudgetNotes(event.target.value)}
+              placeholder="Verba, contrato ou centro de aprovação"
             />
           </Field>
         </div>
@@ -655,6 +867,8 @@ interface PurchaseDetailResponse {
   items: PurchaseItem[];
   receipts: ReceiptSummary[];
   quotes: QuoteSummary[];
+  awards: PurchaseAward[];
+  orders: PurchaseOrder[];
   /** Linha do tempo (F-05): eventos da auditoria na ordem em que aconteceram. */
   timeline: PurchaseTimelineEvent[];
 }
@@ -680,6 +894,7 @@ export function PurchaseDetailPage() {
   const { can, user } = useSession();
   const toast = useToast();
   const [deciding, setDeciding] = useState(false);
+  const [awarding, setAwarding] = useState(false);
   const [ordering, setOrdering] = useState(false);
   const [receiving, setReceiving] = useState(false);
   const [cancelling, setCancelling] = useState(false);
@@ -697,21 +912,44 @@ export function PurchaseDetailPage() {
   if (state.error && !state.data) return <ErrorBlock message={state.error} onRetry={state.reload} />;
   if (!state.data) return null;
 
-  const { request, items, receipts, quotes, timeline } = state.data;
+  const { request, items, receipts, quotes, awards, orders, timeline } = state.data;
+  const isV2 = request.workflowVersion === 2;
   const canSubmit = request.status === "draft" && can(PERMISSIONS.PURCHASES_CREATE);
+  const stageAllowed =
+    request.approvalStage === "manager"
+      ? can(PERMISSIONS.PURCHASES_APPROVE)
+      : request.approvalStage === "direction"
+        ? can(PERMISSIONS.PURCHASES_AUTHORIZE)
+        : request.approvalStage === "purchasing"
+          ? can(PERMISSIONS.PURCHASES_AWARD) || can(PERMISSIONS.PURCHASES_DIRECT)
+          : false;
   const canDecide =
-    request.status === "pending_approval" &&
-    (can(PERMISSIONS.PURCHASES_APPROVE) || can(PERMISSIONS.PURCHASES_ORDER)) &&
+    isV2
+      ? request.status === "pending_approval" && stageAllowed && user?.id !== request.requesterId
+      : request.status === "pending_approval" &&
+        (can(PERMISSIONS.PURCHASES_APPROVE) || can(PERMISSIONS.PURCHASES_ORDER)) &&
+        user?.id !== request.requesterId;
+  const canAward =
+    isV2 &&
+    request.status === "quote_returned" &&
+    request.approvalStage === "award" &&
+    can(PERMISSIONS.PURCHASES_AWARD) &&
     user?.id !== request.requesterId;
-  const canOrder =
-    ["approved", "purchasing", "quote_approved"].includes(request.status) && can(PERMISSIONS.PURCHASES_ORDER);
-  const canQuote =
-    ["quoting", "quote_returned"].includes(request.status) && can(PERMISSIONS.PURCHASES_ORDER);
+  const canOrder = isV2
+    ? ["approved", "quote_approved"].includes(request.status) &&
+      request.approvalStage === "buyer" &&
+      can(PERMISSIONS.PURCHASES_ORDER)
+    : ["approved", "purchasing", "quote_approved"].includes(request.status) &&
+      can(PERMISSIONS.PURCHASES_ORDER);
+  const canQuote = isV2
+    ? request.status === "quoting" && can(PERMISSIONS.PURCHASES_ORDER)
+    : ["quoting", "quote_returned"].includes(request.status) && can(PERMISSIONS.PURCHASES_ORDER);
   const canReturnQuote =
     request.status === "quoting" &&
     can(PERMISSIONS.PURCHASES_ORDER) &&
     quotes.some((quote) => quote.status === "registered");
   const canDecideQuote =
+    !isV2 &&
     request.status === "quote_returned" &&
     can(PERMISSIONS.PURCHASES_APPROVE) &&
     user?.id !== request.requesterId;
@@ -731,12 +969,17 @@ export function PurchaseDetailPage() {
       .filter((item) => item.supplierId && item.supplierName)
       .map((item) => [item.supplierId as string, item.supplierName as string]),
   );
+  const orderById = new Map(orders.map((order) => [order.id, order]));
   const timelineDetail = (event: PurchaseTimelineEvent): string | null => {
     if (event.action.startsWith("purchase_quote.")) {
       const quote = event.entityId ? quoteById.get(event.entityId) : undefined;
       return quote ? `${quote.code} · ${quote.supplierName}` : event.code;
     }
     if (event.action === "purchase_receipt.confirm") return event.code;
+    if (event.action.startsWith("purchase_order.")) {
+      const order = event.entityId ? orderById.get(event.entityId) : undefined;
+      return order ? `${order.code} - ${order.supplierName}` : event.code;
+    }
     if (event.action === "purchase_request.order") {
       return event.supplierId ? (supplierById.get(event.supplierId) ?? null) : null;
     }
@@ -860,7 +1103,25 @@ export function PurchaseDetailPage() {
         description={
           <span className="flex flex-wrap items-center gap-2">
             <Badge tone={PURCHASE_STATUS_TONE[request.status]}>{PURCHASE_STATUS_LABEL[request.status]}</Badge>
+            {isV2 ? (
+              <Badge tone={request.routing === "direct_to_purchasing" ? "violet" : "brand"}>
+                {request.routing === "direct_to_purchasing"
+                  ? "Enviada direto a Compras"
+                  : `Etapa: ${
+                      PURCHASE_APPROVAL_STAGE_LABEL[
+                        request.approvalStage as keyof typeof PURCHASE_APPROVAL_STAGE_LABEL
+                      ] ?? request.approvalStage
+                    }`}
+              </Badge>
+            ) : (
+              <Badge tone="slate">Fluxo anterior</Badge>
+            )}
             <Badge tone={PRIORITY_TONE[request.priority]}>Prioridade {PRIORITY_LABEL[request.priority]}</Badge>
+            {request.costCenterCode ? (
+              <Badge tone="slate">
+                {request.costCenterCode} - {request.costCenterName}
+              </Badge>
+            ) : null}
             {request.desiredDate ? <Badge tone="slate">Desejada para {formatDate(request.desiredDate)}</Badge> : null}
           </span>
         }
@@ -870,10 +1131,16 @@ export function PurchaseDetailPage() {
               <Button variant="secondary">Voltar</Button>
             </Link>
             {canSubmit ? (
-              <Button onClick={() => void submitForApproval()}>Enviar para aprovação</Button>
+              <Button onClick={() => void submitForApproval()}>Enviar ao gestor</Button>
             ) : null}
             {canDecide ? (
-              <Button onClick={() => setDeciding(true)}>Analisar</Button>
+              <Button onClick={() => setDeciding(true)}>
+                {request.approvalStage === "manager"
+                  ? "Analisar necessidade"
+                  : request.approvalStage === "direction"
+                    ? "Analisar orçamento"
+                    : "Triagem de compras"}
+              </Button>
             ) : null}
             {canQuote ? (
               <Button variant="secondary" onClick={() => setQuoting(true)}>
@@ -882,11 +1149,16 @@ export function PurchaseDetailPage() {
             ) : null}
             {canReturnQuote ? (
               <Button onClick={() => void returnQuote()} loading={returningQuote}>
-                Devolver cotação
+                Devolver para adjudicação
               </Button>
             ) : null}
+            {canAward ? (
+              <Button onClick={() => setAwarding(true)}>Adjudicar por item</Button>
+            ) : null}
             {canOrder ? (
-              <Button onClick={() => setOrdering(true)}>Registrar pedido</Button>
+              <Button onClick={() => setOrdering(true)}>
+                {isV2 ? "Emitir pedidos" : "Registrar pedido"}
+              </Button>
             ) : null}
             {canReceive ? (
               <Button onClick={() => setReceiving(true)}>Registrar recebimento</Button>
@@ -902,6 +1174,12 @@ export function PurchaseDetailPage() {
 
       <div className="grid gap-5 lg:grid-cols-3">
         <div className="space-y-5 lg:col-span-2">
+          {isV2 ? (
+            <Card title="Fluxo corporativo">
+              <WorkflowProgress request={request} />
+            </Card>
+          ) : null}
+
           <Card padded={false} title="Itens da solicitação">
             <Table
               columns={columns}
@@ -917,6 +1195,25 @@ export function PurchaseDetailPage() {
                 <Alert tone="amber" title="Cotação devolvida">
                   Compare as propostas e aprove a vencedora; o pedido nasce da proposta aprovada.
                 </Alert>
+              ) : null}
+              {request.status === "quote_returned" && isV2 && canAward ? (
+                <Alert tone="amber" title="Escolha o fornecedor por item">
+                  Um mesmo fornecedor pode ganhar todos os itens ou cada item pode ter um vencedor diferente.
+                  Use “Adjudicar por item” para concluir.
+                </Alert>
+              ) : null}
+              {awards.length > 0 ? (
+                <div className="mt-2 rounded-lg border border-emerald-100 bg-emerald-50 p-3">
+                  <p className="text-sm font-medium text-emerald-900">Adjudicação registrada</p>
+                  <ul className="mt-1 space-y-1 text-xs text-emerald-800">
+                    {awards.map((award) => (
+                      <li key={award.id}>
+                        {award.productName ?? award.description ?? "Item"} — {award.supplierName} •{" "}
+                        {formatCurrencyFromCents(award.unitPriceCents)} / {award.uomCode ?? "un"}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               ) : null}
               {request.status === "quoting" ? (
                 <p className="text-sm text-slate-500">
@@ -1017,6 +1314,53 @@ export function PurchaseDetailPage() {
             </Card>
           ) : null}
 
+          {orders.length > 0 ? (
+            <Card title={`Pedidos por fornecedor (${orders.length})`}>
+              <ul className="divide-y divide-slate-100">
+                {orders.map((order) => (
+                  <li key={order.id} className="py-3">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-medium text-slate-800">
+                          {order.code} — {order.supplierName}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          {order.itemCount} {plural(order.itemCount, "item", "itens")} •{" "}
+                          {order.orderRef ? `ref. ${order.orderRef} • ` : ""}
+                          {order.createdByName} em {formatDateTime(order.createdAt)}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-semibold tabular-nums text-slate-800">
+                          {formatCurrencyFromCents(order.totalCents)}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          {order.status === "received"
+                            ? "Recebido"
+                            : order.status === "partially_received"
+                              ? "Parcialmente recebido"
+                              : "Pedido aberto"}
+                          {order.syncStatus === "pending" ? " • ERP pendente" : ""}
+                        </p>
+                      </div>
+                    </div>
+                    <ul className="mt-2 space-y-1 text-xs text-slate-600">
+                      {order.items.map((line) => (
+                        <li key={line.id} className="flex justify-between gap-3">
+                          <span>
+                            {line.productName ?? line.description ?? "Item"} — {formatQuantity(line.qtyMilli)}{" "}
+                            {line.uomCode ?? ""}
+                          </span>
+                          <span className="tabular-nums">{formatCurrencyFromCents(line.unitPriceCents)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          ) : null}
+
           <Card title={`Recebimentos (${receipts.length})`}>
             {receipts.length === 0 ? (
               <p className="text-sm text-slate-500">
@@ -1069,8 +1413,53 @@ export function PurchaseDetailPage() {
             <dl className="space-y-3 text-sm">
               <InfoRow label="Solicitante" value={request.requesterName} />
               <InfoRow label="Local" value={request.locationPath ?? request.locationName ?? "-"} />
+              {isV2 ? (
+                <>
+                  <InfoRow
+                    label="Centro de custo"
+                    value={
+                      request.costCenterCode
+                        ? `${request.costCenterCode} - ${request.costCenterName}`
+                        : "Não informado"
+                    }
+                  />
+                  <InfoRow label="Conta contábil" value={request.glAccount ?? "-"} />
+                  <InfoRow label="Orçamento" value={PURCHASE_BUDGET_STATUS_LABEL[request.budgetStatus]} />
+                  {request.budgetNotes ? <InfoRow label="Observação de orçamento" value={request.budgetNotes} /> : null}
+                  <InfoRow
+                    label="Financeiro"
+                    value={
+                      request.financeStatus === "committed"
+                        ? "Comprometido no pedido"
+                        : request.financeStatus === "received"
+                          ? "Recebido e conciliado"
+                          : request.financeStatus === "pending"
+                            ? "Aguardando pedido"
+                            : "Não se aplica"
+                    }
+                  />
+                </>
+              ) : null}
               <InfoRow label="Criada em" value={formatDateTime(request.createdAt)} />
               <InfoRow label="Justificativa" value={request.justification ?? "-"} />
+              {request.managerApprovedAt ? (
+                <InfoRow
+                  label="Aprovação do gestor"
+                  value={`${request.managerApprovedByName ?? "-"} em ${formatDateTime(request.managerApprovedAt)}`}
+                />
+              ) : null}
+              {request.directionApprovedAt ? (
+                <InfoRow
+                  label="Autorização da Direção"
+                  value={`${request.directionApprovedByName ?? "-"} em ${formatDateTime(request.directionApprovedAt)}`}
+                />
+              ) : null}
+              {request.directAuthorizedAt ? (
+                <InfoRow
+                  label="Compra direta autorizada"
+                  value={`${request.directAuthorizedByName ?? "-"} em ${formatDateTime(request.directAuthorizedAt)}`}
+                />
+              ) : null}
               {request.approvedAt ? (
                 <InfoRow
                   label="Decisão"
@@ -1114,28 +1503,66 @@ export function PurchaseDetailPage() {
       </div>
 
       {deciding ? (
-        <DecideDialog
+        isV2 ? (
+          <WorkflowDecisionDialog
+            request={request}
+            items={items}
+            onClose={() => setDeciding(false)}
+            onSaved={() => {
+              setDeciding(false);
+              state.reload();
+            }}
+          />
+        ) : (
+          <DecideDialog
+            request={request}
+            items={items}
+            onClose={() => setDeciding(false)}
+            onSaved={() => {
+              setDeciding(false);
+              state.reload();
+            }}
+          />
+        )
+      ) : null}
+
+      {awarding ? (
+        <AwardDialog
           request={request}
           items={items}
-          onClose={() => setDeciding(false)}
+          quotes={quotes}
+          onClose={() => setAwarding(false)}
           onSaved={() => {
-            setDeciding(false);
+            setAwarding(false);
             state.reload();
           }}
         />
       ) : null}
 
       {ordering ? (
-        <OrderDialog
-          request={request}
-          items={items}
-          approvedQuote={approvedQuote}
-          onClose={() => setOrdering(false)}
-          onSaved={() => {
-            setOrdering(false);
-            state.reload();
-          }}
-        />
+        isV2 ? (
+          <MultiOrderDialog
+            request={request}
+            items={items}
+            awards={awards}
+            onClose={() => setOrdering(false)}
+            onSaved={() => {
+              setOrdering(false);
+              state.reload();
+            }}
+          />
+        ) : (
+          <OrderDialog
+            request={request}
+            items={items}
+            approvedQuote={approvedQuote}
+            onClose={() => setOrdering(false)}
+            onSaved={() => {
+              setOrdering(false);
+              state.reload();
+            }}
+          />
+        )
       ) : null}
 
       {quoting ? (
@@ -1195,6 +1622,621 @@ function InfoRow({ label, value }: { label: string; value: string }) {
       <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</dt>
       <dd className="mt-0.5 text-slate-800">{value}</dd>
     </div>
+  );
+}
+
+function WorkflowProgress({ request }: { request: PurchaseRow }) {
+  const standard = request.routing !== "direct_to_purchasing";
+  const steps = [
+    { key: "manager", label: "Gestor do setor" },
+    ...(standard ? [{ key: "direction", label: "Direção" }] : []),
+    { key: "purchasing", label: "Compras" },
+    { key: "buyer", label: "Comprador" },
+    { key: "receipt", label: "Recebimento" },
+  ];
+  const stageOrder: Record<string, number> = {
+    manager: 0,
+    direction: standard ? 1 : 0,
+    purchasing: standard ? 2 : 1,
+    buyer: standard ? 3 : 2,
+    award: standard ? 3 : 2,
+    receipt: standard ? 4 : 3,
+    completed: steps.length,
+  };
+  const current = stageOrder[request.approvalStage] ?? 0;
+
+  return (
+    <ol className="grid gap-2 sm:grid-cols-5">
+      {steps.map((step, index) => {
+        const done = request.approvalStage === "completed" || index < current;
+        const active = index === current && request.approvalStage !== "completed";
+        return (
+          <li key={step.key} className="flex items-center gap-2 sm:block">
+            <span
+              className={`flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
+                done
+                  ? "bg-emerald-100 text-emerald-700"
+                  : active
+                    ? "bg-brand-700 text-white"
+                    : "bg-slate-100 text-slate-500"
+              }`}
+            >
+              {done ? "✓" : index + 1}
+            </span>
+            <span
+              className={`mt-1 block text-xs ${active ? "font-semibold text-slate-800" : "text-slate-500"}`}
+            >
+              {step.label}
+            </span>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+function WorkflowDecisionDialog({
+  request,
+  items,
+  onClose,
+  onSaved,
+}: {
+  request: PurchaseRow;
+  items: PurchaseItem[];
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const toast = useToast();
+  const stage = request.approvalStage;
+  const options =
+    stage === "manager"
+      ? [
+          { value: "approved", label: "Aprovar e enviar à Direção" },
+          { value: "send_to_purchasing", label: "Enviar diretamente a Compras" },
+          { value: "rejected", label: "Rejeitar solicitação" },
+        ]
+      : stage === "direction"
+        ? [
+            { value: "approved", label: "Autorizar compra / orçamento" },
+            { value: "rejected", label: "Rejeitar solicitação" },
+          ]
+        : [
+            { value: "send_to_direction", label: "Enviar à Direção para análise" },
+            { value: "authorize_direct", label: "Autorizar compra direta sem cotação" },
+            { value: "rejected", label: "Rejeitar solicitação" },
+          ];
+  const [decision, setDecision] = useState(options[0]!.value);
+  const [notes, setNotes] = useState("");
+  const [drafts, setDrafts] = useState(() =>
+    items
+      .filter((item) => !["received", "cancelled", "rejected"].includes(item.status))
+      .map((item) => ({
+        itemId: item.id,
+        label: item.productName ?? item.description ?? "Item",
+        requestedMilli: item.qtyMilli,
+        approved: true,
+        qtyApproved: formatQuantity(item.qtyApprovedMilli ?? item.qtyMilli, 3),
+        mode: item.purchaseMode ?? "quote",
+      })),
+  );
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const editItems = stage === "manager" || stage === "direction";
+
+  const submit = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      const payload: Record<string, unknown> = { decision, notes: notes || null };
+      if (editItems && drafts.length > 0) {
+        payload.items = drafts.map((draft) => ({
+          itemId: draft.itemId,
+          status: draft.approved ? "approved" : "rejected",
+          qtyApproved: draft.approved ? Number(draft.qtyApproved.replace(",", ".")) : undefined,
+          purchaseMode: draft.approved ? draft.mode : undefined,
+        }));
+      }
+      await apiPost(`/api/purchases/${request.id}/decide`, payload);
+      toast.success("Decisão registrada.");
+      onSaved();
+    } catch (cause) {
+      setError(apiErrorMessage(cause));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog
+      open
+      wide
+      title={`Decidir ${request.code}`}
+      description="A decisão fica registrada na auditoria e avança a solicitação para a próxima etapa."
+      onClose={onClose}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button onClick={() => void submit()} loading={saving}>
+            Confirmar decisão
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        {error ? <Alert tone="red">{error}</Alert> : null}
+        <Field label="Decisão" htmlFor="workflowDecision">
+          <Select
+            id="workflowDecision"
+            value={decision}
+            onChange={(event) => setDecision(event.target.value)}
+          >
+            {options.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+          {stage === "manager"
+            ? "O gestor confirma a necessidade. A Direção fará a análise de orçamento antes de Compras."
+            : stage === "direction"
+              ? "A Direção confere o centro de custo e o orçamento. A aprovação libera a cotação/compra."
+              : "A triagem de Compras pode autorizar compra direta ou devolver à Direção para análise de orçamento."}
+        </div>
+        {editItems ? (
+          <div className="overflow-hidden rounded-lg border border-slate-200">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                <tr>
+                  <th className="px-3 py-2 text-left font-medium">Item</th>
+                  <th className="px-3 py-2 text-right font-medium">Solicitado</th>
+                  <th className="px-3 py-2 text-right font-medium">Aprovado</th>
+                  <th className="px-3 py-2 text-left font-medium">Destino</th>
+                  <th className="px-3 py-2 text-center font-medium">Incluir</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {drafts.map((draft) => (
+                  <tr key={draft.itemId}>
+                    <td className="px-3 py-2 text-slate-700">{draft.label}</td>
+                    <td className="px-3 py-2 text-right tabular-nums text-slate-500">
+                      {formatQuantity(draft.requestedMilli)}
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <Input
+                        value={draft.qtyApproved}
+                        onChange={(event) =>
+                          setDrafts((current) =>
+                            current.map((entry) =>
+                              entry.itemId === draft.itemId
+                                ? { ...entry, qtyApproved: event.target.value }
+                                : entry,
+                            ),
+                          )
+                        }
+                        className="w-24 text-right"
+                        inputMode="decimal"
+                        aria-label={`Quantidade aprovada de ${draft.label}`}
+                      />
+                    </td>
+                    <td className="px-3 py-2">
+                      <Select
+                        value={draft.mode}
+                        onChange={(event) =>
+                          setDrafts((current) =>
+                            current.map((entry) =>
+                              entry.itemId === draft.itemId
+                                ? { ...entry, mode: event.target.value as "direct" | "quote" }
+                                : entry,
+                            ),
+                          )
+                        }
+                        className="w-32"
+                        aria-label={`Destino de ${draft.label}`}
+                      >
+                        <option value="direct">Compra direta</option>
+                        <option value="quote">Cotação</option>
+                      </Select>
+                    </td>
+                    <td className="px-3 py-2 text-center">
+                      <input
+                        type="checkbox"
+                        className="size-4 rounded border-slate-300 text-brand-700"
+                        checked={draft.approved}
+                        onChange={(event) =>
+                          setDrafts((current) =>
+                            current.map((entry) =>
+                              entry.itemId === draft.itemId
+                                ? { ...entry, approved: event.target.checked }
+                                : entry,
+                            ),
+                          )
+                        }
+                        aria-label={`Incluir ${draft.label}`}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+        <Field label="Observação da decisão" htmlFor="workflowNotes">
+          <Textarea
+            id="workflowNotes"
+            rows={3}
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+            placeholder="Registre a justificativa, a verba ou a orientação para a próxima etapa."
+          />
+        </Field>
+      </div>
+    </Dialog>
+  );
+}
+
+function AwardDialog({
+  request,
+  items,
+  quotes,
+  onClose,
+  onSaved,
+}: {
+  request: PurchaseRow;
+  items: PurchaseItem[];
+  quotes: QuoteSummary[];
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const toast = useToast();
+  const [notes, setNotes] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const candidates = items.filter(
+    (item) => item.purchaseMode === "quote" && !["rejected", "cancelled", "received"].includes(item.status),
+  );
+  const [drafts, setDrafts] = useState(() =>
+    candidates.map((item) => {
+      const options = quotes
+        .filter((quote) => quote.status === "registered")
+        .map((quote) => ({ quote, line: quote.items.find((line) => line.requestItemId === item.id) }))
+        .filter((entry) => entry.line);
+      const best = options.sort((a, b) => (a.line!.unitPriceCents - b.line!.unitPriceCents))[0];
+      return {
+        itemId: item.id,
+        label: item.productName ?? item.description ?? "Item",
+        qty: formatQuantity(item.qtyApprovedMilli ?? item.qtyMilli, 3),
+        quoteId: best?.quote.id ?? "",
+      };
+    }),
+  );
+
+  const submit = async () => {
+    if (drafts.some((draft) => !draft.quoteId)) {
+      setError("Selecione um fornecedor para cada item em cotação.");
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      await apiPost(`/api/purchases/${request.id}/award`, {
+        notes: notes || null,
+        awards: drafts.map((draft) => ({
+          itemId: draft.itemId,
+          quoteId: draft.quoteId,
+          qty: Number(draft.qty.replace(",", ".")),
+        })),
+      });
+      toast.success("Cotação adjudicada por item.");
+      onSaved();
+    } catch (cause) {
+      setError(apiErrorMessage(cause));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog
+      open
+      wide
+      title={`Adjudicar ${request.code}`}
+      description="Escolha o fornecedor de cada item. É permitido um fornecedor para todos ou fornecedores diferentes por item."
+      onClose={onClose}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button onClick={() => void submit()} loading={saving}>
+            Confirmar adjudicação
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        {error ? <Alert tone="red">{error}</Alert> : null}
+        {candidates.length === 0 ? (
+          <Alert tone="amber">Não há itens em cotação pendentes de adjudicação.</Alert>
+        ) : (
+          <div className="overflow-hidden rounded-lg border border-slate-200">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                <tr>
+                  <th className="px-3 py-2 text-left font-medium">Item</th>
+                  <th className="px-3 py-2 text-right font-medium">Qtde</th>
+                  <th className="px-3 py-2 text-left font-medium">Fornecedor / proposta</th>
+                  <th className="px-3 py-2 text-right font-medium">Preço unit.</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {drafts.map((draft) => {
+                  const selected = quotes.find((quote) => quote.id === draft.quoteId);
+                  const line = selected?.items.find((entry) => entry.requestItemId === draft.itemId);
+                  const options = quotes.filter(
+                    (quote) =>
+                      quote.status === "registered" &&
+                      quote.items.some((entry) => entry.requestItemId === draft.itemId),
+                  );
+                  return (
+                    <tr key={draft.itemId}>
+                      <td className="px-3 py-2 text-slate-700">{draft.label}</td>
+                      <td className="px-3 py-2 text-right tabular-nums text-slate-600">{draft.qty}</td>
+                      <td className="px-3 py-2">
+                        <Select
+                          value={draft.quoteId}
+                          onChange={(event) =>
+                            setDrafts((current) =>
+                              current.map((entry) =>
+                                entry.itemId === draft.itemId
+                                  ? { ...entry, quoteId: event.target.value }
+                                  : entry,
+                              ),
+                            )
+                          }
+                          aria-label={`Fornecedor de ${draft.label}`}
+                        >
+                          <option value="">Selecione...</option>
+                          {options.map((quote) => (
+                            <option key={quote.id} value={quote.id}>
+                              {quote.supplierName} ({quote.code})
+                            </option>
+                          ))}
+                        </Select>
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums text-slate-700">
+                        {line ? formatCurrencyFromCents(line.unitPriceCents) : "-"}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <Field label="Observação da adjudicação" htmlFor="awardNotes">
+          <Textarea
+            id="awardNotes"
+            rows={2}
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+            placeholder="Ex.: melhor prazo de entrega; item dividido por disponibilidade."
+          />
+        </Field>
+      </div>
+    </Dialog>
+  );
+}
+
+function MultiOrderDialog({
+  request,
+  items,
+  awards,
+  onClose,
+  onSaved,
+}: {
+  request: PurchaseRow;
+  items: PurchaseItem[];
+  awards: PurchaseAward[];
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const toast = useToast();
+  const suppliers = useSuppliers();
+  const awardByItem = new Map(awards.map((award) => [award.requestItemId, award]));
+  const [orderRef, setOrderRef] = useState("");
+  const [notes, setNotes] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [drafts, setDrafts] = useState(() =>
+    items
+      .filter((item) => item.status === "approved")
+      .map((item) => {
+        const award = awardByItem.get(item.id);
+        return {
+          itemId: item.id,
+          label: item.productName ?? item.description ?? "Item",
+          uomCode: item.uomCode,
+          qty: formatQuantity(item.qtyApprovedMilli ?? item.qtyMilli, 3),
+          supplierId: award?.supplierId ?? item.supplierId ?? "",
+          unitPrice:
+            (award?.unitPriceCents ?? item.unitPriceCents) !== null &&
+            (award?.unitPriceCents ?? item.unitPriceCents) !== undefined
+              ? ((award?.unitPriceCents ?? item.unitPriceCents)! / 100).toFixed(2)
+              : "",
+        };
+      }),
+  );
+
+  const grouped = useMemo(() => {
+    const map = new Map<string, typeof drafts>();
+    for (const draft of drafts) {
+      if (!draft.supplierId) continue;
+      const list = map.get(draft.supplierId) ?? [];
+      list.push(draft);
+      map.set(draft.supplierId, list);
+    }
+    return [...map.entries()];
+  }, [drafts]);
+
+  const submit = async () => {
+    if (drafts.some((draft) => !draft.supplierId)) {
+      setError("Selecione o fornecedor de cada item. Itens adjudicados já vêm com o fornecedor definido.");
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      await apiPost(`/api/purchases/${request.id}/orders`, {
+        notes: notes || null,
+        orders: grouped.map(([supplierId, lines]) => ({
+          supplierId,
+          orderRef: orderRef || null,
+          items: lines.map((line) => ({
+            itemId: line.itemId,
+            qtyOrdered: Number(line.qty.replace(",", ".")),
+            unitPrice: Number(line.unitPrice.replace(",", ".")) || 0,
+          })),
+        })),
+      });
+      toast.success(`${grouped.length} ${plural(grouped.length, "pedido emitido", "pedidos emitidos")}.`);
+      onSaved();
+    } catch (cause) {
+      setError(apiErrorMessage(cause));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog
+      open
+      wide
+      title={`Emitir pedidos de ${request.code}`}
+      description="Confira fornecedor, quantidade e preço. O sistema agrupa os itens em um pedido por fornecedor."
+      onClose={onClose}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button onClick={() => void submit()} loading={saving}>
+            Emitir {grouped.length || ""} {plural(grouped.length, "pedido", "pedidos")}
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        {error ? <Alert tone="red">{error}</Alert> : null}
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Referência do pedido" hint="Opcional; pode ser o número do fornecedor." htmlFor="multiOrderRef">
+            <Input id="multiOrderRef" value={orderRef} onChange={(event) => setOrderRef(event.target.value)} />
+          </Field>
+          <Field label="Observação" htmlFor="multiOrderNotes">
+            <Input
+              id="multiOrderNotes"
+              value={notes}
+              onChange={(event) => setNotes(event.target.value)}
+              placeholder="Prazo, condição de pagamento..."
+            />
+          </Field>
+        </div>
+        <div className="overflow-hidden rounded-lg border border-slate-200">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+              <tr>
+                <th className="px-3 py-2 text-left font-medium">Item</th>
+                <th className="px-3 py-2 text-right font-medium">Qtde</th>
+                <th className="px-3 py-2 text-left font-medium">Fornecedor</th>
+                <th className="px-3 py-2 text-right font-medium">Preço unit.</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {drafts.map((draft) => {
+                const award = awardByItem.get(draft.itemId);
+                return (
+                  <tr key={draft.itemId}>
+                    <td className="px-3 py-2 text-slate-700">
+                      {draft.label}
+                      {award ? <span className="ml-2 text-xs text-emerald-700">adjudicado</span> : null}
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <Input
+                        value={draft.qty}
+                        onChange={(event) =>
+                          setDrafts((current) =>
+                            current.map((entry) =>
+                              entry.itemId === draft.itemId ? { ...entry, qty: event.target.value } : entry,
+                            ),
+                          )
+                        }
+                        className="w-24 text-right"
+                        inputMode="decimal"
+                        aria-label={`Quantidade de ${draft.label}`}
+                      />
+                      <span className="ml-1 text-xs text-slate-500">{draft.uomCode ?? ""}</span>
+                    </td>
+                    <td className="px-3 py-2">
+                      {award ? (
+                        <span className="text-sm text-slate-700">{award.supplierName}</span>
+                      ) : (
+                        <Select
+                          value={draft.supplierId}
+                          onChange={(event) =>
+                            setDrafts((current) =>
+                              current.map((entry) =>
+                                entry.itemId === draft.itemId
+                                  ? { ...entry, supplierId: event.target.value }
+                                  : entry,
+                              ),
+                            )
+                          }
+                          aria-label={`Fornecedor de ${draft.label}`}
+                        >
+                          <option value="">Selecione...</option>
+                          {(suppliers.data ?? []).map((supplier) => (
+                            <option key={supplier.id} value={supplier.id}>
+                              {supplier.name}
+                            </option>
+                          ))}
+                        </Select>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <Input
+                        value={draft.unitPrice}
+                        onChange={(event) =>
+                          setDrafts((current) =>
+                            current.map((entry) =>
+                              entry.itemId === draft.itemId
+                                ? { ...entry, unitPrice: event.target.value }
+                                : entry,
+                            ),
+                          )
+                        }
+                        className="w-24 text-right"
+                        inputMode="decimal"
+                        aria-label={`Preço de ${draft.label}`}
+                      />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        {grouped.length > 0 ? (
+          <p className="text-xs text-slate-500">
+            Serão criados {grouped.length} {plural(grouped.length, "pedido", "pedidos")}, um por fornecedor.
+          </p>
+        ) : (
+          <Alert tone="amber">Selecione um fornecedor para os itens de compra direta.</Alert>
+        )}
+      </div>
+    </Dialog>
   );
 }
 

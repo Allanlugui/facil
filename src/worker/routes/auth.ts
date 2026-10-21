@@ -77,7 +77,9 @@ function toSessionUser(user: AuthUser): SessionUser {
 /* -------------------------------------------------------------------------- */
 
 router.get("/setup-status", async (c) => {
-  const row = await c.env.DB.prepare(`SELECT COUNT(*) AS total FROM users`).first<{ total: number }>();
+  const row = await c.env.DB.prepare(
+    `SELECT COUNT(*) AS total FROM users WHERE id <> 'user_intake'`,
+  ).first<{ total: number }>();
   const settings = await allRows<{ key: string; value: string }>(
     c.env.DB,
     `SELECT key, value FROM settings WHERE key IN ('company.name','ui.theme')`,
@@ -98,7 +100,12 @@ router.get("/setup-status", async (c) => {
  */
 router.post("/setup", async (c) => {
   const body = await parseBody(c, setupSchema);
-  const existing = await c.env.DB.prepare(`SELECT COUNT(*) AS total FROM users`).first<{ total: number }>();
+  // `user_intake` é o solicitante técnico das integrações, não uma conta de
+  // acesso. Ele pode existir antes da instalação inicial e não pode bloquear a
+  // criação do primeiro administrador.
+  const existing = await c.env.DB.prepare(
+    `SELECT COUNT(*) AS total FROM users WHERE id <> 'user_intake'`,
+  ).first<{ total: number }>();
   if ((existing?.total ?? 0) > 0) {
     throw conflict("A instalação inicial já foi concluída.");
   }

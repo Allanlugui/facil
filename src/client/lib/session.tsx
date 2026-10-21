@@ -118,6 +118,24 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     void refresh();
   }, [refresh]);
 
+  // Permissões e dados do perfil podem mudar enquanto a aba está aberta. O
+  // servidor já reavalia cada requisição; aqui a UI se atualiza ao voltar o
+  // foco e, no máximo, a cada minuto, sem exigir recarregar a página.
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") void refresh();
+    };
+    const timer = window.setInterval(refreshWhenVisible, 60_000);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    window.addEventListener("focus", refreshWhenVisible);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+      window.removeEventListener("focus", refreshWhenVisible);
+    };
+  }, [status, refresh]);
+
   // Tema efetivo: preferência do usuário → padrão do sistema → Clássico.
   // O efeito cobre login, logout, troca de preferência e mudança do padrão.
   useEffect(() => {

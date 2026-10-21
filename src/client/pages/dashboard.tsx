@@ -3,6 +3,7 @@ import { PERMISSIONS } from "@shared/permissions";
 import {
   MOVEMENT_TYPE_LABEL,
   PRIORITY_LABEL,
+  PURCHASE_APPROVAL_STAGE_LABEL,
   PURCHASE_STATUS_LABEL,
   TICKET_STATUS_LABEL,
   WORK_ORDER_STATUS_LABEL,
@@ -211,8 +212,8 @@ function useDashboardData() {
 
 /**
  * Capa de topo dos painéis iniciais (D-28): faixa visual no topo da home de
- * cada perfil. A variante mobile troca a capa ampla por uma composta em
- * formato quadrado, que lê melhor em telas estreitas.
+ * cada perfil. A variante mobile usa um recorte mais fechado da mesma arte,
+ * que preserva a marca e as formas em telas estreitas.
  */
 function HomeCover() {
   return (
@@ -242,7 +243,7 @@ function HomeCover() {
  * Acima da home de cada perfil entra a capa da marca (D-28).
  */
 export function DashboardPage() {
-  const { user } = useSession();
+  const { user, can } = useSession();
   const home = (() => {
     switch (user?.roleCode) {
       case "maintenance_tech":
@@ -266,8 +267,59 @@ export function DashboardPage() {
   return (
     <div className="space-y-5">
       <HomeCover />
+      {can(PERMISSIONS.PURCHASES_VIEW) ? <PurchaseQueueStrip /> : null}
       {home}
     </div>
+  );
+}
+
+/**
+ * Fila de compras do perfil. É a mesma fonte da página de compras, então uma
+ * permissão alterada pelo administrador aparece aqui no próximo foco/refresh.
+ */
+function PurchaseQueueStrip() {
+  const { can, user } = useSession();
+  const state = useAsync(
+    () =>
+      apiGet<{
+        queues: {
+          manager: number;
+          direction: number;
+          purchasing: number;
+          award: number;
+          buyer: number;
+          receipt: number;
+        };
+      }>("/api/purchases/overview"),
+    [user?.id],
+  );
+  if (!can(PERMISSIONS.PURCHASES_VIEW) || !state.data) return null;
+  const queues = [
+    { key: "manager", label: PURCHASE_APPROVAL_STAGE_LABEL.manager, count: state.data.queues.manager, show: can(PERMISSIONS.PURCHASES_APPROVE) },
+    { key: "direction", label: PURCHASE_APPROVAL_STAGE_LABEL.direction, count: state.data.queues.direction, show: can(PERMISSIONS.PURCHASES_AUTHORIZE) },
+    { key: "purchasing", label: "Triagem de compras", count: state.data.queues.purchasing, show: can(PERMISSIONS.PURCHASES_AWARD) || can(PERMISSIONS.PURCHASES_DIRECT) },
+    { key: "award", label: "Adjudicação", count: state.data.queues.award, show: can(PERMISSIONS.PURCHASES_AWARD) },
+    { key: "buyer", label: "Preparar pedido", count: state.data.queues.buyer, show: can(PERMISSIONS.PURCHASES_ORDER) },
+    { key: "receipt", label: "Receber", count: state.data.queues.receipt, show: can(PERMISSIONS.PURCHASES_RECEIVE) },
+  ].filter((queue) => queue.show && queue.count > 0);
+  if (queues.length === 0) return null;
+  return (
+    <Card title="Sua fila de compras" description="O que depende do seu perfil agora.">
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {queues.map((queue) => (
+          <Link
+            key={queue.key}
+            to={`/compras?stage=${queue.key}`}
+            className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 hover:border-brand-200 hover:bg-brand-50"
+          >
+            <span>{queue.label}</span>
+            <span className="rounded-full bg-slate-900 px-2 py-0.5 text-xs font-semibold text-white tabular-nums">
+              {queue.count}
+            </span>
+          </Link>
+        ))}
+      </div>
+    </Card>
   );
 }
 

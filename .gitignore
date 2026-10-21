@@ -13,6 +13,7 @@ Thumbs.db
 .idea/
 .serena/
 .playwright-mcp/
+.tmp-*
 shots/
 
 # worker-configuration.d.ts e GERADO por `npm run types` (wrangler types) mas e

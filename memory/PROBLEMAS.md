@@ -353,3 +353,15 @@
 - **Relatório:** `docs/SEGURANCA-AUDITORIA-2026-10-20.md`; decisão D-42.
 - **Residual aceito:** R2 desligado (anexos do suporte em 503), sem domínio próprio/Access, sem WAF
   global, auditoria append-only por convenção e anexos sem antivírus.
+
+## P-21 — Integrações preparadas, mas ainda sem consumidor externo (20/10/2026) — ABERTO
+
+- **Descrição:** o fluxo corporativo grava eventos idempotentes em `integration_outbox`, mas não há
+  consumidor NetSuite/ServiceNow nem confirmação automática. O intake ServiceNow está implementado e
+  desabilitado em produção enquanto `TICKET_INTAKE_KEY` não for configurada.
+- **Impacto:** o protótipo opera ponta a ponta no Facil, mas a compra/pagamento não chega ao ERP e
+  tickets externos não entram até a chave existir.
+- **Mitigação:** interface `/api/integrations` lista e confirma eventos; documentação em
+  `docs/INTEGRACOES.md`; segredo fora do repositório.
+- **Pendente:** configurar o segredo no Worker, implementar o consumidor e definir a política de
+  retry/observabilidade. R2, domínio/Access e CI dedicada continuam pendentes.

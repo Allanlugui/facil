@@ -885,3 +885,63 @@
   0.1.2 e não tagueada; tags `v0.1.0` e `v0.1.2`.
 - **Marca:** login e metadados de assinatura passaram a exibir **CorpServices Group** (sem espaço),
   alinhados ao nome configurado pelo titular.
+
+## D-44 — Fluxo corporativo de compras v2 convive com o fluxo legado (20/10/2026) — VALIDADO
+
+- **Decisão:** a versão 2 é usada por novas solicitações; solicitações antigas permanecem em
+  `workflow_version = 1` e continuam funcionando no fluxo anterior. Não houve migração destrutiva.
+- **Etapas v2:** solicitante → gestor do setor → direção (necessidade/orçamento) → compras →
+  comprador cota → superior adjudica item a item → comprador emite pedido por fornecedor →
+  recebimento vinculado ao pedido.
+- **Caminho alternativo:** gestor pode enviar direto a compras; a triagem pode devolver à direção
+  (cotação) ou autorizar compra direta sem cotação. O destino padrão é **cotação**; compra direta é
+  escolha explícita.
+- **Evidência:** `tests/18-purchase-workflow.spec.ts`, migration `0019_purchase_workflow.sql`,
+  `docs/COMPRAS.md`, `npm run check` 168/168.
+
+## D-45 — Permissões separadas e novos papéis de compras (20/10/2026) — VALIDADO
+
+- **Permissões:** `purchases.view_all` (visão global), `purchases.authorize` (direção),
+  `purchases.award` (adjudicação), `purchases.direct` (compra direta); `purchases.order` e
+  `purchases.receive` deixaram de ser exclusivas do gestor.
+- **Papéis:** `operations_director` e `purchasing_manager`; matriz de 48 → 52 permissões.
+- **Regra:** o solicitante não decide a própria compra; a direção não pode ser a mesma pessoa que
+  aprovou como gestor (salvo administrador com `settings.manage`).
+- **Efeito:** a UI consulta `/api/auth/me` no foco e a cada minuto; o servidor reavalia a permissão
+  em cada requisição.
+
+## D-46 — Centro de custo, orçamento e adjudicação item a item (20/10/2026) — VALIDADO
+
+- **Dados:** `purchase_requests` ganhou centro de custo, conta contábil, observações e situação
+  orçamentária/financeira; `purchase_request_items` ganhou modo de compra, quantidade aprovada,
+  pedida e recebida.
+- **Adjudicação:** `purchase_awards` liga item → proposta → fornecedor, com quantidade e preço;
+  uma solicitação pode gerar vários `purchase_orders` (um por fornecedor).
+- **Pedido:** usa o preço da proposta adjudicada e recusa preço divergente; grava centro de custo e
+  conta contábil da solicitação no próprio pedido.
+- **Recebimento:** `purchase_receipts` e `purchase_receipt_items` vinculam pedido e item, atualizam
+  quantidades e geram movimentação de estoque sem entrada dupla.
+
+## D-47 — Integrações por outbox transacional e intake idempotente (20/10/2026) — VALIDADO
+
+- **Outbox:** `integration_outbox` é gravado no mesmo `batch` D1 da operação, com
+  `idempotency_key` única; eventos `purchase_request.created`, `.submitted`, `.ordered` e
+  `purchase_order.created`/`goods_receipt.posted` ficam pendentes para um integrador.
+- **Inspeção:** `/api/integrations/outbox` e `ack` permitem listar e confirmar eventos; não há
+  chamada síncrona a NetSuite/ServiceNow no caminho crítico.
+- **Intake:** `POST /api/intake/tickets` exige `TICKET_INTAKE_KEY`, usa `externalRef` idempotente por
+  fonte, limita 30 chamadas/10 min por IP e cria/usa o usuário técnico `user_intake`.
+- **Segurança:** a chave não fica no repositório; sem segredo configurado, o endpoint responde
+  `503 INTAKE_DISABLED`.
+
+## D-48 — Release 0.2.0 e limite de escopo comercial (20/10/2026) — VALIDADO
+
+- **Versão:** `0.2.0` (minor por funcionalidade nova), assinada com Ed25519; toda alteração futura
+  eleva a versão. Chave privada fora do repositório, em `%USERPROFILE%\.facil-signing\`.
+- **Publicação:** tree `c19025940127c05cbb4bf172a706868a306e983694df7a5d183034a6a4e121f7`,
+  20/10/2026 21:47:54 −03:00, Worker `ab266118-20a8-4fc5-a0bd-c245a79c9462`.
+- **Custo:** nenhum serviço pago novo; D1 e Worker no plano atual, anexos R2 desativados, sem domínio
+  customizado/Access e sem CI dedicada.
+- **Documentação:** propósito, função, contexto e proposta no relatório externo
+  `C:\Users\jalla\OneDrive\Desktop\Facil - Relatorio Executivo 0.2.0.md`; handoff no `README.md` e
+  em `docs/COMPRAS.md`/`docs/INTEGRACOES.md`, sem afirmar construção por IA.

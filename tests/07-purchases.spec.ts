@@ -69,6 +69,7 @@ describe("compras: solicitação, aprovação, pedido e recebimento", () => {
     const created = await buyer.api.post<{ id: string; code: string; status: string }>(
       "/api/purchases",
       {
+        workflowVersion: 1,
         locationId: structure.warehouseId,
         justification: "Reposição do estoque de água para outubro",
         priority: "high",
@@ -121,6 +122,7 @@ describe("compras: solicitação, aprovação, pedido e recebimento", () => {
 
   it("cria direto para aprovação e recusa itens sem identificação", async () => {
     const direct = await buyer.api.post<{ status: string }>("/api/purchases", {
+      workflowVersion: 1,
       justification: "Compra urgente de café",
       submit: true,
       items: [{ productId: cafeId, qty: 12 }],
@@ -128,26 +130,33 @@ describe("compras: solicitação, aprovação, pedido e recebimento", () => {
     expect(direct.status).toBe(201);
     expect(direct.body.status).toBe("pending_approval");
 
-    const emptyItems = await buyer.api.post("/api/purchases", { items: [] });
+    const emptyItems = await buyer.api.post("/api/purchases", {
+      workflowVersion: 1,
+      items: [],
+    });
     expectError(emptyItems, "VALIDATION_ERROR");
 
     const zeroQty = await buyer.api.post("/api/purchases", {
+      workflowVersion: 1,
       items: [{ productId: aguaId, qty: 0 }],
     });
     expectError(zeroQty, "VALIDATION_ERROR");
 
     const unknownProduct = await buyer.api.post("/api/purchases", {
+      workflowVersion: 1,
       items: [{ productId: "produto-inexistente", qty: 5 }],
     });
     expectError(unknownProduct, "BAD_REQUEST");
 
     const unidentified = await buyer.api.post("/api/purchases", {
+      workflowVersion: 1,
       items: [{ qty: 5 }],
     });
     expectError(unidentified, "BAD_REQUEST");
 
     // Item sem produto no catálogo, mas descrito, é aceito: a cotação resolve.
     const described = await buyer.api.post<{ id: string }>("/api/purchases", {
+      workflowVersion: 1,
       items: [{ description: "Bebedouro industrial inox", qty: 2, uomId: await findUomId("UN") }],
     });
     expect(described.status).toBe(201);
@@ -167,6 +176,7 @@ describe("compras: solicitação, aprovação, pedido e recebimento", () => {
 
     // O próprio gerente também não aprova a solicitação que ele mesmo abriu.
     const own = await manager.api.post<{ id: string }>("/api/purchases", {
+      workflowVersion: 1,
       justification: "Compra aberta pelo gerente",
       submit: true,
       items: [{ productId: cafeId, qty: 5 }],
@@ -442,6 +452,7 @@ describe("compras: solicitação, aprovação, pedido e recebimento", () => {
 
   it("recusa receber item sem produto cadastrado e itens repetidos", async () => {
     const request = await buyer.api.post<{ id: string }>("/api/purchases", {
+      workflowVersion: 1,
       justification: "Compra de bebedouro novo",
       submit: true,
       items: [{ description: "Bebedouro industrial inox", qty: 2, uomId: await findUomId("UN") }],
@@ -476,6 +487,7 @@ describe("compras: solicitação, aprovação, pedido e recebimento", () => {
 
   it("cadastra produto na hora do recebimento e mantem o alerta até completar o cadastro", async () => {
     const request = await buyer.api.post<{ id: string }>("/api/purchases", {
+      workflowVersion: 1,
       justification: "Compra emergencial de peça fora do catálogo",
       submit: true,
       items: [{ description: "Válvula de retenção 3/4", qty: 4 }],
@@ -635,6 +647,7 @@ describe("compras: solicitação, aprovação, pedido e recebimento", () => {
     expectError(view, "FORBIDDEN");
 
     const create = await requester.api.post("/api/purchases", {
+      workflowVersion: 1,
       items: [{ productId: aguaId, qty: 1 }],
     });
     expectError(create, "FORBIDDEN");
@@ -709,6 +722,7 @@ describe("compras: solicitação, aprovação, pedido e recebimento", () => {
 
     try {
       const created = await buyer.api.post<{ id: string; status: string }>("/api/purchases", {
+      workflowVersion: 1,
         justification: "Material de baixo valor",
         submit: true,
         items: [{ productId: aguaId, qty: 3 }],
@@ -748,6 +762,7 @@ describe("compras: solicitação, aprovação, pedido e recebimento", () => {
 
       // Volta ao rascunho para o fluxo normal.
       const draft = await buyer.api.post<{ id: string; status: string }>("/api/purchases", {
+      workflowVersion: 1,
         items: [{ productId: cafeId, qty: 2 }],
       });
       expect(draft.body.status).toBe("draft");
@@ -764,6 +779,7 @@ describe("compras: solicitação, aprovação, pedido e recebimento", () => {
     }
 
     const afterRestore = await buyer.api.post<{ id: string; status: string }>("/api/purchases", {
+      workflowVersion: 1,
       justification: "Voltando ao fluxo com aprovação",
       submit: true,
       items: [{ productId: cafeId, qty: 1 }],
@@ -777,6 +793,7 @@ describe("compras: solicitação, aprovação, pedido e recebimento", () => {
 
   it("F-01/F-02: item em cotação passa por propostas, aprovação do gestor e vira pedido", async () => {
     const created = await buyer.api.post<{ id: string }>("/api/purchases", {
+      workflowVersion: 1,
       locationId: structure.warehouseId,
       justification: "Compra mista: reposição e upgrade",
       submit: true,
@@ -1061,6 +1078,7 @@ describe("compras: solicitação, aprovação, pedido e recebimento", () => {
 
   it("F-06: uso direto entra e sai no mesmo recebimento, com justificativa", async () => {
     const created = await buyer.api.post<{ id: string }>("/api/purchases", {
+      workflowVersion: 1,
       locationId: structure.warehouseId,
       justification: "Compra com uso direto parcial",
       submit: true,
@@ -1177,6 +1195,7 @@ describe("compras: solicitação, aprovação, pedido e recebimento", () => {
     submit: boolean,
   ): Promise<string> {
     const created = await buyer.api.post<{ id: string }>("/api/purchases", {
+      workflowVersion: 1,
       locationId: structure.warehouseId,
       justification: "Reposição de estoque",
       submit,

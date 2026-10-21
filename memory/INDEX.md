@@ -20,6 +20,9 @@
 
 - `CHANGELOG.md`
 - `docs/VERSIONAMENTO.md`
+- `docs/COMPRAS.md`
+- `docs/INTEGRACOES.md`
+- `docs/IMPLANTACAO.md`
 - `docs/SEGURANCA-AUDITORIA-2026-10-20.md`
 - `docs/ASSINATURA.md`
 

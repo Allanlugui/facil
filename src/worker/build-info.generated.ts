@@ -4,14 +4,14 @@
  */
 export const BUILD_INFO = {
   "project": "Facil — Plataforma de Gestão de Facilities",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "author": "Allan Luiz Silveira Lima",
   "alias": "Allanlugui",
   "company": "CorpServices Group",
-  "signedAt": "2026-10-20T01:31:40-03:00",
-  "treeHash": "7e4433f6448566ae5bf6f0df97d03ec0d0fe14fbbc839e9f332745609d1ae13c",
-  "fileCount": 160,
+  "signedAt": "2026-10-20T21:47:54-03:00",
+  "treeHash": "c19025940127c05cbb4bf172a706868a306e983694df7a5d183034a6a4e121f7",
+  "fileCount": 168,
   "algorithm": "Ed25519",
   "keyFingerprint": "65:BE:89:FA:CE:0D:D3:B7:B2:AF:9C:C4:46:A2:01:96:AB:D2:34:48:9C:51:FC:CB:7E:81:F3:47:B2:43:98:50",
-  "signature": "qKuoQqonqJGXfmFqJS/Ne+v9Y59B4mybLDr+GLaUXrSQCF8ehdGfpgzXJ2EsEZyDIJLs7gc67JzHOEp69jAvBA=="
+  "signature": "VqMR+DpuFJRqaIab6Nv4TbIEqilaMWjBqVaiHCK4MctEzsZuhbtZcyYdMTjSCnP05qQngfY7S99wPQOMiWl3AQ=="
 } as const;
