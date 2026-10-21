@@ -248,7 +248,15 @@ export async function login(email: string, password: string): Promise<Api> {
 /** Cria usuário com papel e devolve um cliente já autenticado com ele. */
 export async function createUser(
   admin: Actor,
-  options: { name: string; email: string; roleId: string; password?: string; mustChangePassword?: boolean },
+  options: {
+    name: string;
+    email: string;
+    roleId: string;
+    password?: string;
+    mustChangePassword?: boolean;
+    departmentId?: string | null;
+    managedDepartmentIds?: string[];
+  },
 ): Promise<Actor> {
   const password = options.password ?? DEFAULT_PASSWORD;
   const created = await admin.api.post<{ id: string }>("/api/users/users", {
@@ -257,6 +265,8 @@ export async function createUser(
     roleId: options.roleId,
     password,
     mustChangePassword: options.mustChangePassword ?? false,
+    departmentId: options.departmentId ?? null,
+    managedDepartmentIds: options.managedDepartmentIds ?? [],
   });
   if (created.status !== 201) {
     throw new Error(`Falha ao criar usuário ${options.email}: ${created.status} ${JSON.stringify(created.body)}`);

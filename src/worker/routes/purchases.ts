@@ -2,15 +2,22 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { PERMISSIONS } from "@shared/permissions";
 import { PURCHASE_STATUS_LABEL } from "@shared/types";
-import type { AppContext, AppEnv } from "../types";
-import { assertLocationAllowed, currentUser, requireAuth, requirePermission } from "../auth";
+import type { AppContext, AppEnv, AuthUser } from "../types";
+import {
+  assertLocationAllowed,
+  currentUser,
+  permissionMessage,
+  requireAuth,
+  requirePermission,
+} from "../auth";
 import { auditStatement, clientInfo } from "../audit";
 import { allRows, countRows, insertStatement, normalizePage, offsetOf, oneRow, updateStatement } from "../db";
-import { badRequest, conflict, notFound, parseBody } from "../errors";
-import { assertPurchaseVisible, purchaseVisibility } from "../purchase-access";
+import { badRequest, conflict, forbidden, notFound, parseBody } from "../errors";
+import { assertPurchaseVisible, managesDepartment, purchaseVisibility } from "../purchase-access";
 import { outboxStatement } from "../outbox";
 import { recordMovements, type MovementRequest } from "../stock";
 import { notificationStatement, notificationStatements, usersWithPermission } from "../notify";
+import { deliverOutbox, queueEmail } from "../mailer";
 import { buildCode, nextCounter, nowIso, uuid } from "../util";
 
 const router = new Hono<AppEnv>();
@@ -46,6 +53,15 @@ async function approvalRequired(db: D1Database): Promise<boolean> {
   return row?.value !== "false";
 }
 
+/**
+ * O CHECK de `purchase_request_items.purchase_mode` nasceu no fluxo v1 e aceita
+ * apenas `direct`/`quote`. No v3 o modo oficial fica em `purchase_requests`
+ * (que aceita `budget`); o item guarda só o roteamento de execução.
+ */
+function itemRoutingMode(mode: string): "quote" | "direct" {
+  return mode === "direct" ? "direct" : "quote";
+}
+
 const requestItemSchema = z.object({
   productId: z.string().trim().min(1).nullish(),
   description: z.string().trim().max(300).nullish(),
@@ -66,6 +82,12 @@ const createBody = z.object({
    * declarar 1 explicitamente durante a migração.
    */
   workflowVersion: z.union([z.literal(1), z.literal(2)]).optional().default(2),
+  /** 2 = fluxo anterior com Direção; 3 = fluxo por setor. O app envia 3. */
+  flowRevision: z.union([z.literal(2), z.literal(3)]).optional().default(2),
+  departmentId: z.string().trim().min(1).nullish(),
+  purchaseMode: z.enum(["quote", "budget", "direct"]).optional().nullish(),
+  paymentMethodId: z.string().trim().min(1).nullish(),
+  paymentTerms: z.string().trim().max(300).nullish(),
   costCenterId: z.string().trim().min(1).nullish(),
   glAccount: z.string().trim().max(40).nullish(),
   budgetNotes: z.string().trim().max(1000).nullish(),
@@ -86,6 +108,10 @@ const updateBody = z.object({
   costCenterId: z.string().trim().min(1).nullish(),
   glAccount: z.string().trim().max(40).nullish(),
   budgetNotes: z.string().trim().max(1000).nullish(),
+  departmentId: z.string().trim().min(1).nullish(),
+  purchaseMode: z.enum(["quote", "budget", "direct"]).nullish(),
+  paymentMethodId: z.string().trim().min(1).nullish(),
+  paymentTerms: z.string().trim().max(300).nullish(),
 });
 
 const decideBody = z.object({
@@ -99,6 +125,10 @@ const decideBody = z.object({
     "authorize_direct",
   ]),
   notes: z.string().trim().max(1000).nullish(),
+  /** Fluxo v3: modo escolhido pelo responsável de Compras na autorização. */
+  purchaseMode: z.enum(["quote", "budget", "direct"]).optional(),
+  paymentMethodId: z.string().trim().min(1).optional(),
+  paymentTerms: z.string().trim().max(300).nullish(),
   items: z
     .array(
       z.object({
@@ -117,6 +147,8 @@ const decideBody = z.object({
 const quoteBody = z.object({
   supplierId: z.string().trim().min(1, "Selecione o fornecedor."),
   notes: z.string().trim().max(1000).nullish(),
+  paymentMethodId: z.string().trim().min(1).nullish(),
+  paymentTerms: z.string().trim().max(300).nullish(),
   items: z
     .array(
       z.object({
@@ -195,6 +227,10 @@ const receiptBody = z.object({
   purchaseOrderId: z.string().trim().min(1).nullish(),
   receivedAt: z.string().trim().max(40).nullish(),
   documentRef: z.string().trim().max(80).nullish(),
+  invoiceNumber: z.string().trim().max(60).nullish(),
+  invoiceSeries: z.string().trim().max(20).nullish(),
+  invoiceDate: z.string().trim().max(20).nullish(),
+  invoiceTotal: z.number().finite().nonnegative().optional(),
   notes: z.string().trim().max(1000).nullish(),
   /**
    * F-06 (uso direto): justificativa única do recebimento quando um ou mais
@@ -247,6 +283,9 @@ const REQUEST_SELECT = `
          r.manager_approved_by, r.manager_approved_at,
          r.direction_approved_by, r.direction_approved_at,
          r.direct_authorized_by, r.direct_authorized_at,
+         r.flow_revision, r.department_id, r.purchase_mode,
+         r.payment_method_id, r.payment_terms,
+         r.purchasing_authorized_by, r.purchasing_authorized_at,
          l.name AS location_name, l.path AS location_path,
          rq.name AS requester_name,
          ap.name AS approved_by_name,
@@ -254,6 +293,11 @@ const REQUEST_SELECT = `
          mg.name AS manager_approved_by_name,
          dg.name AS direction_approved_by_name,
          da.name AS direct_authorized_by_name,
+         dep.name AS department_name,
+         pm.code AS payment_method_code, pm.name AS payment_method_name,
+         pm.requires_authorization AS payment_requires_authorization,
+         pm.requires_quote AS payment_requires_quote,
+         pa.name AS purchasing_authorized_by_name,
          (SELECT COUNT(*) FROM purchase_request_items i WHERE i.request_id = r.id) AS item_count,
          (SELECT COUNT(*) FROM purchase_request_items i WHERE i.request_id = r.id AND i.status = 'pending') AS pending_item_count,
          (SELECT COUNT(*) FROM purchase_request_items i WHERE i.request_id = r.id AND i.purchase_mode = 'quote'
@@ -274,7 +318,10 @@ const REQUEST_SELECT = `
     LEFT JOIN cost_centers cc ON cc.id = r.cost_center_id
     LEFT JOIN users mg ON mg.id = r.manager_approved_by
     LEFT JOIN users dg ON dg.id = r.direction_approved_by
-    LEFT JOIN users da ON da.id = r.direct_authorized_by`;
+    LEFT JOIN users da ON da.id = r.direct_authorized_by
+    LEFT JOIN departments dep ON dep.id = r.department_id
+    LEFT JOIN payment_methods pm ON pm.id = r.payment_method_id
+    LEFT JOIN users pa ON pa.id = r.purchasing_authorized_by`;
 
 router.get("/", requirePermission(PERMISSIONS.PURCHASES_VIEW), async (c) => {
   const user = currentUser(c);
@@ -398,7 +445,9 @@ router.get("/overview", requirePermission(PERMISSIONS.PURCHASES_VIEW), async (c)
                    FROM purchase_request_items i
                    JOIN purchase_requests r ON r.id = i.request_id
                   ${where ? `${where} AND` : "WHERE"} i.status = 'approved'), 0) AS approved_value_cents`,
-    visibility.params,
+    // O mesmo filtro aparece em três subconsultas; cada uma recebe os seus
+    // próprios parâmetros.
+    [...visibility.params, ...visibility.params, ...visibility.params],
   );
 
   const costCenters = await allRows<Record<string, unknown>>(
@@ -441,6 +490,37 @@ router.get("/cost-centers", requirePermission(PERMISSIONS.PURCHASES_VIEW), async
   });
 });
 
+/** Formas de pagamento e setores usados no formulário e nas decisões. */
+router.get("/options", requirePermission(PERMISSIONS.PURCHASES_VIEW), async (c) => {
+  const paymentMethods = await allRows<Record<string, unknown>>(
+    c.env.DB,
+    `SELECT id, code, name, requires_authorization, requires_quote, is_active, sort_order, notes
+       FROM payment_methods WHERE is_active = 1 ORDER BY sort_order, name`,
+  );
+  const departments = await allRows<Record<string, unknown>>(
+    c.env.DB,
+    `SELECT id, code, name, is_purchasing FROM departments WHERE is_active = 1 ORDER BY name`,
+  );
+  return c.json({
+    paymentMethods: paymentMethods.map((row) => ({
+      id: String(row.id),
+      code: String(row.code),
+      name: String(row.name),
+      requiresAuthorization: Number(row.requires_authorization) === 1,
+      requiresQuote: Number(row.requires_quote) === 1,
+      isActive: Number(row.is_active) === 1,
+      sortOrder: Number(row.sort_order ?? 0),
+      notes: row.notes ? String(row.notes) : null,
+    })),
+    departments: departments.map((row) => ({
+      id: String(row.id),
+      code: String(row.code),
+      name: String(row.name),
+      isPurchasing: Number(row.is_purchasing) === 1,
+    })),
+  });
+});
+
 const REQUEST_ITEM_SELECT = `
   SELECT i.id, i.request_id, i.product_id, i.description, i.qty_milli, i.uom_id,
          i.qty_approved_milli, i.qty_ordered_milli, i.qty_received_milli,
@@ -463,6 +543,7 @@ router.get("/:id", requirePermission(PERMISSIONS.PURCHASES_VIEW), async (c) => {
   assertPurchaseVisible(user, {
     requester_id: String(row.requester_id),
     location_id: row.location_id ? String(row.location_id) : null,
+    department_id: row.department_id ? String(row.department_id) : null,
   });
 
   const items = await allRows<Record<string, unknown>>(
@@ -474,6 +555,7 @@ router.get("/:id", requirePermission(PERMISSIONS.PURCHASES_VIEW), async (c) => {
   const receipts = await allRows<Record<string, unknown>>(
     c.env.DB,
     `SELECT rc.id, rc.code, rc.received_at, rc.document_ref, rc.notes, rc.status, rc.cancel_reason,
+            rc.invoice_number, rc.invoice_series, rc.invoice_date, rc.invoice_total_cents,
             rc.received_by, u.name AS received_by_name, s.name AS supplier_name,
             (SELECT COUNT(*) FROM purchase_receipt_items ri WHERE ri.receipt_id = rc.id) AS item_count,
             (SELECT COALESCE(SUM(ri.qty_milli), 0) FROM purchase_receipt_items ri WHERE ri.receipt_id = rc.id) AS qty_milli,
@@ -515,15 +597,18 @@ router.get("/:id", requirePermission(PERMISSIONS.PURCHASES_VIEW), async (c) => {
   const quotes = await allRows<Record<string, unknown>>(
     c.env.DB,
     `SELECT q.id, q.code, q.supplier_id, q.status, q.notes,
+            q.payment_method_id, q.payment_terms,
             q.created_by, q.approved_by, q.approved_at, q.approval_notes,
             q.created_at, q.updated_at,
             s.name AS supplier_name,
             cu.name AS created_by_name,
-            au.name AS approved_by_name
+            au.name AS approved_by_name,
+            pm.name AS payment_method_name
        FROM purchase_quotes q
        JOIN suppliers s ON s.id = q.supplier_id
        JOIN users cu ON cu.id = q.created_by
        LEFT JOIN users au ON au.id = q.approved_by
+       LEFT JOIN payment_methods pm ON pm.id = q.payment_method_id
       WHERE q.request_id = ?
       ORDER BY q.created_at, q.id`,
     [id],
@@ -657,6 +742,9 @@ router.get("/:id", requirePermission(PERMISSIONS.PURCHASES_VIEW), async (c) => {
         supplierName: String(q.supplier_name),
         status: String(q.status),
         notes: q.notes ? String(q.notes) : null,
+        paymentMethodId: q.payment_method_id ? String(q.payment_method_id) : null,
+        paymentMethodName: q.payment_method_name ? String(q.payment_method_name) : null,
+        paymentTerms: q.payment_terms ? String(q.payment_terms) : null,
         createdBy: String(q.created_by),
         createdByName: String(q.created_by_name),
         approvedBy: q.approved_by ? String(q.approved_by) : null,
@@ -680,6 +768,10 @@ router.get("/:id", requirePermission(PERMISSIONS.PURCHASES_VIEW), async (c) => {
       receivedByName: String(r.received_by_name),
       supplierName: r.supplier_name ? String(r.supplier_name) : null,
       documentRef: r.document_ref ? String(r.document_ref) : null,
+      invoiceNumber: r.invoice_number ? String(r.invoice_number) : null,
+      invoiceSeries: r.invoice_series ? String(r.invoice_series) : null,
+      invoiceDate: r.invoice_date ? String(r.invoice_date) : null,
+      invoiceTotalCents: r.invoice_total_cents === null ? null : Number(r.invoice_total_cents),
       notes: r.notes ? String(r.notes) : null,
       status: String(r.status),
       cancelReason: r.cancel_reason ? String(r.cancel_reason) : null,
@@ -834,12 +926,30 @@ router.post("/", requirePermission(PERMISSIONS.PURCHASES_CREATE), async (c) => {
   if (body.costCenterId) await assertCostCenterActive(c.env.DB, body.costCenterId);
   await assertItemsReference(c.env.DB, body.items);
 
+  const isV3 = body.workflowVersion === 2 && body.flowRevision === 3;
+  const departmentId = isV3 ? await resolveRequestDepartment(c.env.DB, user, body.departmentId ?? null) : null;
+  const payment =
+    isV3 && body.paymentMethodId ? await loadPaymentMethod(c.env.DB, body.paymentMethodId) : null;
+  if (isV3 && body.submit && !payment) {
+    throw badRequest("Selecione a forma de pagamento antes de enviar a solicitação.");
+  }
+  const purchaseMode = body.purchaseMode ?? "quote";
+  if (isV3 && purchaseMode === "direct" && payment?.requires_quote) {
+    throw badRequest(
+      `A forma de pagamento "${payment.name}" exige cotação ou orçamento e não permite compra direta.`,
+    );
+  }
+
   const id = uuid();
   const ts = nowIso();
   const code = buildCode("SC", await nextCounter(c.env.DB, "purchase_request"));
   const autoApproved = body.submit && !(await approvalRequired(c.env.DB));
-  const status = body.submit ? (autoApproved ? "approved" : "pending_approval") : "draft";
-  const approvalStage = status === "draft" ? "manager" : autoApproved ? "buyer" : "manager";
+  // No fluxo v3 a aprovação automática dispensa apenas o gestor do setor; a
+  // autorização do responsável de Compras continua obrigatória.
+  const autoApprovedLegacy = autoApproved && !isV3;
+  const status = body.submit ? (autoApprovedLegacy ? "approved" : "pending_approval") : "draft";
+  const approvalStage =
+    status === "draft" ? "manager" : autoApprovedLegacy ? "buyer" : isV3 && autoApproved ? "purchasing" : "manager";
   const info = clientInfo(c);
 
   const itemStatements = body.items.map((item) =>
@@ -851,9 +961,9 @@ router.post("/", requirePermission(PERMISSIONS.PURCHASES_CREATE), async (c) => {
       qty_milli: Math.round(item.qty * 1000),
       uom_id: item.uomId ?? null,
       qty_received_milli: 0,
-      status: autoApproved ? "approved" : "pending",
-      qty_approved_milli: autoApproved ? Math.round(item.qty * 1000) : null,
-      purchase_mode: autoApproved ? "direct" : null,
+      status: autoApprovedLegacy ? "approved" : "pending",
+      qty_approved_milli: autoApprovedLegacy ? Math.round(item.qty * 1000) : null,
+      purchase_mode: autoApprovedLegacy ? "direct" : isV3 ? itemRoutingMode(purchaseMode) : null,
       notes: item.notes ?? null,
       created_at: ts,
       updated_at: ts,
@@ -874,13 +984,18 @@ router.post("/", requirePermission(PERMISSIONS.PURCHASES_CREATE), async (c) => {
       approved_at: autoApproved ? ts : null,
       notes: body.notes ?? null,
       workflow_version: body.workflowVersion,
+      flow_revision: body.workflowVersion === 1 ? 1 : body.flowRevision,
       approval_stage: approvalStage,
       routing: "standard",
-      budget_status: autoApproved ? "not_required" : "pending",
+      department_id: departmentId,
+      purchase_mode: isV3 ? purchaseMode : null,
+      payment_method_id: payment?.id ?? null,
+      payment_terms: body.paymentTerms ?? null,
+      budget_status: isV3 ? "not_required" : autoApproved ? "not_required" : "pending",
       budget_notes: body.budgetNotes ?? null,
       cost_center_id: body.costCenterId ?? null,
       gl_account: body.glAccount ?? null,
-      finance_status: autoApproved ? "pending" : "not_required",
+      finance_status: autoApprovedLegacy ? "pending" : "not_required",
       created_at: ts,
       updated_at: ts,
     }),
@@ -896,6 +1011,10 @@ router.post("/", requirePermission(PERMISSIONS.PURCHASES_CREATE), async (c) => {
         status,
         approvalStage,
         workflowVersion: body.workflowVersion,
+        flowRevision: body.workflowVersion === 1 ? 1 : body.flowRevision,
+        departmentId,
+        purchaseMode: isV3 ? purchaseMode : null,
+        paymentMethodId: payment?.id ?? null,
         itemCount: body.items.length,
         autoApproved,
       },
@@ -907,17 +1026,29 @@ router.post("/", requirePermission(PERMISSIONS.PURCHASES_CREATE), async (c) => {
   // Criar já enviando para aprovação precisa avisar quem aprova -- sem isso a
   // solicitação ficaria pendente e invisível até alguém abrir a lista.
   if (status === "pending_approval") {
-    await notifyApprovers(c.env.DB, {
+    await notifyApprovers(c, {
       requestId: id,
       code,
       justification: body.justification ?? null,
       requesterId: user.id,
       requesterName: user.name,
       createdAt: ts,
+      departmentId,
+      stage: approvalStage,
     });
   }
 
-  return c.json({ id, code, status, approvalStage, workflowVersion: body.workflowVersion }, 201);
+  return c.json(
+    {
+      id,
+      code,
+      status,
+      approvalStage,
+      workflowVersion: body.workflowVersion,
+      flowRevision: body.workflowVersion === 1 ? 1 : body.flowRevision,
+    },
+    201,
+  );
 });
 
 router.patch("/:id", requirePermission(PERMISSIONS.PURCHASES_CREATE), async (c) => {
@@ -938,6 +1069,18 @@ router.patch("/:id", requirePermission(PERMISSIONS.PURCHASES_CREATE), async (c) 
     await assertLocationActive(c.env.DB, body.locationId);
   }
   if (body.costCenterId) await assertCostCenterActive(c.env.DB, body.costCenterId);
+  const departmentId =
+    body.departmentId !== undefined && before.flow_revision === 3
+      ? await resolveRequestDepartment(c.env.DB, user, body.departmentId ?? null)
+      : undefined;
+  const payment = body.paymentMethodId
+    ? await loadPaymentMethod(c.env.DB, body.paymentMethodId)
+    : null;
+  if (before.flow_revision === 3 && body.purchaseMode === "direct" && payment?.requires_quote) {
+    throw badRequest(
+      `A forma de pagamento "${payment.name}" exige cotação ou orçamento e não permite compra direta.`,
+    );
+  }
 
   const ts = nowIso();
   const updated = {
@@ -949,6 +1092,10 @@ router.patch("/:id", requirePermission(PERMISSIONS.PURCHASES_CREATE), async (c) 
     ...(body.costCenterId !== undefined ? { cost_center_id: body.costCenterId ?? null } : {}),
     ...(body.glAccount !== undefined ? { gl_account: body.glAccount ?? null } : {}),
     ...(body.budgetNotes !== undefined ? { budget_notes: body.budgetNotes ?? null } : {}),
+    ...(departmentId !== undefined ? { department_id: departmentId } : {}),
+    ...(body.purchaseMode !== undefined ? { purchase_mode: body.purchaseMode } : {}),
+    ...(body.paymentMethodId !== undefined ? { payment_method_id: payment?.id ?? null } : {}),
+    ...(body.paymentTerms !== undefined ? { payment_terms: body.paymentTerms ?? null } : {}),
     updated_at: ts,
   };
 
@@ -980,23 +1127,38 @@ router.post("/:id/submit", requirePermission(PERMISSIONS.PURCHASES_CREATE), asyn
     throw conflict("Somente o solicitante pode enviar esta solicitação.");
   }
 
+  const isV3 = request.flow_revision === 3;
+  if (isV3) {
+    if (!request.department_id) {
+      throw badRequest("Vincule a solicitação a um setor antes de enviá-la.");
+    }
+    if (!request.payment_method_id) {
+      throw badRequest("Selecione a forma de pagamento antes de enviar a solicitação.");
+    }
+  }
+
   const ts = nowIso();
   const info = clientInfo(c);
   const autoApproved = !(await approvalRequired(c.env.DB));
-  const nextStatus = autoApproved ? "approved" : "pending_approval";
-  const nextStage = autoApproved ? "buyer" : "manager";
+  // v3: a dispensa automática vale só para o gestor; Compras sempre autoriza.
+  const autoApprovedLegacy = autoApproved && !isV3;
+  const nextStatus = autoApprovedLegacy ? "approved" : "pending_approval";
+  const nextStage = autoApprovedLegacy ? "buyer" : isV3 && autoApproved ? "purchasing" : "manager";
 
   const statements: D1PreparedStatement[] = [
     updateStatement(c.env.DB, "purchase_requests", id, {
       status: nextStatus,
       approval_stage: nextStage,
-      budget_status: autoApproved ? "not_required" : "pending",
+      budget_status: isV3 ? "not_required" : autoApproved ? "not_required" : "pending",
       ...(autoApproved
-        ? { approval_notes: AUTO_APPROVAL_NOTE, approved_at: ts, finance_status: "pending" }
+        ? {
+            approval_notes: AUTO_APPROVAL_NOTE,
+            ...(autoApprovedLegacy ? { approved_at: ts, finance_status: "pending" } : {}),
+          }
         : {}),
       updated_at: ts,
     }),
-    ...(autoApproved
+    ...(autoApprovedLegacy
       ? [
           c.env.DB
             .prepare(
@@ -1025,14 +1187,16 @@ router.post("/:id/submit", requirePermission(PERMISSIONS.PURCHASES_CREATE), asyn
 
   // Avisa quem pode aprovar. Não notifica o próprio solicitante -- nem quando a
   // política já aprovou a solicitação automaticamente.
-  if (!autoApproved) {
-    await notifyApprovers(c.env.DB, {
+  if (!autoApprovedLegacy) {
+    await notifyApprovers(c, {
       requestId: id,
       code: request.code,
       justification: request.justification ?? null,
       requesterId: user.id,
       requesterName: user.name,
       createdAt: ts,
+      departmentId: request.department_id,
+      stage: nextStage,
     });
   }
 
@@ -1047,7 +1211,7 @@ router.post("/:id/submit", requirePermission(PERMISSIONS.PURCHASES_CREATE), asyn
  * quanto ao criar a solicitação já enviada.
  */
 async function notifyApprovers(
-  db: D1Database,
+  c: AppContext,
   input: {
     requestId: string;
     code: string;
@@ -1055,24 +1219,42 @@ async function notifyApprovers(
     requesterId: string;
     requesterName: string;
     createdAt: string;
+    departmentId?: string | null;
+    stage?: string;
   },
 ): Promise<void> {
-  const approvers = (await usersWithPermission(db, PERMISSIONS.PURCHASES_APPROVE)).filter(
-    (approverId) => approverId !== input.requesterId,
-  );
+  const db = c.env.DB;
+  let candidates: string[];
+  let title = `Solicitação ${input.code} aguarda aprovação`;
+
+  if (input.stage === "purchasing") {
+    // Fluxo v3: a bola está com o responsável do setor de Compras.
+    candidates = await purchasingResponsibleIds(db);
+    title = `Solicitação ${input.code} aguarda autorização do setor de Compras`;
+  } else if (input.departmentId) {
+    // Fluxo v3: apenas os gestores do setor da solicitação são avisados.
+    candidates = await departmentManagerIds(db, input.departmentId);
+    if (candidates.length === 0) {
+      candidates = await usersWithPermission(db, PERMISSIONS.PURCHASES_APPROVE_DEPARTMENT);
+    }
+    title = `Solicitação ${input.code} aguarda aprovação do gestor do setor`;
+  } else {
+    candidates = await usersWithPermission(db, PERMISSIONS.PURCHASES_APPROVE);
+  }
+
+  const approvers = candidates.filter((approverId) => approverId !== input.requesterId);
   if (approvers.length === 0) return;
 
-  await db.batch(
-    notificationStatements(db, approvers, {
-      type: "purchase_pending_approval",
-      title: `Solicitação ${input.code} aguarda aprovação`,
-      body: input.justification ?? `Solicitação de ${input.requesterName}.`,
-      link: `/compras/${input.requestId}`,
-      entityType: "purchase_request",
-      entityId: input.requestId,
-      createdAt: input.createdAt,
-    }),
-  );
+  const staged = await stageNotifications(c, approvers, {
+    type: "purchase_pending_approval",
+    title,
+    body: input.justification ?? `Solicitação de ${input.requesterName}.`,
+    requestId: input.requestId,
+    code: input.code,
+    createdAt: input.createdAt,
+  });
+  await db.batch(staged.statements);
+  await deliverOutbox(db, staged.emailIds);
 }
 
 /**
@@ -1087,6 +1269,9 @@ router.post("/:id/decide", async (c) => {
 
   const request = await requireRequest(c.env.DB, id);
   assertPurchaseVisible(user, request);
+  if (request.flow_revision === 3) {
+    return handleDepartmentWorkflowDecision(c, request, body);
+  }
   if (request.workflow_version === 2) {
     return handleWorkflowDecision(c, request, body);
   }
@@ -1678,6 +1863,418 @@ async function handleWorkflowDecision(
   return c.json({ ok: true, status: nextStatus, approvalStage: nextStage });
 }
 
+/* -------------------------------------------------------------------------- */
+/* Fluxo por setor (revisão 3)                                                */
+/* -------------------------------------------------------------------------- */
+
+interface PaymentMethodRow {
+  id: string;
+  name: string;
+  requires_authorization: number;
+  requires_quote: number;
+  is_active: number;
+}
+
+async function loadPaymentMethod(db: D1Database, id: string): Promise<PaymentMethodRow> {
+  const row = await oneRow<PaymentMethodRow>(
+    db,
+    `SELECT id, name, requires_authorization, requires_quote, is_active
+       FROM payment_methods WHERE id = ?`,
+    [id],
+  );
+  if (!row) throw notFound("Forma de pagamento não encontrada.");
+  if (row.is_active !== 1) throw badRequest("A forma de pagamento informada está inativa.");
+  return row;
+}
+
+/** Setor do solicitante ou setor que ele gerencia; nunca um setor alheio. */
+async function resolveRequestDepartment(
+  db: D1Database,
+  user: AuthUser,
+  requested: string | null,
+): Promise<string> {
+  if (requested && requested !== user.departmentId && !managesDepartment(user, requested)) {
+    throw forbidden(
+      "Você não pode abrir solicitação para este setor. Solicite ao gestor responsável ou ao administrador.",
+    );
+  }
+  const departmentId = requested ?? user.departmentId;
+  if (!departmentId) {
+    throw badRequest(
+      "Seu usuário não está vinculado a um setor. Solicite ao administrador a vinculação antes de abrir uma compra.",
+    );
+  }
+  const department = await oneRow<{ id: string; name: string; is_active: number }>(
+    db,
+    `SELECT id, name, is_active FROM departments WHERE id = ?`,
+    [departmentId],
+  );
+  if (!department) throw notFound("Setor não encontrado.");
+  if (department.is_active !== 1) throw badRequest("O setor informado está inativo.");
+  return departmentId;
+}
+
+async function departmentManagerIds(db: D1Database, departmentId: string): Promise<string[]> {
+  const rows = await allRows<{ id: string }>(
+    db,
+    `SELECT DISTINCT u.id
+       FROM department_managers dm
+       JOIN users u ON u.id = dm.user_id
+      WHERE dm.department_id = ? AND u.is_active = 1`,
+    [departmentId],
+  );
+  return rows.map((row) => row.id);
+}
+
+async function purchasingResponsibleIds(db: D1Database): Promise<string[]> {
+  const rows = await allRows<{ id: string }>(
+    db,
+    `SELECT DISTINCT u.id
+       FROM users u
+       JOIN role_permissions rp ON rp.role_id = u.role_id
+       LEFT JOIN departments d ON d.id = u.department_id
+      WHERE u.is_active = 1 AND rp.permission_code = ?
+        AND (
+          d.is_purchasing = 1
+          OR EXISTS (
+            SELECT 1 FROM department_managers dm
+              JOIN departments dd ON dd.id = dm.department_id
+             WHERE dm.user_id = u.id AND dd.is_purchasing = 1
+          )
+        )`,
+    [PERMISSIONS.PURCHASES_AUTHORIZE],
+  );
+  if (rows.length > 0) return rows.map((row) => row.id);
+  // Setor de Compras ainda não configurado: usa quem tem a permissão para não
+  // deixar a solicitação sem responsável.
+  return usersWithPermission(db, PERMISSIONS.PURCHASES_AUTHORIZE);
+}
+
+/**
+ * Notificação interna + e-mail na mesma transação, apenas para quem precisa
+ * agir na etapa. O envio real acontece depois do commit (`deliverOutbox`).
+ */
+async function stageNotifications(
+  c: AppContext,
+  userIds: string[],
+  input: {
+    type: string;
+    title: string;
+    body: string | null;
+    requestId: string;
+    code: string;
+    createdAt: string;
+  },
+): Promise<{ statements: D1PreparedStatement[]; emailIds: string[] }> {
+  const unique = [...new Set(userIds)].filter(Boolean);
+  if (unique.length === 0) return { statements: [], emailIds: [] };
+
+  const recipients = await allRows<{ id: string; email: string }>(
+    c.env.DB,
+    `SELECT id, email FROM users
+      WHERE is_active = 1 AND id IN (${unique.map(() => "?").join(",")})`,
+    unique,
+  );
+  const statements: D1PreparedStatement[] = [
+    ...notificationStatements(c.env.DB, unique, {
+      type: input.type,
+      title: input.title,
+      body: input.body,
+      link: `/compras/${input.requestId}`,
+      entityType: "purchase_request",
+      entityId: input.requestId,
+      createdAt: input.createdAt,
+    }),
+  ];
+  const emailIds: string[] = [];
+  const origin = new URL(c.req.url).origin;
+  for (const recipient of recipients) {
+    const mail = queueEmail(c.env.DB, {
+      to: recipient.email,
+      subject: input.title,
+      body: [
+        input.title,
+        "",
+        input.body ?? "",
+        "",
+        `Solicitação ${input.code}. Abra: ${origin}/compras/${input.requestId}`,
+      ].join("\n"),
+      kind: "purchase_workflow",
+      relatedId: input.requestId,
+    });
+    statements.push(mail.statement);
+    emailIds.push(mail.id);
+  }
+  return { statements, emailIds };
+}
+
+/**
+ * Decisão do fluxo v3 (por setor).
+ *
+ * manager    -> gestor de um dos setores que gerencia aprova a necessidade;
+ * purchasing -> responsável do setor de Compras escolhe cotação, orçamento ou
+ *               compra direta e autoriza (a compra direta é uma decisão
+ *               explícita, com permissão própria);
+ * buyer      -> comprador cota/pede; a etapa de recebimento confere e lança.
+ *
+ * A Direção não participa das novas solicitações: a autorização é do setor de
+ * Compras, como definido no processo.
+ */
+async function handleDepartmentWorkflowDecision(
+  c: AppContext,
+  request: RequestRow,
+  body: z.infer<typeof decideBody>,
+): Promise<Response> {
+  const user = currentUser(c);
+  const id = request.id;
+  const ts = nowIso();
+  const info = clientInfo(c);
+  const stage = request.approval_stage;
+
+  if (["received", "cancelled", "rejected"].includes(request.status) || stage === "completed") {
+    throw conflict(`Uma solicitação ${request.status} não pode receber novas decisões.`);
+  }
+
+  const items = await allRows<{ id: string; status: string }>(
+    c.env.DB,
+    `SELECT id, status FROM purchase_request_items WHERE request_id = ?`,
+    [id],
+  );
+  if (items.length === 0) throw conflict("A solicitação não possui itens para decidir.");
+
+  const statements: D1PreparedStatement[] = [];
+  const requestPatch: Record<string, unknown> = { updated_at: ts };
+  const notificationTargets = new Set<string>();
+  let nextStatus = request.status;
+  let nextStage = stage;
+  let auditAction = `purchase_request.${body.decision}`;
+  let eventType: string | null = null;
+  let mailTitle = "";
+  let mailBody: string | null = body.notes ?? null;
+
+  if (stage === "manager") {
+    if (!user.permissions.has(PERMISSIONS.PURCHASES_APPROVE_DEPARTMENT)) {
+      throw conflict(
+        await permissionMessage(c.env.DB, PERMISSIONS.PURCHASES_APPROVE_DEPARTMENT, "aprovar a necessidade do setor"),
+      );
+    }
+    if (!managesDepartment(user, request.department_id)) {
+      throw forbidden(
+        "Você não gerencia o setor desta solicitação. Solicite a aprovação ao gestor do setor ou ao administrador.",
+      );
+    }
+    if (request.requester_id === user.id && !user.permissions.has(PERMISSIONS.SETTINGS_MANAGE)) {
+      throw conflict("Você não pode aprovar a sua própria solicitação.");
+    }
+
+    if (body.decision === "approved") {
+      const fallbackMode = itemRoutingMode(request.purchase_mode ?? "quote");
+      statements.push(
+        c.env.DB
+          .prepare(
+            `UPDATE purchase_request_items
+                SET status = 'approved',
+                    qty_approved_milli = COALESCE(qty_approved_milli, qty_milli),
+                    purchase_mode = COALESCE(purchase_mode, ?),
+                    updated_at = ?
+              WHERE request_id = ? AND status = 'pending'`,
+          )
+          .bind(fallbackMode, ts, id),
+      );
+      nextStage = "purchasing";
+      nextStatus = "pending_approval";
+      auditAction = "purchase_request.manager_approved";
+      eventType = "purchase_request.manager_approved";
+      requestPatch.manager_approved_by = user.id;
+      requestPatch.manager_approved_at = ts;
+      mailTitle = `Solicitação ${request.code} aguarda autorização do setor de Compras`;
+      for (const recipient of await purchasingResponsibleIds(c.env.DB)) {
+        if (recipient !== user.id) notificationTargets.add(recipient);
+      }
+    } else if (body.decision === "rejected") {
+      statements.push(
+        c.env.DB
+          .prepare(
+            `UPDATE purchase_request_items SET status = 'rejected', updated_at = ?
+              WHERE request_id = ? AND status IN ('pending','approved')`,
+          )
+          .bind(ts, id),
+      );
+      nextStatus = "rejected";
+      nextStage = "completed";
+      auditAction = "purchase_request.rejected";
+      eventType = "purchase_request.rejected";
+      requestPatch.budget_status = "rejected";
+      requestPatch.finance_status = "not_required";
+      mailTitle = `Solicitação ${request.code} recusada pelo gestor do setor`;
+      if (request.requester_id !== user.id) notificationTargets.add(request.requester_id);
+    } else {
+      throw conflict("O gestor do setor só pode aprovar ou recusar a solicitação.");
+    }
+  } else if (stage === "purchasing") {
+    if (!user.permissions.has(PERMISSIONS.PURCHASES_AUTHORIZE)) {
+      throw conflict(
+        await permissionMessage(c.env.DB, PERMISSIONS.PURCHASES_AUTHORIZE, "autorizar a compra"),
+      );
+    }
+    if (!user.departmentIsPurchasing && !user.permissions.has(PERMISSIONS.SETTINGS_MANAGE)) {
+      throw forbidden(
+        "A autorização deve ser feita pelo responsável do setor de Compras. Solicite ao gestor de Compras.",
+      );
+    }
+    if (request.requester_id === user.id && !user.permissions.has(PERMISSIONS.SETTINGS_MANAGE)) {
+      throw conflict("Você não pode autorizar a sua própria solicitação.");
+    }
+
+    const mode = body.purchaseMode ?? request.purchase_mode ?? "quote";
+    const payment = body.paymentMethodId
+      ? await loadPaymentMethod(c.env.DB, body.paymentMethodId)
+      : request.payment_method_id
+        ? await loadPaymentMethod(c.env.DB, request.payment_method_id)
+        : null;
+
+    if (body.decision === "rejected") {
+      statements.push(
+        c.env.DB
+          .prepare(
+            `UPDATE purchase_request_items SET status = 'rejected', updated_at = ?
+              WHERE request_id = ? AND status IN ('pending','approved')`,
+          )
+          .bind(ts, id),
+      );
+      nextStatus = "rejected";
+      nextStage = "completed";
+      auditAction = "purchase_request.rejected";
+      eventType = "purchase_request.rejected";
+      requestPatch.budget_status = "rejected";
+      requestPatch.finance_status = "not_required";
+      mailTitle = `Solicitação ${request.code} recusada pelo setor de Compras`;
+      if (request.requester_id !== user.id) notificationTargets.add(request.requester_id);
+    } else if (body.decision === "approved" || body.decision === "authorize_direct") {
+      if (mode === "direct") {
+        if (!user.permissions.has(PERMISSIONS.PURCHASES_DIRECT)) {
+          throw conflict(
+            await permissionMessage(c.env.DB, PERMISSIONS.PURCHASES_DIRECT, "autorizar compra direta"),
+          );
+        }
+        if (payment?.requires_quote) {
+          throw badRequest(
+            `A forma de pagamento "${payment.name}" exige cotação ou orçamento e não permite compra direta.`,
+          );
+        }
+      }
+      if (!payment) throw badRequest("Selecione a forma de pagamento antes de autorizar a compra.");
+
+      statements.push(
+        c.env.DB
+          .prepare(
+            `UPDATE purchase_request_items
+                SET status = 'approved',
+                    qty_approved_milli = COALESCE(qty_approved_milli, qty_milli),
+                    purchase_mode = ?,
+                    updated_at = ?
+              WHERE request_id = ? AND status NOT IN ('rejected','cancelled','received')`,
+          )
+          .bind(itemRoutingMode(mode), ts, id),
+      );
+
+      requestPatch.purchase_mode = mode;
+      requestPatch.payment_method_id = payment.id;
+      if (body.paymentTerms !== undefined) requestPatch.payment_terms = body.paymentTerms ?? null;
+      requestPatch.purchasing_authorized_by = user.id;
+      requestPatch.purchasing_authorized_at = ts;
+      requestPatch.approved_by = user.id;
+      requestPatch.approved_at = ts;
+      requestPatch.finance_status = "pending";
+      requestPatch.budget_status = "not_required";
+      nextStage = "buyer";
+      nextStatus = mode === "direct" ? "approved" : "quoting";
+      auditAction = mode === "direct" ? "purchase_request.authorize_direct" : "purchase_request.purchasing_authorized";
+      eventType = mode === "direct" ? "purchase_request.direct_authorized" : "purchase_request.purchasing_authorized";
+      mailTitle =
+        mode === "direct"
+          ? `Compra direta autorizada: ${request.code}`
+          : `${mode === "budget" ? "Orçamento" : "Cotação"} autorizado: ${request.code}`;
+      mailBody =
+        body.notes ??
+        `Forma de pagamento: ${payment.name}. O comprador já pode dar andamento.`;
+      for (const recipient of await usersWithPermission(c.env.DB, PERMISSIONS.PURCHASES_ORDER)) {
+        if (recipient !== user.id) notificationTargets.add(recipient);
+      }
+      if (request.requester_id !== user.id) notificationTargets.add(request.requester_id);
+    } else {
+      throw conflict(
+        "O responsável de Compras só pode autorizar cotação, orçamento, compra direta ou recusar a solicitação.",
+      );
+    }
+  } else {
+    throw conflict(`A solicitação está na etapa "${stage}" e não aceita esta decisão.`);
+  }
+
+  const staged = await stageNotifications(c, [...notificationTargets], {
+    type: `purchase_${nextStatus}`,
+    title: mailTitle,
+    body: mailBody,
+    requestId: id,
+    code: request.code,
+    createdAt: ts,
+  });
+  statements.push(...staged.statements);
+
+  statements.push(
+    updateStatement(c.env.DB, "purchase_requests", id, {
+      ...requestPatch,
+      status: nextStatus,
+      approval_stage: nextStage,
+      approval_notes: body.notes ?? null,
+    }),
+    auditStatement(c.env.DB, {
+      actor: { id: user.id, name: user.name },
+      module: "purchases",
+      action: auditAction,
+      entityType: "purchase_request",
+      entityId: id,
+      before: { status: request.status, approvalStage: stage },
+      after: {
+        status: nextStatus,
+        approvalStage: nextStage,
+        decision: body.decision,
+        purchaseMode: requestPatch.purchase_mode ?? request.purchase_mode,
+        paymentMethodId: requestPatch.payment_method_id ?? request.payment_method_id,
+      },
+      reason: body.notes ?? null,
+      ...info,
+    }),
+  );
+
+  if (eventType) {
+    statements.push(
+      outboxStatement(c.env.DB, {
+        eventType,
+        aggregateType: "purchase_request",
+        aggregateId: id,
+        idempotencyKey: `${eventType}:${id}:${body.decision}:${ts}`,
+        payload: {
+          requestId: id,
+          code: request.code,
+          status: nextStatus,
+          approvalStage: nextStage,
+          decision: body.decision,
+          purchaseMode: requestPatch.purchase_mode ?? request.purchase_mode,
+          paymentMethodId: requestPatch.payment_method_id ?? request.payment_method_id,
+          decidedBy: user.id,
+          decidedAt: ts,
+        },
+        createdAt: ts,
+      }),
+    );
+  }
+
+  await c.env.DB.batch(statements);
+  await deliverOutbox(c.env.DB, staged.emailIds);
+  return c.json({ ok: true, status: nextStatus, approvalStage: nextStage });
+}
+
 router.post("/:id/quotes", requirePermission(PERMISSIONS.PURCHASES_ORDER), async (c) => {
   const user = currentUser(c);
   const id = c.req.param("id");
@@ -1695,6 +2292,28 @@ router.post("/:id/quotes", requirePermission(PERMISSIONS.PURCHASES_ORDER), async
   );
   if (!supplier) throw notFound("Fornecedor não encontrado.");
   if (supplier.is_active !== 1) throw badRequest("O fornecedor informado esta inativo.");
+
+  // Orçamento é de fornecedor único; cotação aceita vários fornecedores.
+  if (request.flow_revision === 3 && request.purchase_mode === "budget") {
+    const other = await oneRow<{ code: string }>(
+      c.env.DB,
+      `SELECT code FROM purchase_quotes
+        WHERE request_id = ? AND supplier_id <> ? AND status = 'registered'`,
+      [id, body.supplierId],
+    );
+    if (other) {
+      throw conflict(
+        `Esta solicitação é um orçamento de fornecedor único. Já existe a proposta ${other.code}; use o mesmo fornecedor ou cancele a proposta anterior.`,
+      );
+    }
+  }
+
+  const paymentMethodId = body.paymentMethodId
+    ? (await loadPaymentMethod(c.env.DB, body.paymentMethodId)).id
+    : request.payment_method_id;
+  if (request.flow_revision === 3 && !paymentMethodId) {
+    throw badRequest("Informe a forma de pagamento da proposta.");
+  }
 
   const itemIds = body.items.map((item) => item.itemId);
   const duplicated = findDuplicates(itemIds);
@@ -1739,6 +2358,8 @@ router.post("/:id/quotes", requirePermission(PERMISSIONS.PURCHASES_ORDER), async
     statements.push(
       updateStatement(c.env.DB, "purchase_quotes", quoteId, {
         notes: body.notes ?? null,
+        payment_method_id: paymentMethodId ?? null,
+        payment_terms: body.paymentTerms ?? null,
         updated_at: ts,
       }),
     );
@@ -1751,6 +2372,8 @@ router.post("/:id/quotes", requirePermission(PERMISSIONS.PURCHASES_ORDER), async
         supplier_id: body.supplierId,
         status: "registered",
         notes: body.notes ?? null,
+        payment_method_id: paymentMethodId ?? null,
+        payment_terms: body.paymentTerms ?? null,
         created_by: user.id,
         created_at: ts,
         updated_at: ts,
@@ -1816,6 +2439,16 @@ router.post("/:id/quotes/return", requirePermission(PERMISSIONS.PURCHASES_ORDER)
   if (quoteCount === 0) {
     throw badRequest("Registre ao menos uma proposta antes de devolver a cotação.");
   }
+  if (request.flow_revision === 3) {
+    if (request.purchase_mode === "quote" && quoteCount < 2) {
+      throw badRequest(
+        "Cotação exige ao menos duas propostas de fornecedores diferentes. Registre a segunda proposta ou use orçamento de fornecedor único.",
+      );
+    }
+    if (request.purchase_mode === "budget" && quoteCount > 1) {
+      throw badRequest("Orçamento aceita apenas uma proposta. Cancele as propostas excedentes antes de enviar.");
+    }
+  }
 
   const ts = nowIso();
   const info = clientInfo(c);
@@ -1836,6 +2469,26 @@ router.post("/:id/quotes/return", requirePermission(PERMISSIONS.PURCHASES_ORDER)
       ...info,
     }),
   ];
+
+  if (request.flow_revision === 3) {
+    const recipients = (await purchasingResponsibleIds(c.env.DB)).filter(
+      (approverId) => approverId !== user.id,
+    );
+    const staged = await stageNotifications(c, recipients, {
+      type: "purchase_quote_returned",
+      title: `Cotação da solicitação ${request.code} aguarda sua aprovação`,
+      body: `${quoteCount} ${quoteCount === 1 ? "proposta registrada" : "propostas registradas"}. Forma de pagamento: ${
+        request.payment_method_id ? "definida na solicitação" : "pendente"
+      }.`,
+      requestId: id,
+      code: request.code,
+      createdAt: ts,
+    });
+    statements.push(...staged.statements);
+    await c.env.DB.batch(statements);
+    await deliverOutbox(c.env.DB, staged.emailIds);
+    return c.json({ ok: true, status: "quote_returned" });
+  }
 
   const approverPermission =
     request.workflow_version === 2 ? PERMISSIONS.PURCHASES_AWARD : PERMISSIONS.PURCHASES_APPROVE;
@@ -1865,7 +2518,7 @@ router.post("/:id/quotes/return", requirePermission(PERMISSIONS.PURCHASES_ORDER)
  * marcadas como não escolhidas e a solicitação fica pronta para o pedido, que
  * nasce com o fornecedor e os preços da proposta aprovada.
  */
-router.post("/:id/quotes/:quoteId/approve", requirePermission(PERMISSIONS.PURCHASES_APPROVE), async (c) => {
+router.post("/:id/quotes/:quoteId/approve", async (c) => {
   const user = currentUser(c);
   const id = c.req.param("id");
   const quoteId = c.req.param("quoteId");
@@ -1873,7 +2526,18 @@ router.post("/:id/quotes/:quoteId/approve", requirePermission(PERMISSIONS.PURCHA
 
   const request = await requireRequest(c.env.DB, id);
   assertPurchaseVisible(user, request);
-  if (request.workflow_version === 2) {
+  const isV3 = request.flow_revision === 3;
+  const requiredPermission = isV3 ? PERMISSIONS.PURCHASES_AUTHORIZE : PERMISSIONS.PURCHASES_APPROVE;
+  if (!user.permissions.has(requiredPermission)) {
+    throw conflict(
+      await permissionMessage(
+        c.env.DB,
+        requiredPermission,
+        isV3 ? "aprovar a cotação e autorizar a compra" : "aprovar a cotação",
+      ),
+    );
+  }
+  if (!isV3 && request.workflow_version === 2) {
     throw conflict("Use a adjudicação por item para escolher os fornecedores desta solicitação.");
   }
   if (request.status !== "quote_returned") {
@@ -1881,6 +2545,11 @@ router.post("/:id/quotes/:quoteId/approve", requirePermission(PERMISSIONS.PURCHA
   }
   if (request.requester_id === user.id && !user.permissions.has(PERMISSIONS.SETTINGS_MANAGE)) {
     throw conflict("Você não pode aprovar a cotação da sua própria solicitação.");
+  }
+  if (isV3 && !user.departmentIsPurchasing && !user.permissions.has(PERMISSIONS.SETTINGS_MANAGE)) {
+    throw forbidden(
+      "A aprovação da cotação deve ser feita pelo responsável do setor de Compras. Solicite ao gestor de Compras.",
+    );
   }
   const quote = await oneRow<{ id: string; code: string; status: string; supplier_id: string }>(
     c.env.DB,
@@ -1911,7 +2580,19 @@ router.post("/:id/quotes/:quoteId/approve", requirePermission(PERMISSIONS.PURCHA
           WHERE request_id = ? AND status = 'registered' AND id <> ?`,
       )
       .bind(ts, id, quoteId),
-    updateStatement(c.env.DB, "purchase_requests", id, { status: "quote_approved", updated_at: ts }),
+    updateStatement(c.env.DB, "purchase_requests", id, {
+      status: "quote_approved",
+      ...(isV3
+        ? {
+            approval_stage: "buyer",
+            approved_by: user.id,
+            approved_at: ts,
+            approval_notes: body.notes ?? null,
+            finance_status: "pending",
+          }
+        : {}),
+      updated_at: ts,
+    }),
     auditStatement(c.env.DB, {
       actor: { id: user.id, name: user.name },
       module: "purchases",
@@ -1925,11 +2606,57 @@ router.post("/:id/quotes/:quoteId/approve", requirePermission(PERMISSIONS.PURCHA
     }),
   ];
 
+  if (isV3) {
+    // O responsável de Compras aprovou a proposta: ela já vira adjudicação de
+    // todos os itens e o comprador só precisa emitir o pedido.
+    const quoteItems = await allRows<{
+      request_item_id: string;
+      qty_milli: number;
+      unit_price_cents: number;
+    }>(
+      c.env.DB,
+      `SELECT request_item_id, qty_milli, unit_price_cents FROM purchase_quote_items WHERE quote_id = ?`,
+      [quoteId],
+    );
+    for (const item of quoteItems) {
+      statements.push(
+        insertStatement(c.env.DB, "purchase_awards", {
+          id: uuid(),
+          request_id: id,
+          request_item_id: item.request_item_id,
+          quote_id: quoteId,
+          supplier_id: quote.supplier_id,
+          qty_milli: item.qty_milli,
+          unit_price_cents: item.unit_price_cents,
+          awarded_by: user.id,
+          awarded_at: ts,
+          notes: body.notes ?? null,
+          created_at: ts,
+        }),
+      );
+    }
+  }
+
   const recipients = new Set<string>();
   if (request.requester_id !== user.id) recipients.add(request.requester_id);
   for (const buyerId of await usersWithPermission(c.env.DB, PERMISSIONS.PURCHASES_ORDER)) {
     if (buyerId !== user.id) recipients.add(buyerId);
   }
+  if (isV3) {
+    const staged = await stageNotifications(c, [...recipients], {
+      type: "purchase_quote_approved",
+      title: `Cotação da solicitação ${request.code} aprovada`,
+      body: `Proposta ${quote.code} selecionada; o pedido já pode ser emitido.`,
+      requestId: id,
+      code: request.code,
+      createdAt: ts,
+    });
+    statements.push(...staged.statements);
+    await c.env.DB.batch(statements);
+    await deliverOutbox(c.env.DB, staged.emailIds);
+    return c.json({ ok: true, status: "quote_approved" });
+  }
+
   if (recipients.size > 0) {
     statements.push(
       ...notificationStatements(c.env.DB, [...recipients], {
@@ -1949,7 +2676,7 @@ router.post("/:id/quotes/:quoteId/approve", requirePermission(PERMISSIONS.PURCHA
 });
 
 /** Recusa a proposta devolvida: a cotação volta ao comprador para ajustes. */
-router.post("/:id/quotes/:quoteId/reject", requirePermission(PERMISSIONS.PURCHASES_APPROVE), async (c) => {
+router.post("/:id/quotes/:quoteId/reject", async (c) => {
   const user = currentUser(c);
   const id = c.req.param("id");
   const quoteId = c.req.param("quoteId");
@@ -1957,6 +2684,13 @@ router.post("/:id/quotes/:quoteId/reject", requirePermission(PERMISSIONS.PURCHAS
 
   const request = await requireRequest(c.env.DB, id);
   assertPurchaseVisible(user, request);
+  const isV3 = request.flow_revision === 3;
+  const requiredPermission = isV3 ? PERMISSIONS.PURCHASES_AUTHORIZE : PERMISSIONS.PURCHASES_APPROVE;
+  if (!user.permissions.has(requiredPermission)) {
+    throw conflict(
+      await permissionMessage(c.env.DB, requiredPermission, "revisar a cotação enviada pelo comprador"),
+    );
+  }
   if (request.status !== "quote_returned") {
     throw conflict(`A cotação só pode ser recusada depois de devolvida pelo comprador. Status atual: ${request.status}.`);
   }
@@ -1980,7 +2714,11 @@ router.post("/:id/quotes/:quoteId/reject", requirePermission(PERMISSIONS.PURCHAS
       approval_notes: body.notes ?? null,
       updated_at: ts,
     }),
-    updateStatement(c.env.DB, "purchase_requests", id, { status: "quoting", updated_at: ts }),
+    updateStatement(c.env.DB, "purchase_requests", id, {
+      status: "quoting",
+      ...(isV3 ? { approval_stage: "buyer" } : {}),
+      updated_at: ts,
+    }),
     auditStatement(c.env.DB, {
       actor: { id: user.id, name: user.name },
       module: "purchases",
@@ -1997,6 +2735,21 @@ router.post("/:id/quotes/:quoteId/reject", requirePermission(PERMISSIONS.PURCHAS
   const buyers = (await usersWithPermission(c.env.DB, PERMISSIONS.PURCHASES_ORDER)).filter(
     (buyerId) => buyerId !== user.id,
   );
+  if (isV3) {
+    const staged = await stageNotifications(c, buyers, {
+      type: "purchase_quote_rejected",
+      title: `Cotação da solicitação ${request.code} devolvida para ajustes`,
+      body: body.notes ?? null,
+      requestId: id,
+      code: request.code,
+      createdAt: ts,
+    });
+    statements.push(...staged.statements);
+    await c.env.DB.batch(statements);
+    await deliverOutbox(c.env.DB, staged.emailIds);
+    return c.json({ ok: true, status: "quoting" });
+  }
+
   if (buyers.length > 0) {
     statements.push(
       ...notificationStatements(c.env.DB, buyers, {
@@ -2373,9 +3126,15 @@ router.post("/:id/orders", requirePermission(PERMISSIONS.PURCHASES_ORDER), async
   const createdOrders: Array<{ id: string; code: string; supplierId: string; totalCents: number }> = [];
   // O centro de custo e a conta contábil vêm da solicitação; ficam no pedido
   // para a exportação ao ERP não depender de uma segunda consulta.
-  const requestFinance = await oneRow<{ cost_center_id: string | null; gl_account: string | null }>(
+  const requestFinance = await oneRow<{
+    cost_center_id: string | null;
+    gl_account: string | null;
+    payment_method_id: string | null;
+    payment_terms: string | null;
+  }>(
     c.env.DB,
-    `SELECT cost_center_id, gl_account FROM purchase_requests WHERE id = ?`,
+    `SELECT cost_center_id, gl_account, payment_method_id, payment_terms
+       FROM purchase_requests WHERE id = ?`,
     [id],
   );
 
@@ -2395,6 +3154,8 @@ router.post("/:id/orders", requirePermission(PERMISSIONS.PURCHASES_ORDER), async
         total_cents: plan.totalCents,
         cost_center_id: requestFinance?.cost_center_id ?? null,
         gl_account: requestFinance?.gl_account ?? null,
+        payment_method_id: requestFinance?.payment_method_id ?? null,
+        payment_terms: requestFinance?.payment_terms ?? null,
         sync_status: "pending",
         notes: plan.notes,
         created_by: user.id,
@@ -2467,7 +3228,6 @@ router.post("/:id/orders", requirePermission(PERMISSIONS.PURCHASES_ORDER), async
       status: "ordered",
       approval_stage: "receipt",
       finance_status: "committed",
-      approval_notes: body.notes ?? null,
       updated_at: ts,
     }),
     auditStatement(c.env.DB, {
@@ -2533,7 +3293,11 @@ router.post("/:id/order", requirePermission(PERMISSIONS.PURCHASES_ORDER), async 
   const request = await requireRequest(c.env.DB, id);
   assertPurchaseVisible(user, request);
   if (request.workflow_version === 2) {
-    throw conflict("Use o pedido por fornecedor do fluxo corporativo (POST /api/purchases/:id/orders).");
+    throw conflict(
+      request.flow_revision === 3
+        ? "Use a emissão de pedidos por fornecedor (POST /api/purchases/:id/orders)."
+        : "Use o pedido por fornecedor do fluxo corporativo (POST /api/purchases/:id/orders).",
+    );
   }
   if (!["approved", "purchasing", "quote_approved"].includes(request.status)) {
     throw conflict(
@@ -2763,6 +3527,15 @@ router.post("/:id/receipts", requirePermission(PERMISSIONS.PURCHASES_RECEIVE), a
   }
   assertLocationAllowed(user, body.locationId);
   await assertLocationActive(c.env.DB, body.locationId);
+
+  if (request.flow_revision === 3) {
+    if (!body.invoiceNumber?.trim()) {
+      throw badRequest("Informe o número da nota fiscal para concluir o recebimento.");
+    }
+    if (!body.invoiceDate?.trim()) {
+      throw badRequest("Informe a data da nota fiscal para concluir o recebimento.");
+    }
+  }
 
   const directUseCount = body.items.filter((line) => line.directUse).length;
   if (directUseCount > 0 && (body.directUseReason ?? "").trim().length < 5) {
@@ -3017,6 +3790,11 @@ router.post("/:id/receipts", requirePermission(PERMISSIONS.PURCHASES_RECEIVE), a
           received_by: user.id,
           received_at: receivedAt,
           document_ref: body.documentRef ?? null,
+          invoice_number: body.invoiceNumber ?? null,
+          invoice_series: body.invoiceSeries ?? null,
+          invoice_date: body.invoiceDate ?? null,
+          invoice_total_cents:
+            body.invoiceTotal !== undefined ? Math.round(body.invoiceTotal * 100) : null,
           notes: body.notes ?? null,
           status: "confirmed",
           created_at: ts,
@@ -3255,9 +4033,14 @@ interface RequestRow {
   location_id: string | null;
   justification: string | null;
   workflow_version: number;
+  flow_revision: number;
   approval_stage: string;
   routing: string;
   manager_approved_by: string | null;
+  department_id: string | null;
+  purchase_mode: string | null;
+  payment_method_id: string | null;
+  purchasing_authorized_by: string | null;
 }
 
 async function requireRequest(db: D1Database, id: string | undefined): Promise<RequestRow> {
@@ -3265,7 +4048,8 @@ async function requireRequest(db: D1Database, id: string | undefined): Promise<R
   const row = await oneRow<RequestRow>(
     db,
     `SELECT id, code, status, priority, requester_id, location_id, justification,
-            workflow_version, approval_stage, routing, manager_approved_by
+            workflow_version, flow_revision, approval_stage, routing, manager_approved_by,
+            department_id, purchase_mode, payment_method_id, purchasing_authorized_by
        FROM purchase_requests WHERE id = ?`,
     [id],
   );
@@ -3354,7 +4138,22 @@ function mapRequest(row: Record<string, unknown>) {
     priority: String(row.priority),
     status: String(row.status),
     workflowVersion: Number(row.workflow_version ?? 1),
+    flowRevision: Number(row.flow_revision ?? 1),
     approvalStage: String(row.approval_stage ?? "completed"),
+    departmentId: row.department_id ? String(row.department_id) : null,
+    departmentName: row.department_name ? String(row.department_name) : null,
+    purchaseMode: row.purchase_mode ? String(row.purchase_mode) : null,
+    paymentMethodId: row.payment_method_id ? String(row.payment_method_id) : null,
+    paymentMethodCode: row.payment_method_code ? String(row.payment_method_code) : null,
+    paymentMethodName: row.payment_method_name ? String(row.payment_method_name) : null,
+    paymentRequiresAuthorization: Number(row.payment_requires_authorization) === 1,
+    paymentRequiresQuote: Number(row.payment_requires_quote) === 1,
+    paymentTerms: row.payment_terms ? String(row.payment_terms) : null,
+    purchasingAuthorizedBy: row.purchasing_authorized_by ? String(row.purchasing_authorized_by) : null,
+    purchasingAuthorizedByName: row.purchasing_authorized_by_name
+      ? String(row.purchasing_authorized_by_name)
+      : null,
+    purchasingAuthorizedAt: row.purchasing_authorized_at ? String(row.purchasing_authorized_at) : null,
     routing: String(row.routing ?? "standard"),
     budgetStatus: String(row.budget_status ?? "not_required"),
     budgetNotes: row.budget_notes ? String(row.budget_notes) : null,

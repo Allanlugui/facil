@@ -9,6 +9,13 @@ export interface AuthUser {
   roleCode: string;
   roleName: string;
   unitId: string | null;
+  /** Setor ao qual o usuário pertence (fluxo de compras v3). */
+  departmentId: string | null;
+  departmentName: string | null;
+  /** true quando o setor do usuário é o setor de Compras. */
+  departmentIsPurchasing: boolean;
+  /** Setores que este usuário gerencia (pode haver mais de um). */
+  managedDepartmentIds: string[];
   mustChangePassword: boolean;
   /** Códigos de permissão concedidos ao perfil. */
   permissions: Set<string>;

@@ -65,6 +65,10 @@ function toSessionUser(user: AuthUser): SessionUser {
     roleCode: user.roleCode,
     roleName: user.roleName,
     unitId: user.unitId,
+    departmentId: user.departmentId,
+    departmentName: user.departmentName,
+    departmentIsPurchasing: user.departmentIsPurchasing,
+    managedDepartmentIds: user.managedDepartmentIds,
     mustChangePassword: user.mustChangePassword,
     permissions: [...user.permissions].sort(),
     locationScope: user.locationScope,
@@ -185,9 +189,14 @@ async function createStarterLocations(db: D1Database, unitId: string, ts: string
 async function loadUserForResponse(db: D1Database, userId: string): Promise<SessionUser> {
   const row = await db
     .prepare(
-      `SELECT u.id, u.name, u.email, u.role_id, u.unit_id, u.must_change_password, u.theme,
+      `SELECT u.id, u.name, u.email, u.role_id, u.unit_id, u.department_id,
+              u.must_change_password, u.theme,
+              d.name AS department_name, d.is_purchasing AS department_is_purchasing,
               r.code AS role_code, r.name AS role_name
-         FROM users u JOIN roles r ON r.id = u.role_id WHERE u.id = ?`,
+         FROM users u
+         JOIN roles r ON r.id = u.role_id
+         LEFT JOIN departments d ON d.id = u.department_id
+        WHERE u.id = ?`,
     )
     .bind(userId)
     .first<{
@@ -196,6 +205,9 @@ async function loadUserForResponse(db: D1Database, userId: string): Promise<Sess
       email: string;
       role_id: string;
       unit_id: string | null;
+      department_id: string | null;
+      department_name: string | null;
+      department_is_purchasing: number | null;
       must_change_password: number;
       theme: string | null;
       role_code: string;
@@ -216,6 +228,15 @@ async function loadUserForResponse(db: D1Database, userId: string): Promise<Sess
     roleCode: row.role_code,
     roleName: row.role_name,
     unitId: row.unit_id,
+    departmentId: row.department_id,
+    departmentName: row.department_name,
+    departmentIsPurchasing: row.department_is_purchasing === 1,
+    managedDepartmentIds: (
+      await db
+        .prepare(`SELECT department_id FROM department_managers WHERE user_id = ?`)
+        .bind(row.id)
+        .all<{ department_id: string }>()
+    ).results.map((item) => item.department_id),
     mustChangePassword: row.must_change_password === 1,
     permissions: permissions.results.map((p) => p.permission_code).sort(),
     locationScope: await resolveLocationScope(db, row.id),

@@ -42,6 +42,10 @@ interface UserRow {
   roleCode: string;
   unitId: string | null;
   unitName: string | null;
+  departmentId: string | null;
+  departmentName: string | null;
+  departmentIsPurchasing: boolean;
+  managedDepartmentIds: string[];
   employeeCode: string | null;
   phone: string | null;
   jobTitle: string | null;
@@ -70,28 +74,40 @@ interface PermissionGroup {
   codes: { code: string; label: string }[];
 }
 
+interface DepartmentRow {
+  id: string;
+  code: string;
+  name: string;
+  isPurchasing: boolean;
+  isActive: boolean;
+  notes: string | null;
+  managers: { id: string; name: string }[];
+}
+
 /* -------------------------------------------------------------------------- */
 /* Página                                                                     */
 /* -------------------------------------------------------------------------- */
 
 export function UsersPage() {
-  const [tab, setTab] = useState<"users" | "roles">("users");
+  const [tab, setTab] = useState<"users" | "departments" | "roles">("users");
 
   return (
     <div>
       <PageHeader
         title="Usuários e permissões"
-        description="Contas de acesso, perfis e a matriz de permissões aplicada pelo servidor em cada requisição."
+        description="Contas de acesso, setores, gestores responsáveis e a matriz de permissões aplicada pelo servidor em cada requisição."
       />
       <Tabs
         tabs={[
           { value: "users", label: "Usuários" },
+          { value: "departments", label: "Setores e gestores" },
           { value: "roles", label: "Perfis e permissões" },
         ]}
         value={tab}
         onChange={setTab}
       />
       {tab === "users" ? <UsersTab /> : null}
+      {tab === "departments" ? <DepartmentsTab /> : null}
       {tab === "roles" ? <RolesTab /> : null}
     </div>
   );
@@ -115,6 +131,10 @@ function UsersTab() {
 
   const roles = useAsync(async () => {
     const result = await apiGet<{ items: RoleRow[] }>("/api/users/roles");
+    return result.items;
+  }, []);
+  const departments = useAsync(async () => {
+    const result = await apiGet<{ items: DepartmentRow[] }>("/api/users/departments");
     return result.items;
   }, []);
 
@@ -148,11 +168,14 @@ function UsersTab() {
     },
     {
       key: "role",
-      header: "Perfil",
+      header: "Perfil e setor",
       cell: (row) => (
         <div className="text-xs">
           <Badge tone="blue">{row.roleName}</Badge>
-          <p className="mt-1 text-slate-500">{row.unitName ?? "Sem unidade"}</p>
+          <p className="mt-1 text-slate-500">
+            {row.departmentName ?? "Sem setor"}
+            {row.unitName ? ` · ${row.unitName}` : ""}
+          </p>
         </div>
       ),
     },
@@ -290,6 +313,7 @@ function UsersTab() {
       {creating ? (
         <UserDialog
           roles={roles.data ?? []}
+          departments={departments.data ?? []}
           onClose={() => setCreating(false)}
           onSaved={() => {
             setCreating(false);
@@ -302,6 +326,7 @@ function UsersTab() {
         <UserDialog
           user={editing}
           roles={roles.data ?? []}
+          departments={departments.data ?? []}
           onClose={() => setEditing(null)}
           onSaved={() => {
             setEditing(null);
@@ -338,11 +363,13 @@ function UsersTab() {
 function UserDialog({
   user,
   roles,
+  departments,
   onClose,
   onSaved,
 }: {
   user?: UserRow;
   roles: RoleRow[];
+  departments: DepartmentRow[];
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -352,6 +379,10 @@ function UserDialog({
   const [email, setEmail] = useState(user?.email ?? "");
   const [roleId, setRoleId] = useState(user?.roleId ?? "");
   const [unitId, setUnitId] = useState(user?.unitId ?? "");
+  const [departmentId, setDepartmentId] = useState(user?.departmentId ?? "");
+  const [managedDepartmentIds, setManagedDepartmentIds] = useState<string[]>(
+    user?.managedDepartmentIds ?? [],
+  );
   const [employeeCode, setEmployeeCode] = useState(user?.employeeCode ?? "");
   const [phone, setPhone] = useState(user?.phone ?? "");
   const [jobTitle, setJobTitle] = useState(user?.jobTitle ?? "");
@@ -375,6 +406,8 @@ function UserDialog({
           email,
           roleId,
           unitId: unitId || null,
+          departmentId: departmentId || null,
+          managedDepartmentIds,
           employeeCode: employeeCode || null,
           phone: phone || null,
           jobTitle: jobTitle || null,
@@ -389,6 +422,8 @@ function UserDialog({
           email,
           roleId,
           unitId: unitId || null,
+          departmentId: departmentId || null,
+          managedDepartmentIds,
           employeeCode: employeeCode || null,
           phone: phone || null,
           jobTitle: jobTitle || null,
@@ -493,6 +528,27 @@ function UserDialog({
               ))}
             </Select>
           </Field>
+          <Field
+            label="Setor"
+            hint="O gestor do setor aprova as solicitações de compra dele."
+            htmlFor="userDepartment"
+          >
+            <Select
+              id="userDepartment"
+              value={departmentId}
+              onChange={(event) => setDepartmentId(event.target.value)}
+            >
+              <option value="">Sem setor</option>
+              {departments
+                .filter((department) => department.isActive || department.id === user?.departmentId)
+                .map((department) => (
+                  <option key={department.id} value={department.id}>
+                    {department.name}
+                    {department.isPurchasing ? " (Compras)" : ""}
+                  </option>
+                ))}
+            </Select>
+          </Field>
           <Field label="Matricula" htmlFor="userCode">
             <Input id="userCode" value={employeeCode} onChange={(event) => setEmployeeCode(event.target.value)} />
           </Field>
@@ -523,6 +579,32 @@ function UserDialog({
         <Field label="Observações" htmlFor="userNotes">
           <Textarea id="userNotes" rows={2} value={notes} onChange={(event) => setNotes(event.target.value)} />
         </Field>
+
+        <div className="rounded-lg border border-slate-200 p-3">
+          <p className="text-sm font-medium text-slate-700">Setores que este usuário gerencia</p>
+          <p className="mt-0.5 text-xs text-slate-500">
+            Um gestor pode responder por vários setores. Ele aprova as solicitações desses setores e vê
+            apenas as compras deles.
+          </p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            {departments
+              .filter((department) => department.isActive)
+              .map((department) => (
+                <Checkbox
+                  key={department.id}
+                  label={`${department.name}${department.isPurchasing ? " (Compras)" : ""}`}
+                  checked={managedDepartmentIds.includes(department.id)}
+                  onChange={(checked) =>
+                    setManagedDepartmentIds((current) =>
+                      checked
+                        ? [...new Set([...current, department.id])]
+                        : current.filter((id) => id !== department.id),
+                    )
+                  }
+                />
+              ))}
+          </div>
+        </div>
 
         {!user ? (
           <Checkbox
@@ -697,6 +779,255 @@ function ResetPasswordDialog({
             Gere uma senha temporária para entregar pessoalmente ao colaborador.
           </p>
         )}
+      </div>
+    </Dialog>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Setores e gestores                                                         */
+/* -------------------------------------------------------------------------- */
+
+function DepartmentsTab() {
+  const { can } = useSession();
+  const manage = can(PERMISSIONS.USERS_MANAGE);
+  const [creating, setCreating] = useState(false);
+  const [editing, setEditing] = useState<DepartmentRow | null>(null);
+  const state = useAsync(async () => {
+    const result = await apiGet<{ items: DepartmentRow[] }>("/api/users/departments");
+    return result.items;
+  }, []);
+  const users = useAsync(async () => {
+    const result = await apiGet<{ items: UserRow[] }>("/api/users/users", {
+      isActive: "true",
+      pageSize: 100,
+    });
+    return result.items;
+  }, []);
+
+  const columns: Column<DepartmentRow>[] = [
+    {
+      key: "department",
+      header: "Setor",
+      cell: (row) => (
+        <div>
+          <p className="font-medium text-slate-800">{row.name}</p>
+          <p className="text-xs text-slate-500">{row.code}</p>
+        </div>
+      ),
+    },
+    {
+      key: "kind",
+      header: "Tipo",
+      cell: (row) =>
+        row.isPurchasing ? <Badge tone="violet">Setor de Compras</Badge> : <Badge tone="slate">Setor solicitante</Badge>,
+    },
+    {
+      key: "managers",
+      header: "Gestores responsáveis",
+      cell: (row) =>
+        row.managers.length === 0 ? (
+          <span className="text-xs text-amber-700">Sem gestor — ninguém aprova este setor</span>
+        ) : (
+          <span className="text-xs text-slate-600">{row.managers.map((manager) => manager.name).join(", ")}</span>
+        ),
+    },
+    {
+      key: "status",
+      header: "Situação",
+      cell: (row) => (
+        <Badge tone={row.isActive ? "green" : "slate"}>{row.isActive ? "Ativo" : "Inativo"}</Badge>
+      ),
+    },
+    {
+      key: "actions",
+      header: "",
+      align: "right",
+      cell: (row) =>
+        manage ? (
+          <Button variant="ghost" size="sm" onClick={() => setEditing(row)}>
+            Editar
+          </Button>
+        ) : null,
+    },
+  ];
+
+  return (
+    <Card padded={false}>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 p-4">
+        <div>
+          <p className="text-sm font-medium text-slate-800">Hierarquia de setores</p>
+          <p className="text-xs text-slate-500">
+            O gestor aprova a necessidade do setor; o setor de Compras autoriza e o comprador executa.
+          </p>
+        </div>
+        {manage ? <Button onClick={() => setCreating(true)}>Novo setor</Button> : null}
+      </div>
+      <div className="p-4">
+        {state.loading && !state.data ? (
+          <LoadingBlock />
+        ) : state.error ? (
+          <ErrorBlock message={state.error} onRetry={state.reload} />
+        ) : (
+          <Table
+            columns={columns}
+            rows={state.data ?? []}
+            keyOf={(row) => row.id}
+            empty={<EmptyState title="Nenhum setor" description="Crie o primeiro setor para organizar as compras." />}
+          />
+        )}
+      </div>
+      {creating ? (
+        <DepartmentDialog
+          users={users.data ?? []}
+          onClose={() => setCreating(false)}
+          onSaved={() => {
+            setCreating(false);
+            state.reload();
+          }}
+        />
+      ) : null}
+      {editing ? (
+        <DepartmentDialog
+          department={editing}
+          users={users.data ?? []}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            state.reload();
+          }}
+        />
+      ) : null}
+    </Card>
+  );
+}
+
+function DepartmentDialog({
+  department,
+  users,
+  onClose,
+  onSaved,
+}: {
+  department?: DepartmentRow;
+  users: UserRow[];
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const toast = useToast();
+  const [code, setCode] = useState(department?.code ?? "");
+  const [name, setName] = useState(department?.name ?? "");
+  const [isPurchasing, setIsPurchasing] = useState(department?.isPurchasing ?? false);
+  const [isActive, setIsActive] = useState(department?.isActive ?? true);
+  const [notes, setNotes] = useState(department?.notes ?? "");
+  const [managerIds, setManagerIds] = useState<string[]>(
+    department?.managers.map((manager) => manager.id) ?? [],
+  );
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      const payload = {
+        code: code.trim().toUpperCase(),
+        name: name.trim(),
+        isPurchasing,
+        isActive,
+        notes: notes || null,
+      };
+      let departmentId = department?.id;
+      if (department) {
+        await apiPatch(`/api/users/departments/${department.id}`, payload);
+      } else {
+        const created = await apiPost<{ id: string }>("/api/users/departments", payload);
+        departmentId = created.id;
+      }
+      if (departmentId) {
+        await apiPut(`/api/users/departments/${departmentId}/managers`, { userIds: managerIds });
+      }
+      toast.success(department ? "Setor atualizado." : "Setor criado.");
+      onSaved();
+    } catch (cause) {
+      setError(apiErrorMessage(cause));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog
+      open
+      wide
+      title={department ? `Editar ${department.name}` : "Novo setor"}
+      description="O setor organiza a solicitação; os gestores escolhidos aprovam as compras dele."
+      onClose={onClose}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button onClick={submit} loading={saving}>
+            Salvar setor
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        {error ? <Alert tone="red">{error}</Alert> : null}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Código" required hint="Curto, em maiúsculas. Ex.: MAN." htmlFor="departmentCode">
+            <Input
+              id="departmentCode"
+              value={code}
+              onChange={(event) => setCode(event.target.value.toUpperCase())}
+              maxLength={20}
+            />
+          </Field>
+          <Field label="Nome" required htmlFor="departmentName">
+            <Input id="departmentName" value={name} onChange={(event) => setName(event.target.value)} />
+          </Field>
+        </div>
+        <Checkbox
+          label="Este é o setor de Compras"
+          hint="Membros deste setor veem toda a fila e o responsável autoriza as compras."
+          checked={isPurchasing}
+          onChange={setIsPurchasing}
+        />
+        <Checkbox
+          label="Setor ativo"
+          hint="Setores inativos não aparecem em novas solicitações."
+          checked={isActive}
+          onChange={setIsActive}
+        />
+        <Field label="Observações" htmlFor="departmentNotes">
+          <Textarea
+            id="departmentNotes"
+            rows={2}
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+          />
+        </Field>
+        <div className="rounded-lg border border-slate-200 p-3">
+          <p className="text-sm font-medium text-slate-700">Gestores do setor</p>
+          <p className="mt-0.5 text-xs text-slate-500">
+            Selecione uma ou mais pessoas. Sem gestor, a solicitação fica sem aprovador.
+          </p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            {users.map((user) => (
+              <Checkbox
+                key={user.id}
+                label={`${user.name}${user.departmentName ? ` · ${user.departmentName}` : ""}`}
+                checked={managerIds.includes(user.id)}
+                onChange={(checked) =>
+                  setManagerIds((current) =>
+                    checked ? [...new Set([...current, user.id])] : current.filter((id) => id !== user.id),
+                  )
+                }
+              />
+            ))}
+          </div>
+        </div>
       </div>
     </Dialog>
   );

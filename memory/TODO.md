@@ -1,6 +1,34 @@
 # Tarefas Pendentes: Facil
 
-Atualizado em 20/10/2026. Este é o **backlog oficial** do projeto (plano + pendências em um só lugar).
+Atualizado em 21/10/2026. Este é o **backlog oficial** do projeto (plano + pendências em um só lugar).
+
+## ETAPA 4 — CONCLUÍDA (21/10/2026)
+
+- [x] **Compras v3 por setor:** gestor do setor cria/envia → responsável de Compras
+      autoriza (cotação, orçamento ou compra direta) → comprador cota e envia para
+      aprovação → responsável de Compras aprova e adjudica → comprador pede →
+      responsável pelo estoque confere e lança a nota fiscal.
+- [x] **Setores e gestores:** `departments`/`department_managers`; um gestor pode
+      responder por vários setores; visibilidade por setor e fila única para a
+      equipe de Compras.
+- [x] **Formas de pagamento:** `payment_methods` com `requires_authorization` e
+      `requires_quote`; cotação bloqueia compra direta quando exige cotação.
+- [x] **Cotação/orçamento/compra direta:** mínimo de 2 propostas na cotação, 1 no
+      orçamento, compra direta autorizada pelo responsável de Compras; aprovação da
+      cotação cria a adjudicação e envia ao comprador.
+- [x] **Recebimento com nota fiscal:** número, série, data, total e local; atualiza
+      solicitação, pedido e itens.
+- [x] **Notificações direcionadas:** internas + `email_outbox` na mesma transação,
+      apenas para quem precisa agir; erro de permissão nomeia o responsável.
+- [x] **Chat de suporte em tempo real:** Durable Object `SupportRoom` (WebSocket) com
+      digitação, presença e fallback de polling de 60s em `/ajuda/:id` e
+      `/suporte/acompanhar/:token`; mensagens persistidas no D1.
+- [x] **Qualidade:** `npm run check` **175/175 em 20 arquivos**, typecheck, lint,
+      contrato de API; `npm run build`; verificação visual do fluxo completo.
+- [x] **Documentação:** `CHANGELOG.md`, `README.md`, `docs/COMPRAS.md` e memória
+      atualizados para a release **0.4.0**.
+- [ ] **Release 0.4.0:** assinatura Ed25519, migration `0020` no D1 remoto e
+      `wrangler deploy` (pendente de publicação neste momento).
 
 ## ETAPA 3 — CONCLUÍDA (20/10/2026)
 

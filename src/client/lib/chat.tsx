@@ -8,7 +8,7 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from "react";
-import { apiErrorMessage } from "./api";
+import { apiErrorMessage, apiPost } from "./api";
 import {
   calendarDay,
   formatBytes,
@@ -137,6 +137,124 @@ export function useOptimisticChat({
   }, [messages, pending]);
 
   return { messages: merged, sendMessage };
+}
+
+/* -------------------------------------------------------------------------- */
+/* Tempo real                                                                 */
+/* -------------------------------------------------------------------------- */
+
+interface RealtimeEvent {
+  type?: string;
+  authorType?: "requester" | "staff";
+  authorName?: string;
+  clientId?: string | null;
+}
+
+/**
+ * Conecta a conversa à sala em tempo real e avisa quando alguém está digitando.
+ *
+ * A mensagem em si continua sendo gravada pelo POST e lida pela API; o evento
+ * `message` apenas dispara uma leitura imediata. Se o WebSocket cair, a página
+ * segue com o polling de segurança e o indicador some sozinho.
+ */
+export function useSupportRealtime({
+  socketPath,
+  typingPath,
+  selfType,
+  onEvent,
+}: {
+  socketPath: string | null;
+  typingPath: string | null;
+  selfType: "requester" | "staff";
+  onEvent: () => void;
+}) {
+  const [typingName, setTypingName] = useState<string | null>(null);
+  const [connected, setConnected] = useState(false);
+  const clientId = useRef(`chat-${crypto.randomUUID()}`);
+  const eventHandler = useRef(onEvent);
+  const typingTimer = useRef<number | null>(null);
+  const lastTypingSent = useRef(0);
+
+  useEffect(() => {
+    eventHandler.current = onEvent;
+  }, [onEvent]);
+
+  useEffect(() => {
+    if (!socketPath) return;
+    let closed = false;
+    let attempt = 0;
+    let reconnectTimer: number | null = null;
+    let pingTimer: number | null = null;
+    let socket: WebSocket | null = null;
+
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const url = `${protocol}//${window.location.host}${socketPath}`;
+
+    const connect = () => {
+      if (closed) return;
+      socket = new WebSocket(url);
+      socket.onopen = () => {
+        setConnected(true);
+        attempt = 0;
+        pingTimer = window.setInterval(() => {
+          try {
+            socket?.send(JSON.stringify({ type: "ping" }));
+          } catch {
+            // O onclose já agenda a reconexão.
+          }
+        }, 25_000);
+      };
+      socket.onmessage = (event) => {
+        let payload: RealtimeEvent;
+        try {
+          payload = JSON.parse(String(event.data)) as RealtimeEvent;
+        } catch {
+          return;
+        }
+        if (payload.type === "message") {
+          eventHandler.current();
+          return;
+        }
+        if (payload.type === "typing") {
+          if (payload.clientId && payload.clientId === clientId.current) return;
+          if (payload.authorType === selfType) return;
+          setTypingName(payload.authorName ?? "Alguém");
+          if (typingTimer.current) window.clearTimeout(typingTimer.current);
+          typingTimer.current = window.setTimeout(() => setTypingName(null), 4_000);
+        }
+      };
+      socket.onclose = () => {
+        setConnected(false);
+        if (pingTimer) window.clearInterval(pingTimer);
+        if (closed) return;
+        const delay = Math.min(30_000, 1_000 * 2 ** attempt);
+        attempt += 1;
+        reconnectTimer = window.setTimeout(connect, delay);
+      };
+      socket.onerror = () => socket?.close();
+    };
+
+    connect();
+    return () => {
+      closed = true;
+      setConnected(false);
+      if (reconnectTimer) window.clearTimeout(reconnectTimer);
+      if (pingTimer) window.clearInterval(pingTimer);
+      if (typingTimer.current) window.clearTimeout(typingTimer.current);
+      socket?.close();
+    };
+  }, [socketPath, selfType]);
+
+  const notifyTyping = useCallback(() => {
+    if (!typingPath) return;
+    const now = Date.now();
+    // Um evento a cada 2s é suficiente para "digitando..." e evita ruído.
+    if (now - lastTypingSent.current < 2_000) return;
+    lastTypingSent.current = now;
+    void apiPost(typingPath, { clientId: clientId.current, typing: true }).catch(() => undefined);
+  }, [typingPath]);
+
+  return { typingName, connected, notifyTyping };
 }
 
 /* -------------------------------------------------------------------------- */
@@ -340,6 +458,8 @@ export function ChatThread({
   title = "Conversa",
   subtitle,
   emptyText = "Nenhuma mensagem ainda.",
+  typingName,
+  connected,
   children,
 }: {
   messages: ChatMessageView[];
@@ -348,6 +468,10 @@ export function ChatThread({
   title?: string;
   subtitle?: string;
   emptyText?: string;
+  /** Nome de quem está digitando agora, quando o tempo real está ativo. */
+  typingName?: string | null;
+  /** `false` quando o WebSocket caiu; não escondemos a conversa por isso. */
+  connected?: boolean;
   children: ReactNode;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -389,9 +513,30 @@ export function ChatThread({
           </span>
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-slate-900">{title}</p>
-            <p className="truncate text-xs text-slate-500">{subtitle ?? countLabel}</p>
+            <p className="truncate text-xs text-slate-500">
+              {typingName ? (
+                <span className="inline-flex items-center gap-1 font-medium text-brand-700">
+                  {typingName} está digitando
+                  <span className="inline-flex gap-0.5" aria-hidden>
+                    <span className="size-1 animate-pulse rounded-full bg-brand-500" />
+                    <span className="size-1 animate-pulse rounded-full bg-brand-500 [animation-delay:150ms]" />
+                    <span className="size-1 animate-pulse rounded-full bg-brand-500 [animation-delay:300ms]" />
+                  </span>
+                </span>
+              ) : (
+                (subtitle ?? countLabel)
+              )}
+            </p>
           </div>
         </div>
+        {connected === false ? (
+          <span
+            className="shrink-0 text-[11px] text-slate-400"
+            title="Tempo real indisponível; a conversa atualiza automaticamente."
+          >
+            reconectando…
+          </span>
+        ) : null}
       </header>
 
       <div
@@ -459,11 +604,14 @@ export function MessageComposer({
   hint,
   limits,
   onSend,
+  onTyping,
 }: {
   placeholder: string;
   hint?: string;
   limits: ChatLimits;
   onSend: (text: string, files: File[]) => Promise<void>;
+  /** Avisa a sala de que há texto sendo digitado (limitado pelo hook). */
+  onTyping?: () => void;
 }) {
   const toast = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -578,7 +726,10 @@ export function MessageComposer({
       <Textarea
         rows={2}
         value={text}
-        onChange={(event) => setText(event.target.value)}
+        onChange={(event) => {
+          setText(event.target.value);
+          if (event.target.value.trim().length > 0) onTyping?.();
+        }}
         onKeyDown={onKeyDown}
         placeholder={placeholder}
         aria-label={placeholder}

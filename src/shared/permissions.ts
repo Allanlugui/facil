@@ -56,6 +56,7 @@ export const PERMISSIONS = {
   PURCHASES_VIEW_ALL: "purchases.view_all",
   PURCHASES_CREATE: "purchases.create",
   PURCHASES_APPROVE: "purchases.approve",
+  PURCHASES_APPROVE_DEPARTMENT: "purchases.approve_department",
   PURCHASES_AUTHORIZE: "purchases.authorize",
   PURCHASES_AWARD: "purchases.award",
   PURCHASES_DIRECT: "purchases.direct",
@@ -181,6 +182,10 @@ export const PERMISSION_GROUPS: readonly PermissionGroup[] = [
       { code: "purchases.view_all", label: "Visualizar todas as solicitações de compra" },
       { code: "purchases.create", label: "Criar solicitação de compra" },
       { code: "purchases.approve", label: "Aprovar a necessidade como gestor do setor" },
+      {
+        code: "purchases.approve_department",
+        label: "Aprovar solicitações dos setores que gerencia (fluxo por setor)",
+      },
       { code: "purchases.authorize", label: "Autorizar compra após análise de orçamento" },
       { code: "purchases.award", label: "Adjudicar cotação por item e escolher fornecedores" },
       { code: "purchases.direct", label: "Autorizar compra direta sem cotação" },

@@ -842,9 +842,11 @@ describe("relatórios, painel, auditoria e notificações", () => {
     expect(keeperHome.body.stock.itemCount).toBe(4);
     expect(keeperHome.body.stock.lowStockCount).toBe(1);
     expect(keeperHome.body.recentMovements.length).toBe(4);
-    // Sem permissão de pedido/recebimento, as listas não vazam para o estoque.
+    // O responsável pelo estoque recebe e lança a nota fiscal (fluxo v3), então
+    // vê a fila de recebimento; pedidos continuam com o comprador.
     expect(keeperHome.body.purchases.awaitingOrder.length).toBe(0);
-    expect(keeperHome.body.purchases.toReceive.length).toBe(0);
+    expect(keeperHome.body.purchases.toReceive.length).toBe(1);
+    expect(keeperHome.body.purchases.toReceive[0]?.id).toBe(request.body.id);
 
     /* --- Limpeza: consumo e chamados próprios; nada de outras áreas -------- */
     const cleanerHome = await cleaner.api.get<DashboardSummary>("/api/dashboard/summary");

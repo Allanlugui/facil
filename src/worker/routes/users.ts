@@ -22,6 +22,9 @@ const userCreateBody = z.object({
   email: emailSchema,
   roleId: z.string().trim().min(1, "Selecione o perfil."),
   unitId: z.string().trim().min(1).nullish(),
+  departmentId: z.string().trim().min(1).nullish(),
+  /** Setores sob responsabilidade do usuário (um gestor pode ter vários). */
+  managedDepartmentIds: z.array(z.string().trim().min(1)).max(100).optional(),
   employeeCode: z.string().trim().max(40).nullish(),
   phone: z.string().trim().max(40).nullish(),
   jobTitle: z.string().trim().max(80).nullish(),
@@ -39,6 +42,8 @@ const userUpdateBody = z.object({
   email: emailSchema.optional(),
   roleId: z.string().trim().min(1).optional(),
   unitId: z.string().trim().min(1).nullish(),
+  departmentId: z.string().trim().min(1).nullish(),
+  managedDepartmentIds: z.array(z.string().trim().min(1)).max(100).optional(),
   employeeCode: z.string().trim().max(40).nullish(),
   phone: z.string().trim().max(40).nullish(),
   jobTitle: z.string().trim().max(80).nullish(),
@@ -65,12 +70,186 @@ const scopesBody = z.object({
   locationIds: z.array(z.string().trim().min(1)).max(500),
 });
 
+const departmentBody = z.object({
+  code: z
+    .string()
+    .trim()
+    .min(2)
+    .max(20)
+    .regex(/^[A-Z0-9_-]+$/, "Use letras maiúsculas, números, hífen ou sublinhado."),
+  name: z.string().trim().min(2, "Informe o nome do setor.").max(120),
+  isPurchasing: z.boolean().optional().default(false),
+  isActive: z.boolean().optional().default(true),
+  notes: z.string().trim().max(500).nullish(),
+});
+
+const departmentManagersBody = z.object({
+  userIds: z.array(z.string().trim().min(1)).max(100),
+});
+
 /* -------------------------------------------------------------------------- */
 /* Catálogo de permissões                                                     */
 /* -------------------------------------------------------------------------- */
 
 router.get("/permissions", requirePermission(PERMISSIONS.USERS_VIEW), (c) => {
   return c.json({ groups: PERMISSION_GROUPS, total: ALL_PERMISSION_CODES.length });
+});
+
+/* -------------------------------------------------------------------------- */
+/* Setores e gestores                                                         */
+/* -------------------------------------------------------------------------- */
+
+router.get("/departments", requirePermission(PERMISSIONS.USERS_VIEW), async (c) => {
+  const rows = await allRows<Record<string, unknown>>(
+    c.env.DB,
+    `SELECT id, code, name, is_purchasing, is_active, notes, created_at, updated_at
+       FROM departments ORDER BY is_purchasing DESC, name`,
+  );
+  const managers = await allRows<{ department_id: string; user_id: string; name: string; email: string }>(
+    c.env.DB,
+    `SELECT dm.department_id, dm.user_id, u.name, u.email
+       FROM department_managers dm JOIN users u ON u.id = dm.user_id
+      WHERE u.is_active = 1
+      ORDER BY u.name`,
+  );
+  const byDepartment = new Map<string, { id: string; name: string; email: string }[]>();
+  for (const manager of managers) {
+    const list = byDepartment.get(manager.department_id) ?? [];
+    list.push({ id: manager.user_id, name: manager.name, email: manager.email });
+    byDepartment.set(manager.department_id, list);
+  }
+
+  return c.json({
+    items: rows.map((row) => ({
+      id: String(row.id),
+      code: String(row.code),
+      name: String(row.name),
+      isPurchasing: Number(row.is_purchasing) === 1,
+      isActive: Number(row.is_active) === 1,
+      notes: row.notes ? String(row.notes) : null,
+      createdAt: String(row.created_at),
+      updatedAt: String(row.updated_at),
+      managers: byDepartment.get(String(row.id)) ?? [],
+    })),
+  });
+});
+
+router.post("/departments", requirePermission(PERMISSIONS.USERS_MANAGE), async (c) => {
+  const actor = currentUser(c);
+  const body = await parseBody(c, departmentBody);
+  const duplicate = await oneRow<{ id: string }>(
+    c.env.DB,
+    `SELECT id FROM departments WHERE code = ? COLLATE NOCASE`,
+    [body.code],
+  );
+  if (duplicate) throw conflict("Já existe um setor com este código.");
+
+  const id = uuid();
+  const ts = nowIso();
+  await c.env.DB.batch([
+    insertStatement(c.env.DB, "departments", {
+      id,
+      code: body.code,
+      name: body.name,
+      is_purchasing: body.isPurchasing ? 1 : 0,
+      is_active: body.isActive ? 1 : 0,
+      notes: body.notes ?? null,
+      created_at: ts,
+      updated_at: ts,
+    }),
+    auditStatement(c.env.DB, {
+      actor: { id: actor.id, name: actor.name },
+      module: "users",
+      action: "department.create",
+      entityType: "department",
+      entityId: id,
+      after: body,
+      ...clientInfo(c),
+    }),
+  ]);
+  return c.json({ id }, 201);
+});
+
+router.patch("/departments/:id", requirePermission(PERMISSIONS.USERS_MANAGE), async (c) => {
+  const actor = currentUser(c);
+  const id = c.req.param("id");
+  const body = await parseBody(c, departmentBody.partial());
+  const before = await oneRow<Record<string, unknown>>(c.env.DB, `SELECT * FROM departments WHERE id = ?`, [id]);
+  if (!before) throw notFound("Setor não encontrado.");
+
+  if (body.code) {
+    const duplicate = await oneRow<{ id: string }>(
+      c.env.DB,
+      `SELECT id FROM departments WHERE code = ? COLLATE NOCASE AND id <> ?`,
+      [body.code, id],
+    );
+    if (duplicate) throw conflict("Já existe um setor com este código.");
+  }
+
+  const updated = {
+    ...(body.code !== undefined ? { code: body.code } : {}),
+    ...(body.name !== undefined ? { name: body.name } : {}),
+    ...(body.isPurchasing !== undefined ? { is_purchasing: body.isPurchasing ? 1 : 0 } : {}),
+    ...(body.isActive !== undefined ? { is_active: body.isActive ? 1 : 0 } : {}),
+    ...(body.notes !== undefined ? { notes: body.notes ?? null } : {}),
+    updated_at: nowIso(),
+  };
+  await c.env.DB.batch([
+    updateStatement(c.env.DB, "departments", id, updated),
+    auditStatement(c.env.DB, {
+      actor: { id: actor.id, name: actor.name },
+      module: "users",
+      action: "department.update",
+      entityType: "department",
+      entityId: id,
+      before,
+      after: updated,
+      ...clientInfo(c),
+    }),
+  ]);
+  return c.json({ ok: true });
+});
+
+router.put("/departments/:id/managers", requirePermission(PERMISSIONS.USERS_MANAGE), async (c) => {
+  const actor = currentUser(c);
+  const id = c.req.param("id");
+  const body = await parseBody(c, departmentManagersBody);
+  const department = await oneRow<{ id: string; name: string }>(
+    c.env.DB,
+    `SELECT id, name FROM departments WHERE id = ?`,
+    [id],
+  );
+  if (!department) throw notFound("Setor não encontrado.");
+
+  const unique = [...new Set(body.userIds)];
+  if (unique.length > 0) {
+    const found = await allRows<{ id: string }>(
+      c.env.DB,
+      `SELECT id FROM users WHERE is_active = 1 AND id IN (${unique.map(() => "?").join(",")})`,
+      unique,
+    );
+    if (found.length !== unique.length) throw badRequest("Um ou mais gestores informados não estão ativos.");
+  }
+
+  const ts = nowIso();
+  await c.env.DB.batch([
+    c.env.DB.prepare(`DELETE FROM department_managers WHERE department_id = ?`).bind(id),
+    ...unique.map((userId) =>
+      c.env.DB
+        .prepare(`INSERT INTO department_managers (department_id, user_id, created_at) VALUES (?, ?, ?)`)
+        .bind(id, userId, ts),
+    ),
+    auditStatement(c.env.DB, {
+      actor: { id: actor.id, name: actor.name },
+      module: "users",
+      action: "department.managers_update",
+      entityType: "department",
+      entityId: id,
+      after: { department: department.name, userIds: unique },
+      ...clientInfo(c),
+    }),
+  ]);
+  return c.json({ ok: true, userIds: unique });
 });
 
 /* -------------------------------------------------------------------------- */
@@ -264,10 +443,12 @@ const USER_SELECT = `
          u.notes, u.is_active, u.must_change_password, u.last_login_at, u.created_at,
          r.name AS role_name, r.code AS role_code,
          un.name AS unit_name,
+         d.name AS department_name, d.is_purchasing AS department_is_purchasing,
          (SELECT COUNT(*) FROM user_location_scopes s WHERE s.user_id = u.id) AS scope_count
     FROM users u
     JOIN roles r ON r.id = u.role_id
-    LEFT JOIN units un ON un.id = u.unit_id`;
+    LEFT JOIN units un ON un.id = u.unit_id
+    LEFT JOIN departments d ON d.id = u.department_id`;
 
 router.get("/users", requirePermission(PERMISSIONS.USERS_VIEW), async (c) => {
   const url = new URL(c.req.url);
@@ -320,10 +501,26 @@ router.get("/users", requirePermission(PERMISSIONS.USERS_VIEW), async (c) => {
     scopeByUser.set(s.user_id, list);
   }
 
+  const managed = ids.length
+    ? await allRows<{ user_id: string; department_id: string }>(
+        c.env.DB,
+        `SELECT user_id, department_id FROM department_managers
+          WHERE user_id IN (${ids.map(() => "?").join(",")})`,
+        ids,
+      )
+    : [];
+  const managedByUser = new Map<string, string[]>();
+  for (const item of managed) {
+    const list = managedByUser.get(item.user_id) ?? [];
+    list.push(item.department_id);
+    managedByUser.set(item.user_id, list);
+  }
+
   return c.json({
     items: rows.map((r) => ({
       ...mapUser(r),
       locationScope: scopeByUser.get(String(r.id)) ?? [],
+      managedDepartmentIds: managedByUser.get(String(r.id)) ?? [],
     })),
     total,
     page: page.page,
@@ -342,8 +539,17 @@ router.get("/users/:id", requirePermission(PERMISSIONS.USERS_VIEW), async (c) =>
        JOIN locations l ON l.id = s.location_id WHERE s.user_id = ?`,
     [String(row.id)],
   );
+  const managed = await allRows<{ department_id: string }>(
+    c.env.DB,
+    `SELECT department_id FROM department_managers WHERE user_id = ?`,
+    [String(row.id)],
+  );
   return c.json({
-    user: { ...mapUser(row), locationScope: scope.map((s) => ({ id: s.location_id, path: s.path })) },
+    user: {
+      ...mapUser(row),
+      locationScope: scope.map((s) => ({ id: s.location_id, path: s.path })),
+      managedDepartmentIds: managed.map((item) => item.department_id),
+    },
   });
 });
 
@@ -362,6 +568,8 @@ router.post("/users", requirePermission(PERMISSIONS.USERS_MANAGE), async (c) => 
   if (!role) throw notFound("Perfil não encontrado.");
   await assertRoleWithinAuthority(c.env.DB, actor, role.id);
   if (body.unitId) await assertUnitExists(c.env.DB, body.unitId);
+  if (body.departmentId) await assertDepartmentActive(c.env.DB, body.departmentId);
+  const managedDepartmentIds = await assertDepartmentsActive(c.env.DB, body.managedDepartmentIds ?? []);
 
   const duplicate = await oneRow<{ id: string }>(c.env.DB, `SELECT id FROM users WHERE email = ?`, [body.email]);
   if (duplicate) throw conflict("Já existe um usuário com este e-mail.");
@@ -386,6 +594,7 @@ router.post("/users", requirePermission(PERMISSIONS.USERS_MANAGE), async (c) => 
       password_iterations: iterations,
       role_id: body.roleId,
       unit_id: body.unitId ?? null,
+      department_id: body.departmentId ?? null,
       employee_code: body.employeeCode ?? null,
       phone: body.phone ?? null,
       job_title: body.jobTitle ?? null,
@@ -395,6 +604,11 @@ router.post("/users", requirePermission(PERMISSIONS.USERS_MANAGE), async (c) => 
       created_at: ts,
       updated_at: ts,
     }),
+    ...managedDepartmentIds.map((departmentId) =>
+      c.env.DB
+        .prepare(`INSERT INTO department_managers (department_id, user_id, created_at) VALUES (?, ?, ?)`)
+        .bind(departmentId, id, ts),
+    ),
     auditStatement(c.env.DB, {
       actor: { id: actor.id, name: actor.name },
       module: "users",
@@ -444,6 +658,11 @@ router.patch("/users/:id", requirePermission(PERMISSIONS.USERS_MANAGE), async (c
     await assertNotLastAdmin(c.env.DB, id, "deactivate");
   }
   if (body.unitId) await assertUnitExists(c.env.DB, body.unitId);
+  if (body.departmentId) await assertDepartmentActive(c.env.DB, body.departmentId);
+  const managedDepartmentIds =
+    body.managedDepartmentIds !== undefined
+      ? await assertDepartmentsActive(c.env.DB, body.managedDepartmentIds)
+      : null;
 
   const ts = nowIso();
   const updated = {
@@ -451,6 +670,7 @@ router.patch("/users/:id", requirePermission(PERMISSIONS.USERS_MANAGE), async (c
     ...(body.email !== undefined ? { email: body.email } : {}),
     ...(body.roleId !== undefined ? { role_id: body.roleId } : {}),
     ...(body.unitId !== undefined ? { unit_id: body.unitId ?? null } : {}),
+    ...(body.departmentId !== undefined ? { department_id: body.departmentId ?? null } : {}),
     ...(body.employeeCode !== undefined ? { employee_code: body.employeeCode ?? null } : {}),
     ...(body.phone !== undefined ? { phone: body.phone ?? null } : {}),
     ...(body.jobTitle !== undefined ? { job_title: body.jobTitle ?? null } : {}),
@@ -462,6 +682,16 @@ router.patch("/users/:id", requirePermission(PERMISSIONS.USERS_MANAGE), async (c
   const info = clientInfo(c);
   const statements = [
     updateStatement(c.env.DB, "users", id, updated),
+    ...(managedDepartmentIds !== null
+      ? [
+          c.env.DB.prepare(`DELETE FROM department_managers WHERE user_id = ?`).bind(id),
+          ...managedDepartmentIds.map((departmentId) =>
+            c.env.DB
+              .prepare(`INSERT INTO department_managers (department_id, user_id, created_at) VALUES (?, ?, ?)`)
+              .bind(departmentId, id, ts),
+          ),
+        ]
+      : []),
     auditStatement(c.env.DB, {
       actor: { id: actor.id, name: actor.name },
       module: "users",
@@ -644,6 +874,28 @@ async function assertUnitExists(db: D1Database, unitId: string): Promise<void> {
   if (!unit) throw notFound("Unidade não encontrada.");
 }
 
+async function assertDepartmentActive(db: D1Database, departmentId: string): Promise<void> {
+  const department = await oneRow<{ id: string; is_active: number }>(
+    db,
+    `SELECT id, is_active FROM departments WHERE id = ?`,
+    [departmentId],
+  );
+  if (!department) throw notFound("Setor não encontrado.");
+  if (department.is_active !== 1) throw badRequest("O setor informado está inativo.");
+}
+
+async function assertDepartmentsActive(db: D1Database, departmentIds: string[]): Promise<string[]> {
+  const unique = [...new Set(departmentIds)];
+  if (unique.length === 0) return unique;
+  const found = await allRows<{ id: string }>(
+    db,
+    `SELECT id FROM departments WHERE is_active = 1 AND id IN (${unique.map(() => "?").join(",")})`,
+    unique,
+  );
+  if (found.length !== unique.length) throw badRequest("Um ou mais setores informados não estão ativos.");
+  return unique;
+}
+
 function mapUser(row: Record<string, unknown>) {
   return {
     id: String(row.id),
@@ -654,6 +906,9 @@ function mapUser(row: Record<string, unknown>) {
     roleCode: String(row.role_code),
     unitId: row.unit_id ? String(row.unit_id) : null,
     unitName: row.unit_name ? String(row.unit_name) : null,
+    departmentId: row.department_id ? String(row.department_id) : null,
+    departmentName: row.department_name ? String(row.department_name) : null,
+    departmentIsPurchasing: Number(row.department_is_purchasing) === 1,
     employeeCode: row.employee_code ? String(row.employee_code) : null,
     phone: row.phone ? String(row.phone) : null,
     jobTitle: row.job_title ? String(row.job_title) : null,

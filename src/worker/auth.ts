@@ -17,6 +17,9 @@ interface SessionRow {
   role_code: string;
   role_name: string;
   unit_id: string | null;
+  department_id: string | null;
+  department_name: string | null;
+  department_is_purchasing: number | null;
   must_change_password: number;
   theme: string | null;
   token_hash: string;
@@ -59,11 +62,14 @@ export async function resolveUser(db: D1Database, token: string): Promise<AuthUs
   const now = nowIso();
   const row = await db
     .prepare(
-      `SELECT u.id, u.name, u.email, u.role_id, u.unit_id, u.must_change_password, u.theme,
+      `SELECT u.id, u.name, u.email, u.role_id, u.unit_id, u.department_id,
+              u.must_change_password, u.theme,
+              d.name AS department_name, d.is_purchasing AS department_is_purchasing,
               r.code AS role_code, r.name AS role_name, s.token_hash
          FROM sessions s
          JOIN users u ON u.id = s.user_id
          JOIN roles r ON r.id = u.role_id
+         LEFT JOIN departments d ON d.id = u.department_id
         WHERE s.token_hash = ? AND s.expires_at > ? AND u.is_active = 1 AND r.is_active = 1`,
     )
     .bind(tokenHash, now)
@@ -77,6 +83,10 @@ export async function resolveUser(db: D1Database, token: string): Promise<AuthUs
 
   const permissions = new Set(permRows.results.map((p) => p.permission_code));
   const locationScope = await resolveLocationScope(db, row.id);
+  const managed = await db
+    .prepare(`SELECT department_id FROM department_managers WHERE user_id = ?`)
+    .bind(row.id)
+    .all<{ department_id: string }>();
 
   return {
     id: row.id,
@@ -86,6 +96,10 @@ export async function resolveUser(db: D1Database, token: string): Promise<AuthUs
     roleCode: row.role_code,
     roleName: row.role_name,
     unitId: row.unit_id,
+    departmentId: row.department_id,
+    departmentName: row.department_name,
+    departmentIsPurchasing: row.department_is_purchasing === 1,
+    managedDepartmentIds: (managed.results ?? []).map((item) => item.department_id),
     mustChangePassword: row.must_change_password === 1,
     permissions,
     locationScope,
@@ -251,6 +265,37 @@ export function can(user: AuthUser, code: PermissionCode): boolean {
 
 export function assertCan(user: AuthUser, code: PermissionCode): void {
   if (!user.permissions.has(code)) throw forbidden(`Permissão necessária: ${code}.`);
+}
+
+/**
+ * Mensagem de permissão orientada à pessoa: diz quem procurar e para quê.
+ * A lista vem do banco (permissão efetiva), nunca do cliente.
+ */
+export async function permissionMessage(
+  db: D1Database,
+  code: PermissionCode,
+  action: string,
+): Promise<string> {
+  const rows = await db
+    .prepare(
+      `SELECT DISTINCT u.name
+         FROM users u
+         JOIN role_permissions rp ON rp.role_id = u.role_id
+        WHERE u.is_active = 1 AND rp.permission_code = ?
+        ORDER BY u.name
+        LIMIT 3`,
+    )
+    .bind(code)
+    .all<{ name: string }>();
+
+  const names = (rows.results ?? []).map((row) => row.name).filter(Boolean);
+  const responsible =
+    names.length === 0
+      ? "um administrador do sistema"
+      : names.length === 1
+        ? names[0]
+        : `${names.slice(0, -1).join(", ")} ou ${names[names.length - 1]}`;
+  return `Você não tem permissão para realizar esta ação. Solicite a ${responsible}, responsável por ${action}.`;
 }
 
 /* -------------------------------------------------------------------------- */

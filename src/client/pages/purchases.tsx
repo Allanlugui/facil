@@ -10,6 +10,7 @@ import {
   PURCHASE_EVENT_LABEL,
   PURCHASE_ITEM_MODE_LABEL,
   PURCHASE_ITEM_STATUS_LABEL,
+  PURCHASE_MODE_SHORT_LABEL,
   PURCHASE_STATUS_LABEL,
   type Paginated,
   type Priority,
@@ -70,7 +71,20 @@ interface PurchaseRow {
   priority: Priority;
   status: PurchaseStatus;
   workflowVersion: number;
+  flowRevision: number;
   approvalStage: string;
+  departmentId: string | null;
+  departmentName: string | null;
+  purchaseMode: "quote" | "budget" | "direct" | null;
+  paymentMethodId: string | null;
+  paymentMethodCode: string | null;
+  paymentMethodName: string | null;
+  paymentRequiresAuthorization: boolean;
+  paymentRequiresQuote: boolean;
+  paymentTerms: string | null;
+  purchasingAuthorizedBy: string | null;
+  purchasingAuthorizedByName: string | null;
+  purchasingAuthorizedAt: string | null;
   routing: "standard" | "direct_to_purchasing";
   budgetStatus: "pending" | "approved" | "rejected" | "not_required";
   budgetNotes: string | null;
@@ -157,6 +171,9 @@ interface QuoteSummary {
   approvedByName: string | null;
   approvedAt: string | null;
   approvalNotes: string | null;
+  paymentMethodId: string | null;
+  paymentMethodName: string | null;
+  paymentTerms: string | null;
   createdAt: string;
   updatedAt: string;
   items: QuoteItem[];
@@ -221,6 +238,19 @@ interface PurchaseOrder {
   items: PurchaseOrderItem[];
 }
 
+interface PurchaseOptions {
+  paymentMethods: Array<{
+    id: string;
+    code: string;
+    name: string;
+    requiresAuthorization: boolean;
+    requiresQuote: boolean;
+    isActive: boolean;
+    notes: string | null;
+  }>;
+  departments: Array<{ id: string; code: string; name: string; isPurchasing: boolean }>;
+}
+
 interface PurchaseOverview {
   queues: {
     manager: number;
@@ -261,6 +291,10 @@ interface ReceiptSummary {
   receivedByName: string;
   supplierName: string | null;
   documentRef: string | null;
+  invoiceNumber: string | null;
+  invoiceSeries: string | null;
+  invoiceDate: string | null;
+  invoiceTotalCents: number | null;
   notes: string | null;
   status: string;
   cancelReason: string | null;
@@ -597,7 +631,13 @@ export function CreatePurchaseDialog({
   const toast = useToast();
   const locations = useLocations();
   const uoms = useUoms();
+  const { user, can } = useSession();
   const overview = useAsync(() => apiGet<PurchaseOverview>("/api/purchases/overview"), []);
+  const options = useAsync(() => apiGet<PurchaseOptions>("/api/purchases/options"), []);
+  const [departmentId, setDepartmentId] = useState(user?.departmentId ?? "");
+  const [purchaseMode, setPurchaseMode] = useState<"quote" | "budget" | "direct">("quote");
+  const [paymentMethodId, setPaymentMethodId] = useState("");
+  const [paymentTerms, setPaymentTerms] = useState("");
   const [locationId, setLocationId] = useState("");
   const [justification, setJustification] = useState("");
   const [priority, setPriority] = useState<Priority>("normal");
@@ -628,6 +668,10 @@ export function CreatePurchaseDialog({
       setError("Informe o produto do catálogo ou descreva o item que deve ser comprado (mínimo 3 caracteres).");
       return;
     }
+    if (submitNow && !paymentMethodId) {
+      setError("Escolha a forma de pagamento. É ela que orienta a autorização do setor de Compras.");
+      return;
+    }
     const parsed = items
       .filter((item) => (item.productId || item.description.trim().length > 0) && Number(item.qty.replace(",", ".")) > 0)
       .map((item) => ({
@@ -646,6 +690,11 @@ export function CreatePurchaseDialog({
     try {
       const result = await apiPost<{ id: string; code: string; status: PurchaseStatus }>("/api/purchases", {
         workflowVersion: 2,
+        flowRevision: 3,
+        departmentId: departmentId || null,
+        purchaseMode,
+        paymentMethodId: paymentMethodId || null,
+        paymentTerms: paymentTerms || null,
         locationId: locationId || null,
         justification: justification || null,
         priority,
@@ -659,7 +708,7 @@ export function CreatePurchaseDialog({
       });
       toast.success(
         result.status === "pending_approval"
-          ? `Solicitação ${result.code} enviada ao gestor do setor.`
+          ? `Solicitação ${result.code} enviada para aprovação.`
           : `Rascunho ${result.code} salvo.`,
       );
       onCreated(result.id);
@@ -670,12 +719,22 @@ export function CreatePurchaseDialog({
     }
   };
 
+  const allowedDepartments = (options.data?.departments ?? []).filter(
+    (department) =>
+      department.id === user?.departmentId ||
+      (user?.managedDepartmentIds ?? []).includes(department.id) ||
+      can(PERMISSIONS.SETTINGS_MANAGE),
+  );
+  const selectedPayment = (options.data?.paymentMethods ?? []).find(
+    (method) => method.id === paymentMethodId,
+  );
+
   return (
     <Dialog
       open
       wide
       title="Nova solicitação de compra"
-      description="O gestor do setor aprova a necessidade; a Direção analisa o orçamento; Compras cota, escolhe fornecedores e conduz o recebimento."
+      description="O gestor do setor aprova a necessidade; o responsável de Compras autoriza a cotação, o orçamento ou a compra direta; o comprador executa e o estoque confere a nota fiscal."
       onClose={onClose}
       footer={
         <>
@@ -721,6 +780,83 @@ export function CreatePurchaseDialog({
                 </option>
               ))}
             </Select>
+          </Field>
+          <Field
+            label="Setor solicitante"
+            hint="O gestor deste setor aprova a necessidade antes de Compras."
+            htmlFor="prDepartment"
+          >
+            <Select
+              id="prDepartment"
+              value={departmentId}
+              onChange={(event) => setDepartmentId(event.target.value)}
+            >
+              <option value="">Selecione o setor...</option>
+              {allowedDepartments.map((department) => (
+                <option key={department.id} value={department.id}>
+                  {department.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field
+            label="Forma de pagamento"
+            hint={
+              selectedPayment?.requiresQuote
+                ? "Esta forma exige cotação ou orçamento; não permite compra direta."
+                : selectedPayment?.requiresAuthorization
+                  ? "Exige autorização explícita do responsável de Compras."
+                  : "A escolha acompanha a cotação, o pedido e o recebimento."
+            }
+            htmlFor="prPaymentMethod"
+          >
+            <Select
+              id="prPaymentMethod"
+              value={paymentMethodId}
+              onChange={(event) => {
+                const next = event.target.value;
+                setPaymentMethodId(next);
+                const method = (options.data?.paymentMethods ?? []).find((item) => item.id === next);
+                if (method?.requiresQuote && purchaseMode === "direct") setPurchaseMode("quote");
+              }}
+            >
+              <option value="">Selecione...</option>
+              {(options.data?.paymentMethods ?? []).map((method) => (
+                <option key={method.id} value={method.id}>
+                  {method.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field
+            label="Como comprar"
+            hint="O responsável de Compras confirma o modo ao autorizar."
+            htmlFor="prMode"
+          >
+            <Select
+              id="prMode"
+              value={purchaseMode}
+              onChange={(event) => setPurchaseMode(event.target.value as "quote" | "budget" | "direct")}
+            >
+              <option value="quote">Cotação — comparar fornecedores (mínimo 2)</option>
+              <option value="budget">Orçamento — fornecedor único</option>
+              <option value="direct" disabled={selectedPayment?.requiresQuote}>
+                Compra direta — sem cotação
+              </option>
+            </Select>
+          </Field>
+          <Field
+            label="Condições de pagamento"
+            hint="Opcional: prazo, parcelas ou observação combinada."
+            htmlFor="prPaymentTerms"
+          >
+            <Input
+              id="prPaymentTerms"
+              value={paymentTerms}
+              onChange={(event) => setPaymentTerms(event.target.value)}
+              placeholder="Ex.: 30 dias após a nota fiscal"
+              maxLength={300}
+            />
           </Field>
           <Field label="Justificativa" htmlFor="prJustification">
             <Input
@@ -976,47 +1112,126 @@ export function PurchaseDetailPage() {
   if (!state.data) return null;
 
   const { request, items, receipts, quotes, awards, orders, timeline } = state.data;
-  const isV2 = request.workflowVersion === 2;
+  const isV3 = request.flowRevision === 3;
+  const isV2 = request.workflowVersion === 2 && !isV3;
+  const managesRequestDepartment =
+    !!request.departmentId && (user?.managedDepartmentIds.includes(request.departmentId) ?? false);
   const canSubmit = request.status === "draft" && can(PERMISSIONS.PURCHASES_CREATE);
   const stageAllowed =
     request.approvalStage === "manager"
-      ? can(PERMISSIONS.PURCHASES_APPROVE)
+      ? isV3
+        ? can(PERMISSIONS.PURCHASES_APPROVE_DEPARTMENT) && managesRequestDepartment
+        : can(PERMISSIONS.PURCHASES_APPROVE)
       : request.approvalStage === "direction"
         ? can(PERMISSIONS.PURCHASES_AUTHORIZE)
         : request.approvalStage === "purchasing"
-          ? can(PERMISSIONS.PURCHASES_AWARD) || can(PERMISSIONS.PURCHASES_DIRECT)
+          ? isV3
+            ? can(PERMISSIONS.PURCHASES_AUTHORIZE) &&
+              (user?.departmentIsPurchasing || can(PERMISSIONS.SETTINGS_MANAGE))
+            : can(PERMISSIONS.PURCHASES_AWARD) || can(PERMISSIONS.PURCHASES_DIRECT)
           : false;
   const canDecide =
-    isV2
-      ? request.status === "pending_approval" && stageAllowed && user?.id !== request.requesterId
-      : request.status === "pending_approval" &&
-        (can(PERMISSIONS.PURCHASES_APPROVE) || can(PERMISSIONS.PURCHASES_ORDER)) &&
-        user?.id !== request.requesterId;
+    request.status === "pending_approval" &&
+    stageAllowed &&
+    user?.id !== request.requesterId &&
+    (isV3 ? ["manager", "purchasing"].includes(request.approvalStage) : true);
   const canAward =
     isV2 &&
     request.status === "quote_returned" &&
     request.approvalStage === "award" &&
     can(PERMISSIONS.PURCHASES_AWARD) &&
     user?.id !== request.requesterId;
-  const canOrder = isV2
+  const canOrder = isV3
     ? ["approved", "quote_approved"].includes(request.status) &&
       request.approvalStage === "buyer" &&
       can(PERMISSIONS.PURCHASES_ORDER)
-    : ["approved", "purchasing", "quote_approved"].includes(request.status) &&
-      can(PERMISSIONS.PURCHASES_ORDER);
-  const canQuote = isV2
-    ? request.status === "quoting" && can(PERMISSIONS.PURCHASES_ORDER)
-    : ["quoting", "quote_returned"].includes(request.status) && can(PERMISSIONS.PURCHASES_ORDER);
+    : isV2
+      ? ["approved", "quote_approved"].includes(request.status) &&
+        request.approvalStage === "buyer" &&
+        can(PERMISSIONS.PURCHASES_ORDER)
+      : ["approved", "purchasing", "quote_approved"].includes(request.status) &&
+        can(PERMISSIONS.PURCHASES_ORDER);
+  const canQuote = isV3
+    ? request.status === "quoting" &&
+      request.approvalStage === "buyer" &&
+      can(PERMISSIONS.PURCHASES_ORDER)
+    : isV2
+      ? request.status === "quoting" && can(PERMISSIONS.PURCHASES_ORDER)
+      : ["quoting", "quote_returned"].includes(request.status) && can(PERMISSIONS.PURCHASES_ORDER);
+  const registeredQuotes = quotes.filter((quote) => quote.status === "registered").length;
+  // Orçamento é fornecedor único; cotação exige duas propostas para comparar.
+  const requiredQuotes = isV3 ? (request.purchaseMode === "budget" ? 1 : 2) : 1;
+  const quoteRequirementMet = registeredQuotes >= requiredQuotes;
   const canReturnQuote =
     request.status === "quoting" &&
+    request.approvalStage === "buyer" &&
     can(PERMISSIONS.PURCHASES_ORDER) &&
-    quotes.some((quote) => quote.status === "registered");
-  const canDecideQuote =
-    !isV2 &&
-    request.status === "quote_returned" &&
-    can(PERMISSIONS.PURCHASES_APPROVE) &&
-    user?.id !== request.requesterId;
+    registeredQuotes > 0 &&
+    quoteRequirementMet;
+  const canDecideQuote = isV3
+    ? request.status === "quote_returned" &&
+      can(PERMISSIONS.PURCHASES_AUTHORIZE) &&
+      (user?.departmentIsPurchasing || can(PERMISSIONS.SETTINGS_MANAGE)) &&
+      user?.id !== request.requesterId
+    : !isV2 &&
+      request.status === "quote_returned" &&
+      can(PERMISSIONS.PURCHASES_APPROVE) &&
+      user?.id !== request.requesterId;
   const approvedQuote = quotes.find((quote) => quote.status === "approved") ?? null;
+  const nextStep = (() => {
+    if (!isV3 || ["received", "cancelled", "rejected"].includes(request.status)) return null;
+    if (request.approvalStage === "manager") {
+      return {
+        title: "Aprovação do gestor do setor",
+        responsible: `Gestor de ${request.departmentName ?? "seu setor"}`,
+        action: "Confirmar a necessidade para enviar a Compras.",
+      };
+    }
+    if (request.approvalStage === "purchasing") {
+      return {
+        title: "Autorização do responsável de Compras",
+        responsible: "Responsável pelo setor de Compras",
+        action:
+          request.purchaseMode === "direct"
+            ? "Autorizar a compra direta e liberar o comprador."
+            : "Escolher o modo e liberar a cotação ou o orçamento.",
+      };
+    }
+    if (request.status === "quoting") {
+      return {
+        title: "Propostas de fornecedor",
+        responsible: "Comprador",
+        action:
+          registeredQuotes >= requiredQuotes
+            ? "Enviar as propostas para autorização de Compras."
+            : `Registrar ${requiredQuotes - registeredQuotes} ${
+                requiredQuotes - registeredQuotes === 1 ? "proposta" : "propostas"
+              } e enviar para autorização.`,
+      };
+    }
+    if (request.status === "quote_returned") {
+      return {
+        title: "Aprovação da proposta",
+        responsible: "Responsável pelo setor de Compras",
+        action: "Aprovar ou recusar a proposta escolhida pelo comprador.",
+      };
+    }
+    if (["approved", "quote_approved"].includes(request.status)) {
+      return {
+        title: "Emissão do pedido",
+        responsible: "Comprador",
+        action: "Emitir o pedido ao fornecedor e acompanhar a entrega.",
+      };
+    }
+    if (["ordered", "partially_received"].includes(request.status)) {
+      return {
+        title: "Recebimento e nota fiscal",
+        responsible: "Responsável pelo estoque",
+        action: "Conferir os itens, lançar a nota fiscal e dar entrada no estoque.",
+      };
+    }
+    return null;
+  })();
   const canReceive =
     ["ordered", "partially_received"].includes(request.status) && can(PERMISSIONS.PURCHASES_RECEIVE);
   const canCancel =
@@ -1167,7 +1382,17 @@ export function PurchaseDetailPage() {
         description={
           <span className="flex flex-wrap items-center gap-2">
             <Badge tone={PURCHASE_STATUS_TONE[request.status]}>{PURCHASE_STATUS_LABEL[request.status]}</Badge>
-            {isV2 ? (
+            {request.departmentName ? <Badge tone="brand">{request.departmentName}</Badge> : null}
+            {isV3 ? (
+              <Badge tone="violet">
+                Etapa:{" "}
+                {request.status === "quote_returned"
+                  ? "Aprovação da proposta"
+                  : PURCHASE_APPROVAL_STAGE_LABEL[
+                      request.approvalStage as keyof typeof PURCHASE_APPROVAL_STAGE_LABEL
+                    ] ?? request.approvalStage}
+              </Badge>
+            ) : isV2 ? (
               <Badge tone={request.routing === "direct_to_purchasing" ? "violet" : "brand"}>
                 {request.routing === "direct_to_purchasing"
                   ? "Enviada direto a Compras"
@@ -1180,6 +1405,14 @@ export function PurchaseDetailPage() {
             ) : (
               <Badge tone="slate">Fluxo anterior</Badge>
             )}
+            {request.purchaseMode ? (
+              <Badge tone={request.purchaseMode === "direct" ? "amber" : "slate"}>
+                {PURCHASE_MODE_SHORT_LABEL[request.purchaseMode]}
+              </Badge>
+            ) : null}
+            {request.paymentMethodName ? (
+              <Badge tone="slate">Pagamento: {request.paymentMethodName}</Badge>
+            ) : null}
             <Badge tone={PRIORITY_TONE[request.priority]}>Prioridade {PRIORITY_LABEL[request.priority]}</Badge>
             {request.costCenterCode ? (
               <Badge tone="slate">
@@ -1213,7 +1446,7 @@ export function PurchaseDetailPage() {
             ) : null}
             {canReturnQuote ? (
               <Button onClick={() => void returnQuote()} loading={returningQuote}>
-                Devolver para adjudicação
+                {isV3 ? "Enviar para autorização de Compras" : "Devolver para adjudicação"}
               </Button>
             ) : null}
             {canAward ? (
@@ -1236,10 +1469,21 @@ export function PurchaseDetailPage() {
         }
       />
 
+      {nextStep ? (
+        <div className="mb-5 rounded-xl border border-brand-100 bg-brand-50/70 px-4 py-3">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-brand-700">Próxima etapa</p>
+          <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+            <p className="text-sm font-semibold text-slate-900">{nextStep.title}</p>
+            <p className="text-xs text-slate-600">Responsável: {nextStep.responsible}</p>
+          </div>
+          <p className="mt-1 text-sm text-slate-700">{nextStep.action}</p>
+        </div>
+      ) : null}
+
       <div className="grid gap-5 lg:grid-cols-3">
         <div className="space-y-5 lg:col-span-2">
-          {isV2 ? (
-            <Card title="Fluxo corporativo">
+          {isV2 || isV3 ? (
+            <Card title="Fluxo da compra">
               <WorkflowProgress request={request} />
             </Card>
           ) : null}
@@ -1281,9 +1525,24 @@ export function PurchaseDetailPage() {
               ) : null}
               {request.status === "quoting" ? (
                 <p className="text-sm text-slate-500">
-                  {request.quoteItemCount > 0
-                    ? `${request.quoteItemCount} ${plural(request.quoteItemCount, "item marcado", "itens marcados")} para cotação.`
-                    : "Registre as propostas de fornecedor e devolva ao gestor para aprovação."}
+                  {isV3 ? (
+                    <>
+                      {registeredQuotes} de {requiredQuotes}{" "}
+                      {plural(requiredQuotes, "proposta necessária", "propostas necessárias")} registrada
+                      {registeredQuotes === 1 ? "" : "s"}.
+                      {!quoteRequirementMet
+                        ? request.purchaseMode === "direct"
+                          ? " A compra direta não usa cotação; o comprador emite o pedido."
+                          : ` Registre mais ${requiredQuotes - registeredQuotes} ${
+                              requiredQuotes - registeredQuotes === 1 ? "proposta" : "propostas"
+                            } para enviar a autorização.`
+                        : " Envie para autorização do responsável de Compras."}
+                    </>
+                  ) : request.quoteItemCount > 0 ? (
+                    `${request.quoteItemCount} ${plural(request.quoteItemCount, "item marcado", "itens marcados")} para cotação.`
+                  ) : (
+                    "Registre as propostas de fornecedor e devolva ao gestor para aprovação."
+                  )}
                 </p>
               ) : null}
               {quotes.length === 0 ? (
@@ -1455,7 +1714,11 @@ export function PurchaseDetailPage() {
                         </p>
                         <p className="text-xs text-slate-500">
                           {formatDateTime(receipt.receivedAt)} · {receipt.receivedByName}
-                          {receipt.documentRef ? ` · doc. ${receipt.documentRef}` : ""}
+                          {receipt.invoiceNumber
+                            ? ` · NF ${receipt.invoiceNumber}${receipt.invoiceSeries ? `/${receipt.invoiceSeries}` : ""}`
+                            : receipt.documentRef
+                              ? ` · doc. ${receipt.documentRef}`
+                              : ""}
                         </p>
                       </div>
                       <span className="text-xs text-slate-500">
@@ -1477,6 +1740,25 @@ export function PurchaseDetailPage() {
             <dl className="space-y-3 text-sm">
               <InfoRow label="Solicitante" value={request.requesterName} />
               <InfoRow label="Local" value={request.locationPath ?? request.locationName ?? "-"} />
+              {isV3 ? (
+                <>
+                  <InfoRow label="Setor" value={request.departmentName ?? "-"} />
+                  <InfoRow
+                    label="Modo de compra"
+                    value={request.purchaseMode ? PURCHASE_MODE_SHORT_LABEL[request.purchaseMode] : "A definir por Compras"}
+                  />
+                  <InfoRow label="Forma de pagamento" value={request.paymentMethodName ?? "-"} />
+                  {request.paymentTerms ? <InfoRow label="Condições de pagamento" value={request.paymentTerms} /> : null}
+                  {request.purchasingAuthorizedAt ? (
+                    <InfoRow
+                      label="Autorização de Compras"
+                      value={`${request.purchasingAuthorizedByName ?? "-"} em ${formatDateTime(
+                        request.purchasingAuthorizedAt,
+                      )}`}
+                    />
+                  ) : null}
+                </>
+              ) : null}
               {isV2 ? (
                 <>
                   <InfoRow
@@ -1526,10 +1808,16 @@ export function PurchaseDetailPage() {
               ) : null}
               {request.approvedAt ? (
                 <InfoRow
-                  label="Decisão"
-                  value={`${PURCHASE_STATUS_LABEL[request.status]} por ${request.approvedByName ?? "-"} em ${formatDateTime(
-                    request.approvedAt,
-                  )}${request.approvalNotes ? ` — ${request.approvalNotes}` : ""}`}
+                  label={isV3 ? "Aprovação de Compras" : "Decisão"}
+                  value={
+                    isV3
+                      ? `Aprovada por ${request.approvedByName ?? "-"} em ${formatDateTime(request.approvedAt)}${
+                          request.approvalNotes ? ` — ${request.approvalNotes}` : ""
+                        }`
+                      : `${PURCHASE_STATUS_LABEL[request.status]} por ${request.approvedByName ?? "-"} em ${formatDateTime(
+                          request.approvedAt,
+                        )}${request.approvalNotes ? ` — ${request.approvalNotes}` : ""}`
+                  }
                 />
               ) : null}
               {request.cancelReason ? <InfoRow label="Motivo do cancelamento" value={request.cancelReason} /> : null}
@@ -1567,7 +1855,7 @@ export function PurchaseDetailPage() {
       </div>
 
       {deciding ? (
-        isV2 ? (
+        request.workflowVersion === 2 ? (
           <WorkflowDecisionDialog
             request={request}
             items={items}
@@ -1604,7 +1892,7 @@ export function PurchaseDetailPage() {
       ) : null}
 
       {ordering ? (
-        isV2 ? (
+        request.workflowVersion === 2 ? (
           <MultiOrderDialog
             request={request}
             items={items}
@@ -1690,27 +1978,44 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 }
 
 function WorkflowProgress({ request }: { request: PurchaseRow }) {
+  const isV3 = request.flowRevision === 3;
   const standard = request.routing !== "direct_to_purchasing";
-  const steps = [
-    { key: "manager", label: "Gestor do setor" },
-    ...(standard ? [{ key: "direction", label: "Direção" }] : []),
-    { key: "purchasing", label: "Compras" },
-    { key: "buyer", label: "Comprador" },
-    { key: "receipt", label: "Recebimento" },
-  ];
-  const stageOrder: Record<string, number> = {
-    manager: 0,
-    direction: standard ? 1 : 0,
-    purchasing: standard ? 2 : 1,
-    buyer: standard ? 3 : 2,
-    award: standard ? 3 : 2,
-    receipt: standard ? 4 : 3,
-    completed: steps.length,
-  };
+  const steps = isV3
+    ? [
+        { key: "manager", label: "Gestor do setor" },
+        { key: "purchasing", label: "Compras autoriza" },
+        { key: "buyer", label: "Comprador" },
+        { key: "receipt", label: "Recebimento" },
+      ]
+    : [
+        { key: "manager", label: "Gestor do setor" },
+        ...(standard ? [{ key: "direction", label: "Direção" }] : []),
+        { key: "purchasing", label: "Compras" },
+        { key: "buyer", label: "Comprador" },
+        { key: "receipt", label: "Recebimento" },
+      ];
+  const stageOrder: Record<string, number> = isV3
+    ? {
+        manager: 0,
+        purchasing: 1,
+        buyer: 2,
+        award: 2,
+        receipt: 3,
+        completed: 4,
+      }
+    : {
+        manager: 0,
+        direction: standard ? 1 : 0,
+        purchasing: standard ? 2 : 1,
+        buyer: standard ? 3 : 2,
+        award: standard ? 3 : 2,
+        receipt: standard ? 4 : 3,
+        completed: steps.length,
+      };
   const current = stageOrder[request.approvalStage] ?? 0;
 
   return (
-    <ol className="grid gap-2 sm:grid-cols-5">
+    <ol className={`grid gap-2 ${isV3 ? "sm:grid-cols-4" : "sm:grid-cols-5"}`}>
       {steps.map((step, index) => {
         const done = request.approvalStage === "completed" || index < current;
         const active = index === current && request.approvalStage !== "completed";
@@ -1752,8 +2057,18 @@ function WorkflowDecisionDialog({
 }) {
   const toast = useToast();
   const stage = request.approvalStage;
-  const options =
-    stage === "manager"
+  const isV3 = request.flowRevision === 3;
+  const options = isV3
+    ? stage === "manager"
+      ? [
+          { value: "approved", label: "Aprovar e enviar ao setor de Compras" },
+          { value: "rejected", label: "Recusar solicitação" },
+        ]
+      : [
+          { value: "approved", label: "Autorizar a compra e liberar o comprador" },
+          { value: "rejected", label: "Recusar solicitação" },
+        ]
+    : stage === "manager"
       ? [
           { value: "approved", label: "Aprovar e enviar à Direção" },
           { value: "send_to_purchasing", label: "Enviar diretamente a Compras" },
@@ -1770,6 +2085,15 @@ function WorkflowDecisionDialog({
             { value: "rejected", label: "Rejeitar solicitação" },
           ];
   const [decision, setDecision] = useState(options[0]!.value);
+  const optionsData = useAsync(
+    () => (isV3 && stage === "purchasing" ? apiGet<PurchaseOptions>("/api/purchases/options") : Promise.resolve(null)),
+    [isV3, stage],
+  );
+  const [purchaseMode, setPurchaseMode] = useState<"quote" | "budget" | "direct">(
+    request.purchaseMode ?? "quote",
+  );
+  const [paymentMethodId, setPaymentMethodId] = useState(request.paymentMethodId ?? "");
+  const [paymentTerms, setPaymentTerms] = useState(request.paymentTerms ?? "");
   const [notes, setNotes] = useState("");
   const [drafts, setDrafts] = useState(() =>
     items
@@ -1785,13 +2109,33 @@ function WorkflowDecisionDialog({
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const editItems = stage === "manager" || stage === "direction";
+  const editItems = !isV3 && (stage === "manager" || stage === "direction");
+  const selectedPayment = (optionsData.data?.paymentMethods ?? []).find(
+    (method) => method.id === paymentMethodId,
+  );
 
   const submit = async () => {
     setSaving(true);
     setError(null);
     try {
+      if (isV3 && stage === "purchasing" && decision === "approved") {
+        if (!paymentMethodId) {
+          setError("Escolha a forma de pagamento antes de autorizar.");
+          setSaving(false);
+          return;
+        }
+        if (purchaseMode === "direct" && selectedPayment?.requiresQuote) {
+          setError("A forma de pagamento selecionada exige cotação ou orçamento.");
+          setSaving(false);
+          return;
+        }
+      }
       const payload: Record<string, unknown> = { decision, notes: notes || null };
+      if (isV3 && stage === "purchasing") {
+        payload.purchaseMode = purchaseMode;
+        payload.paymentMethodId = paymentMethodId || null;
+        payload.paymentTerms = paymentTerms || null;
+      }
       if (editItems && drafts.length > 0) {
         payload.items = drafts.map((draft) => ({
           itemId: draft.itemId,
@@ -1843,12 +2187,71 @@ function WorkflowDecisionDialog({
             ))}
           </Select>
         </Field>
+        {isV3 && stage === "purchasing" && decision === "approved" ? (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field
+              label="Como comprar"
+              hint="Cotação exige 2 propostas; orçamento aceita 1; compra direta dispensa proposta."
+              htmlFor="decisionMode"
+            >
+              <Select
+                id="decisionMode"
+                value={purchaseMode}
+                onChange={(event) =>
+                  setPurchaseMode(event.target.value as "quote" | "budget" | "direct")
+                }
+              >
+                <option value="quote">Cotação — comparar fornecedores</option>
+                <option value="budget">Orçamento — fornecedor único</option>
+                <option value="direct" disabled={selectedPayment?.requiresQuote}>
+                  Compra direta — sem cotação
+                </option>
+              </Select>
+            </Field>
+            <Field
+              label="Forma de pagamento"
+              hint={selectedPayment?.requiresQuote ? "Exige cotação ou orçamento." : "Confirme a forma negociada."}
+              htmlFor="decisionPayment"
+            >
+              <Select
+                id="decisionPayment"
+                value={paymentMethodId}
+                onChange={(event) => {
+                  const next = event.target.value;
+                  setPaymentMethodId(next);
+                  const method = (optionsData.data?.paymentMethods ?? []).find((item) => item.id === next);
+                  if (method?.requiresQuote && purchaseMode === "direct") setPurchaseMode("quote");
+                }}
+              >
+                <option value="">Selecione...</option>
+                {(optionsData.data?.paymentMethods ?? []).map((method) => (
+                  <option key={method.id} value={method.id}>
+                    {method.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Condições de pagamento" htmlFor="decisionTerms">
+              <Input
+                id="decisionTerms"
+                value={paymentTerms}
+                onChange={(event) => setPaymentTerms(event.target.value)}
+                placeholder="Ex.: 30 dias após a nota fiscal"
+                maxLength={300}
+              />
+            </Field>
+          </div>
+        ) : null}
         <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
-          {stage === "manager"
-            ? "O gestor confirma a necessidade. A Direção fará a análise de orçamento antes de Compras."
-            : stage === "direction"
-              ? "A Direção confere o centro de custo e o orçamento. A aprovação libera a cotação/compra."
-              : "A triagem de Compras pode autorizar compra direta ou devolver à Direção para análise de orçamento."}
+          {isV3
+            ? stage === "manager"
+              ? "Você confirma a necessidade do seu setor. A solicitação segue para o responsável de Compras, que escolhe e autoriza o modo de compra."
+              : "Escolha como comprar e confirme a forma de pagamento. A autorização libera o comprador e registra o responsável pela decisão."
+            : stage === "manager"
+              ? "O gestor confirma a necessidade. A Direção fará a análise de orçamento antes de Compras."
+              : stage === "direction"
+                ? "A Direção confere o centro de custo e o orçamento. A aprovação libera a cotação/compra."
+                : "A triagem de Compras pode autorizar compra direta ou devolver à Direção para análise de orçamento."}
         </div>
         {editItems ? (
           <div className="overflow-hidden rounded-lg border border-slate-200">
@@ -2718,8 +3121,11 @@ function QuoteDialog({
 }) {
   const toast = useToast();
   const suppliers = useSuppliers();
+  const options = useAsync(() => apiGet<PurchaseOptions>("/api/purchases/options"), []);
   const [supplierId, setSupplierId] = useState("");
   const [notes, setNotes] = useState("");
+  const [paymentMethodId, setPaymentMethodId] = useState(request.paymentMethodId ?? "");
+  const [paymentTerms, setPaymentTerms] = useState(request.paymentTerms ?? "");
   const [drafts, setDrafts] = useState<QuoteDraft[]>(() =>
     items
       .filter((item) => !["rejected", "cancelled", "received"].includes(item.status))
@@ -2761,6 +3167,8 @@ function QuoteDialog({
       await apiPost(`/api/purchases/${request.id}/quotes`, {
         supplierId,
         notes: notes || null,
+        paymentMethodId: paymentMethodId || null,
+        paymentTerms: paymentTerms || null,
         items: chosen.map((draft) => ({
           itemId: draft.itemId,
           unitPrice: Number(draft.unitPrice.replace(",", ".")),
@@ -2808,6 +3216,38 @@ function QuoteDialog({
               ))}
           </Select>
         </Field>
+
+        {request.flowRevision === 3 ? (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field
+              label="Forma de pagamento desta proposta"
+              hint="Pode confirmar ou ajustar a forma definida na solicitação."
+              htmlFor="quotePayment"
+            >
+              <Select
+                id="quotePayment"
+                value={paymentMethodId}
+                onChange={(event) => setPaymentMethodId(event.target.value)}
+              >
+                <option value="">Selecione...</option>
+                {(options.data?.paymentMethods ?? []).map((method) => (
+                  <option key={method.id} value={method.id}>
+                    {method.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Condições de pagamento" htmlFor="quoteTerms">
+              <Input
+                id="quoteTerms"
+                value={paymentTerms}
+                onChange={(event) => setPaymentTerms(event.target.value)}
+                placeholder="Ex.: 28 dias após a nota fiscal"
+                maxLength={300}
+              />
+            </Field>
+          </div>
+        ) : null}
 
         <div className="rounded-lg border border-slate-200">
           <p className="border-b border-slate-100 px-3 py-2 text-sm font-medium text-slate-700">
@@ -2971,6 +3411,10 @@ function ReceiptDialog({
   const locations = useLocations();
   const [locationId, setLocationId] = useState(request.locationId ?? "");
   const [documentRef, setDocumentRef] = useState("");
+  const [invoiceNumber, setInvoiceNumber] = useState("");
+  const [invoiceSeries, setInvoiceSeries] = useState("");
+  const [invoiceDate, setInvoiceDate] = useState("");
+  const [invoiceTotal, setInvoiceTotal] = useState("");
   const [notes, setNotes] = useState("");
   const [directUseReason, setDirectUseReason] = useState("");
   const [drafts, setDrafts] = useState<ReceiptDraft[]>(() =>
@@ -3010,6 +3454,16 @@ function ReceiptDialog({
       setError("Informe o local de destino do material recebido.");
       return;
     }
+    if (request.flowRevision === 3) {
+      if (!invoiceNumber.trim()) {
+        setError("Informe o número da nota fiscal do fornecedor.");
+        return;
+      }
+      if (!invoiceDate) {
+        setError("Informe a data da nota fiscal.");
+        return;
+      }
+    }
     if (chosen.length === 0) {
       setError("Informe ao menos um item recebido com quantidade.");
       return;
@@ -3041,6 +3495,10 @@ function ReceiptDialog({
         requestKey,
         locationId,
         documentRef: documentRef || null,
+        invoiceNumber: invoiceNumber || null,
+        invoiceSeries: invoiceSeries || null,
+        invoiceDate: invoiceDate || null,
+        invoiceTotal: invoiceTotal ? Number(invoiceTotal.replace(",", ".")) : undefined,
         notes: notes || null,
         directUseReason: directUseChosen.length > 0 ? directUseReason.trim() : null,
         items: chosen.map((draft) => ({
@@ -3103,9 +3561,46 @@ function ReceiptDialog({
               ))}
             </Select>
           </Field>
-          <Field label="Documento" hint="Nota fiscal, romaneio ou protocolo." htmlFor="receiptDoc">
+          <Field label="Documento" hint="Romaneio, protocolo ou referência interna." htmlFor="receiptDoc">
             <Input id="receiptDoc" value={documentRef} onChange={(event) => setDocumentRef(event.target.value)} />
           </Field>
+          {request.flowRevision === 3 ? (
+            <>
+              <Field label="Nota fiscal" required hint="Número da NF do fornecedor." htmlFor="receiptInvoice">
+                <Input
+                  id="receiptInvoice"
+                  value={invoiceNumber}
+                  onChange={(event) => setInvoiceNumber(event.target.value)}
+                  maxLength={60}
+                />
+              </Field>
+              <Field label="Série" hint="Opcional." htmlFor="receiptInvoiceSeries">
+                <Input
+                  id="receiptInvoiceSeries"
+                  value={invoiceSeries}
+                  onChange={(event) => setInvoiceSeries(event.target.value)}
+                  maxLength={20}
+                />
+              </Field>
+              <Field label="Data da nota" required htmlFor="receiptInvoiceDate">
+                <Input
+                  id="receiptInvoiceDate"
+                  type="date"
+                  value={invoiceDate}
+                  onChange={(event) => setInvoiceDate(event.target.value)}
+                />
+              </Field>
+              <Field label="Total da nota (R$)" hint="Opcional; confira contra os itens." htmlFor="receiptInvoiceTotal">
+                <Input
+                  id="receiptInvoiceTotal"
+                  value={invoiceTotal}
+                  onChange={(event) => setInvoiceTotal(event.target.value)}
+                  inputMode="decimal"
+                  placeholder="0,00"
+                />
+              </Field>
+            </>
+          ) : null}
         </div>
 
         <div className="rounded-lg border border-slate-200">

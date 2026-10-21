@@ -34,7 +34,7 @@ describe("autenticação, sessões e autorização", () => {
     const me = await admin.api.get<{ user: { email: string; permissions: string[] } }>("/api/auth/me");
     expect(me.status).toBe(200);
     expect(me.body.user.email).toBe(admin.email);
-    expect(me.body.user.permissions.length).toBe(52);
+    expect(me.body.user.permissions.length).toBe(53);
 
     const other = new Api();
     const second = await other.post("/api/auth/setup", {

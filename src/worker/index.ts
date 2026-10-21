@@ -8,6 +8,7 @@ import { BUILD_INFO } from "./build-info.generated";
 import { loadSession } from "./auth";
 import { ApiError, errorBody } from "./errors";
 import { nowIso } from "./util";
+export { SupportRoom } from "./support-room";
 import authRoutes from "./routes/auth";
 import structureRoutes from "./routes/structure";
 import userRoutes from "./routes/users";

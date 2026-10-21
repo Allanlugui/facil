@@ -962,3 +962,43 @@
   verificação visual desktop/mobile. Release **0.3.0**, tree
   `8757a04ed013ff3425f69837af402007b1a9c1f27a0c07154dde64dfc85a9c10`, Worker
   `cf468e3f-7a2f-4b06-96c2-948e6b38243e`.
+
+## D-50 — Compras v3 por setor com autorização de Compras (21/10/2026) — EM VALIDAÇÃO
+
+- **Contexto:** o fluxo v2 não modela organizações em que o gestor do setor envia direto para
+  Compras e o responsável de Compras autoriza antes da cotação, com o estoque recebendo.
+- **Decisão:** criar o fluxo **v3** (`workflow_version = 3`, `flow_revision = 3`) convivendo com
+  v1/v2. Etapas reaproveitadas: `manager`, `purchasing`, `buyer`, `award`, `receipt`, `completed`.
+- **Setores:** `departments` (+ `is_purchasing`), `department_managers` e `users.department_id`.
+  Um gestor pode responder por vários setores; a equipe de Compras vê a fila inteira.
+- **Permissões:** `purchases.approve_department` (gestor/admin) e `purchases.receive` para o perfil
+  de estoque; `purchases.authorize` para o gestor de Compras.
+- **Modos:** `quote` (≥2 propostas), `budget` (1 proposta, fornecedor único) e `direct` (sem
+  cotação, autorizado pelo responsável de Compras). `purchase_mode` oficial fica na solicitação;
+  o item mantém o CHECK legado (`direct`/`quote`).
+- **Aprovação:** aprovar a proposta cria a adjudicação de todos os itens e envia ao comprador.
+- **Recebimento:** nota fiscal obrigatória (número, série, data, total) + local de entrega.
+- **Pendência:** assinatura da release 0.4.0, migration `0020` no D1 remoto e deploy.
+
+## D-51 — Formas de pagamento influenciam a aprovação (21/10/2026) — EM VALIDAÇÃO
+
+- **Decisão:** `payment_methods` com `requires_authorization` e `requires_quote`.
+- `requires_quote = 1` bloqueia compra direta; `requires_authorization = 1` obriga autorização do
+  responsável de Compras. A regra vale para cotação e orçamento e é aplicada na API e na UI.
+
+## D-52 — Chat de suporte em tempo real com Durable Object e fallback (21/10/2026) — EM VALIDAÇÃO
+
+- **Decisão:** Durable Object `SupportRoom` (binding `SUPPORT_ROOM`, migration
+  `new_sqlite_classes`) transmite mensagem, digitação e presença por WebSocket; o **D1 continua a
+  fonte da verdade** das mensagens.
+- **Autenticação:** o Worker valida sessão (interno) ou token (público) antes de encaminhar ao DO.
+- **Degradação:** polling de 60s permanece como fallback; digitação no máximo a cada 2s; o cliente
+  ignora o próprio evento por `clientId`; reconexão com backoff até 30s.
+- **Sem custo novo:** Durable Objects SQLite são gratuitos no plano; nenhum serviço pago adicionado.
+
+## D-53 — E-mail e notificação em outbox no mesmo lote D1 (21/10/2026) — EM VALIDAÇÃO
+
+- **Decisão:** `email_outbox` gravado na mesma transação da operação e entregue após o commit.
+  Notificações internas e e-mails são direcionados apenas a quem precisa agir.
+- **Erros de permissão:** mensagem nomeia o responsável (“Solicite a [nome], responsável por
+  [ação]”), em vez de 403 genérico.

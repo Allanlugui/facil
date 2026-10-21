@@ -3,6 +3,54 @@
 Todas as alterações relevantes do Facil são registradas aqui. O projeto segue o
 versionamento descrito em `docs/VERSIONAMENTO.md`.
 
+## [0.4.0] — 2026-10-21
+
+Compras por setor (v3) com autorização de Compras e chat de suporte em tempo real.
+
+### Adicionado
+
+- **Compras v3 por setor:** o gestor do setor cria e envia; o responsável de
+  Compras autoriza antes de qualquer cotação; o comprador monta, envia para
+  aprovação e acompanha o pedido; o estoque confere e lança a nota fiscal.
+- **Setores e gestores:** `departments` e `department_managers` permitem que um
+  gestor responda por vários setores. A visibilidade é por setor, e a equipe de
+  Compras vê a fila inteira.
+- **Formas de pagamento:** `payment_methods` com `requires_authorization` e
+  `requires_quote`; a forma bloqueia compra direta quando exige cotação.
+- **Cotação e orçamento:** cotação exige pelo menos 2 propostas; orçamento
+  aceita fornecedor único em fluxo separado. A aprovação da cotação v3 cria a
+  adjudicação dos itens e envia ao comprador.
+- **Compra direta v3:** o responsável de Compras autoriza sem cotação e envia
+  direto ao comprador, respeitando a forma de pagamento.
+- **Recebimento com nota fiscal:** número, série, data, total e local de entrega;
+  o lançamento atualiza solicitação, pedido e itens.
+- **Chat de suporte em tempo real:** Durable Object `SupportRoom` com
+  WebSocket, indicador de digitação, presença e fallback de polling de 60s nas
+  páginas de suporte interno e acompanhamento público (`/ajuda/:id` e
+  `/suporte/acompanhar/:token`). As mensagens continuam persistidas no D1.
+- **Próxima etapa explícita:** o detalhe da solicitação mostra a etapa, o
+  responsável e a ação esperada.
+- Permissões novas: `purchases.approve_department` (gestor/admin) e
+  `purchases.receive` para o perfil de estoque.
+
+### Alterado
+
+- O fluxo v3 é o padrão; v1 e v2 continuam disponíveis por
+  `workflow_version` + `flow_revision`.
+- E-mails e notificações internas são gravados em `email_outbox` na mesma
+  transação D1 e entregues após o commit.
+- A ficha da solicitação v3 mostra “Aprovação de Compras” em vez do status
+  corrente, evitando confundir a última decisão com o pedido.
+
+### Validação
+
+- `npm run check`: typecheck, lint, contrato de API e **175/175 testes** em 20
+  arquivos (incluindo o fluxo v3 completo com gestor multi-setor e estoque, e o
+  broadcast de mensagem/digitação do WebSocket).
+- `npm run build` e `npm run verify` antes da publicação.
+- Verificação visual no navegador do fluxo completo: gestor → Compras →
+  2 propostas → aprovação → pedido → recebimento com nota fiscal.
+
 ## [0.3.0] — 2026-10-20
 
 Solicitação de itens que ainda não existem no catálogo, sem bloquear a compra.

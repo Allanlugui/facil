@@ -44,6 +44,45 @@ const router = new Hono<AppEnv>();
 
 const MANAGE = PERMISSIONS.SUPPORT_MANAGE;
 
+/* -------------------------------------------------------------------------- */
+/* Tempo real (Durable Object por atendimento)                                */
+/* -------------------------------------------------------------------------- */
+
+function supportRoom(env: Env, requestId: string): DurableObjectStub {
+  return env.SUPPORT_ROOM.get(env.SUPPORT_ROOM.idFromName(`support:${requestId}`));
+}
+
+/** Falha do Durable Object nunca derruba a mensagem já gravada no D1. */
+async function broadcastRoom(env: Env, requestId: string, payload: unknown): Promise<void> {
+  try {
+    await supportRoom(env, requestId).fetch("https://support-room/broadcast", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    // Sem sala (primeiro deploy ou manutenção): o polling de segurança cobre.
+  }
+}
+
+async function upgradeRoom(
+  c: AppContext,
+  requestId: string,
+  role: "staff" | "requester",
+): Promise<Response> {
+  const headers = new Headers(c.req.raw.headers);
+  headers.set("Upgrade", "websocket");
+  headers.set("x-room-role", role);
+  return supportRoom(c.env, requestId).fetch(
+    new Request("https://support-room/ws", { method: "GET", headers }),
+  );
+}
+
+const typingBody = z.object({
+  clientId: z.string().trim().max(80).optional(),
+  typing: z.boolean().optional(),
+});
+
 const KIND_LABEL: Record<string, string> = {
   password_reset: "Redefinição de senha",
   help: "Ajuda geral",
@@ -819,6 +858,31 @@ router.get("/track/:token", async (c) => {
   });
 });
 
+/* -------------------------------------------------------------------------- */
+/* Tempo real do acompanhamento público                                       */
+/* -------------------------------------------------------------------------- */
+
+router.get("/track/:token/socket", async (c) => {
+  const row = await requestByToken(c.env.DB, c.req.param("token"));
+  return upgradeRoom(c, String(row.id), "requester");
+});
+
+router.post("/track/:token/typing", async (c) => {
+  const row = await requestByToken(c.env.DB, c.req.param("token"));
+  if (String(row.status) !== "resolved") {
+    const body = await parseBody(c, typingBody);
+    await broadcastRoom(c.env, String(row.id), {
+      type: "typing",
+      requestId: String(row.id),
+      authorType: "requester",
+      authorName: String(row.requester_name),
+      clientId: body.clientId ?? null,
+      at: nowIso(),
+    });
+  }
+  return c.body(null, 204);
+});
+
 router.post("/track/:token/messages", async (c) => {
   const token = c.req.param("token");
   const row = await requestByToken(c.env.DB, token);
@@ -916,6 +980,14 @@ router.post("/track/:token/messages", async (c) => {
   }
 
   await deliverOutbox(c.env.DB, mailStaff.map((mail) => mail.id));
+  await broadcastRoom(c.env, requestId, {
+    type: "message",
+    requestId,
+    messageId: id,
+    authorType: "requester",
+    authorName,
+    at: ts,
+  });
   return c.json({ id }, 201);
 });
 
@@ -1057,6 +1129,37 @@ router.get("/requests/:id", requireAuth, async (c) => {
   });
 });
 
+/* -------------------------------------------------------------------------- */
+/* Tempo real do atendimento interno                                          */
+/* -------------------------------------------------------------------------- */
+
+router.get("/requests/:id/socket", requireAuth, async (c) => {
+  const user = currentUser(c);
+  const id = c.req.param("id");
+  const row = await loadRequest(c.env.DB, id);
+  assertRequestAccess(user, row);
+  return upgradeRoom(c, id, isStaff(user) ? "staff" : "requester");
+});
+
+router.post("/requests/:id/typing", requireAuth, async (c) => {
+  const user = currentUser(c);
+  const id = c.req.param("id");
+  const row = await loadRequest(c.env.DB, id);
+  assertRequestAccess(user, row);
+  if (String(row.status) !== "resolved") {
+    const body = await parseBody(c, typingBody);
+    await broadcastRoom(c.env, id, {
+      type: "typing",
+      requestId: id,
+      authorType: isStaff(user) ? "staff" : "requester",
+      authorName: user.name,
+      clientId: body.clientId ?? null,
+      at: nowIso(),
+    });
+  }
+  return c.body(null, 204);
+});
+
 router.post("/requests/:id/messages", requireAuth, async (c) => {
   const user = currentUser(c);
   const id = c.req.param("id");
@@ -1177,6 +1280,14 @@ router.post("/requests/:id/messages", requireAuth, async (c) => {
   }
 
   await deliverOutbox(c.env.DB, mailStatements.map((mail) => mail.id));
+  await broadcastRoom(c.env, id, {
+    type: "message",
+    requestId: id,
+    messageId,
+    authorType,
+    authorName: user.name,
+    at: ts,
+  });
 
   return c.json({ id: messageId }, 201);
 });

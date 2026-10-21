@@ -7,7 +7,7 @@ e adjudicação, relatórios, usuários/permissões e auditoria.
 **Autor:** Allan Luiz Silveira Lima (Allanlugui)  
 **Licença:** proprietária, todos os direitos reservados (ver `LICENSE`).  
 **Assinatura:** cada release é assinada com Ed25519 (ver `docs/ASSINATURA.md`).  
-**Versão atual:** `0.3.0` (itens fora do catálogo no fluxo de compras).
+**Versão atual:** `0.4.0` (compras por setor e chat de suporte em tempo real).
 
 > A autoria é registrada apenas pelo nome. CPF e e-mail pessoal do autor não são
 > armazenados nem exibidos pelo sistema, pela documentação ou pelo repositório.
@@ -24,6 +24,8 @@ e adjudicação, relatórios, usuários/permissões e auditoria.
 | Ordens de serviço | Checklist, materiais, responsável, execução e conclusão |
 | Compras v1 | Fluxo legado: aprovação única, cotação, pedido e recebimento |
 | Compras v2 | Gestor → direção → compras, envio direto, compra direta, adjudicação por item, pedidos por fornecedor e itens fora do catálogo |
+| Compras v3 | Por setor: gestor → Compras (autoriza) → comprador cota/aprova → pedido → estoque recebe com nota fiscal |
+| Suporte | Chat em tempo real (WebSocket + fallback de polling), digitação, presença e acompanhamento público por token |
 | Relatórios | Estoque, movimentos, consumo, chamados, ordens, compras e exportação |
 | Administração | Usuários, perfis, permissões, configurações, auditoria e notificações |
 | Integrações | Outbox transacional para NetSuite/ServiceNow e intake externo de chamados |
@@ -33,7 +35,9 @@ e adjudicação, relatórios, usuários/permissões e auditoria.
 - **Cloudflare Workers** (runtime) + **Hono 4** (API)
 - **D1** (banco SQLite gerenciado, plano gratuito) + **R2** (anexos do suporte, opcional)
 - **React 19 + Vite 7 + Tailwind v4 + React Router 7** (interface)
-- **Zod 4** (validação) + **Vitest 5** (169 testes em 18 arquivos)
+- **Zod 4** (validação) + **Vitest 5** (175 testes em 20 arquivos)
+- **Durable Objects** (`SupportRoom`) para chat de suporte em tempo real, com
+  D1 como fonte da verdade e polling de 60s como fallback
 - **Wrangler 4** (desenvolvimento, migrations e deploy)
 - **Ed25519** (assinatura de release, chave privada fora do repositório)
 
@@ -56,7 +60,7 @@ No Windows, use a interface pela porta **5173** (o watcher de assets do
 ## Verificações
 
 ```bash
-npm run check           # typecheck + lint + contrato de API + 169 testes
+npm run check           # typecheck + lint + contrato de API + 175 testes
 npm run build           # build da interface + Worker
 npm run verify          # confere a assinatura da release atual
 ```
@@ -80,7 +84,8 @@ npm run deploy                           # assina a release + checks + build + d
 
 Ordem recomendada para esta versão:
 
-1. Aplicar a migration `0019_purchase_workflow.sql` no D1 remoto.
+1. Aplicar a migration `0020_organization_purchases.sql` no D1 remoto
+   (depois da `0019_purchase_workflow.sql`).
 2. Configurar `TICKET_INTAKE_KEY` com `wrangler secret put` (sem colocar no repo).
 3. Rodar `npm run deploy`.
 4. Abrir a URL e concluir a **Instalação inicial** (empresa, administrador e senha).
@@ -90,22 +95,33 @@ Guia completo para a equipe de TI: **`docs/IMPLANTACAO.md`**.
 
 ## Fluxo corporativo de compras
 
-O fluxo v2 é o padrão para solicitações novas. O v1 continua disponível para
-solicitações antigas e integrações que declarem `workflowVersion: 1`.
+O fluxo **v3** é o padrão para solicitações novas: é por setor e tem
+autorização do responsável de Compras antes de qualquer cotação. O v1 e o v2
+continuam disponíveis para solicitações antigas e integrações que declarem
+`workflowVersion: 1` ou `2`.
 
 ```text
 Solicitante
-  └─ cria e envia
+  └─ cria e envia (setor, modo e forma de pagamento)
        └─ Gestor do setor aprova a necessidade
-            └─ Direção analisa orçamento e autoriza
-                 └─ Compras registra propostas
-                      └─ Comprador devolve a cotação
-                           └─ Compras adjudica item a item
-                                └─ Comprador emite pedido por fornecedor
-                                     └─ Compras/comprador recebe e conclui
+            └─ Responsável de Compras autoriza (cotação, orçamento ou compra direta)
+                 └─ Comprador registra propostas e devolve para aprovação
+                      └─ Responsável de Compras aprova a proposta e adjudica os itens
+                           └─ Comprador emite pedido por fornecedor
+                                └─ Responsável pelo estoque confere e lança a nota fiscal
 ```
 
-Caminhos alternativos:
+Caminhos alternativos do v3:
+
+- **Cotação:** exige pelo menos 2 propostas registradas antes de devolver para
+  aprovação.
+- **Orçamento:** fornecedor único, fluxo separado, mesma aprovação da cotação.
+- **Compra direta:** o responsável de Compras autoriza sem cotação; só é
+  possível quando a forma de pagamento não exige cotação.
+- **Formas de pagamento:** cada método define se exige autorização e se exige
+  cotação; a UI e o backend aplicam as duas regras.
+
+Caminhos do v2 (legado, mantido):
 
 - **Envio direto a compras:** o gestor do setor envia a solicitação direto para
   a triagem de compras, sem passar pela direção. A triagem pode devolver à
@@ -121,12 +137,14 @@ Caminhos alternativos:
 Regras que o backend garante:
 
 - quem solicita não aprova a própria solicitação;
-- a segunda aprovação deve ser de outro responsável;
-- a direção registra orçamento e autorização;
-- a adjudicação cobre todos os itens em cotação;
+- o gestor só decide nos setores que gerencia (ou em todos, se administrador);
+- a autorização e a aprovação de Compras são de quem tem a permissão do setor;
+- cotação exige pelo menos 2 propostas e orçamento aceita apenas 1;
+- compra direta respeita a forma de pagamento (sem cotação quando proibido);
 - o pedido inclui todos os itens aprovados e respeita o fornecedor adjudicado;
-- o recebimento atualiza solicitação, pedido e linha do pedido;
-- cada operação grava auditoria, notificação e evento de integração.
+- o recebimento exige nota fiscal, atualiza solicitação, pedido e linha do pedido;
+- cada operação grava auditoria, notificação interna, e-mail em outbox e evento
+  de integração.
 
 Detalhes de estados, permissões, payloads e erros: **`docs/COMPRAS.md`**.
 
@@ -157,7 +175,8 @@ src/worker/                 API Hono e regras de negócio
   errors.ts                formato único de erro
   notify.ts                notificações internas
   outbox.ts                eventos idempotentes de integração
-  purchase-access.ts       visibilidade de compras por perfil/local
+    purchase-access.ts       visibilidade de compras por perfil/local/setor
+  support-room.ts           Durable Object da sala de suporte (WebSocket)
   routes/
     auth.ts                login, setup, sessão, perfil
     structure.ts           unidades, locais e salas
@@ -168,14 +187,14 @@ src/worker/                 API Hono e regras de negócio
     inventories.ts         inventários
     tickets.ts             chamados
     workorders.ts          ordens de serviço
-    purchases.ts           compras v1/v2, cotação, adjudicação, pedidos e recebimentos
+    purchases.ts           compras v1/v2/v3, cotação, orçamento, compra direta, adjudicação, pedidos e recebimentos
     dashboard.ts           resumo e alertas
     reports.ts             relatórios e exportação
     settings.ts            configurações e credenciais
     audit.ts               consulta de auditoria
     attachments.ts         anexos (R2 opcional)
     notifications.ts       notificações
-    support.ts             suporte público
+    support.ts             suporte público e interno (tempo real)
     intake.ts              entrada externa de chamados
     integrations.ts        inspeção e confirmação do outbox
 
@@ -187,7 +206,7 @@ src/client/                 interface React
   public/branding/         logo, capas, favicon e wallpaper
 
 src/shared/                 tipos, permissões e contratos usados nos dois lados
-migrations/                 migrations D1 (0001..0019)
+migrations/                 migrations D1 (0001..0020)
 seeds/                      dados demo e reset local
 tests/                      testes de integração (Worker + D1)
 scripts/                    contrato de API, assinatura e release
@@ -197,13 +216,18 @@ memory/                     decisões, status, histórico, problemas e TODO
 
 ## Dados e migrations
 
-- 19 migrations aplicadas em sequência; a última é
-  `0019_purchase_workflow.sql`.
+- 20 migrations aplicadas em sequência; a última é
+  `0020_organization_purchases.sql`.
 - Tabelas centrais do fluxo novo: `cost_centers`, `purchase_awards`,
   `purchase_orders`, `purchase_order_items`, `integration_outbox`,
-  `ticket_intake_events`.
+  `ticket_intake_events`, `departments`, `department_managers` e
+  `payment_methods`.
 - A migration 0019 é **aditiva**: adiciona colunas e tabelas, marca solicitações
   antigas como versão 1 e não remove dados.
+- A migration 0020 também é **aditiva**: cria setores, gestores de setor,
+  formas de pagamento e as colunas do fluxo v3 (`workflow_version`,
+  `flow_revision`, `purchase_mode`, `payment_method_id`, `payment_terms`,
+  nota fiscal no recebimento e permissões do setor de Compras).
 - A migration não cria o usuário `user_intake` em banco novo antes da
   instalação inicial; ele é criado no primeiro intake.
 - Centros de custo iniciais: `CC-ADM`, `CC-OPE`, `CC-MAN`, `CC-LIM`.
@@ -258,7 +282,7 @@ memory/                     decisões, status, histórico, problemas e TODO
 - **Assinatura:** `npm run sign` gera `SIGNATURE.json`; `npm run verify` confere
   versão, árvore e autor.
 - **Produção atual:** `https://facil.cf-pilot-disposable.workers.dev`
-  (release 0.3.0; `/api/health` informa o hash da árvore em execução).
+  (release 0.4.0; `/api/health` informa o hash da árvore em execução).
 
 ## Memória e continuidade
 

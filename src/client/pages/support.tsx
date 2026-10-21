@@ -39,6 +39,7 @@ import {
   EMPTY_MESSAGES,
   MessageComposer,
   useOptimisticChat,
+  useSupportRealtime,
   type ChatAttachment,
   type ChatLimits,
   type SupportMessage,
@@ -850,11 +851,19 @@ export function SupportThreadPage() {
 
   const state = useAsync(() => apiGet<ThreadResponse>(`/api/support/requests/${id}`), [id]);
 
-  // Mantém a conversa atualizada enquanto o atendimento está aberto.
+  // O WebSocket entrega a mensagem na hora; o polling fica como rede de
+  // segurança para quando a conexão cair (celular, troca de rede, hibernação).
   useEffect(() => {
-    const timer = window.setInterval(state.reload, 20000);
+    const timer = window.setInterval(state.reload, 60000);
     return () => window.clearInterval(timer);
   }, [state.reload]);
+
+  const realtime = useSupportRealtime({
+    socketPath: `/api/support/requests/${id}/socket`,
+    typingPath: `/api/support/requests/${id}/typing`,
+    selfType: staff ? "staff" : "requester",
+    onEvent: state.reload,
+  });
 
   const changeStatus = async (status: "queued" | "in_progress" | "resolved") => {
     setChangingStatus(true);
@@ -990,6 +999,8 @@ export function SupportThreadPage() {
           }
           onRemoveAttachment={staff ? removeAttachment : undefined}
           title={staff ? "Conversa com o solicitante" : "Conversa com o suporte"}
+          typingName={realtime.typingName}
+          connected={realtime.connected}
           emptyText={
             staff
               ? "Nenhuma mensagem ainda. Escreva a primeira resposta."
@@ -1010,6 +1021,7 @@ export function SupportThreadPage() {
               }
               limits={limits}
               onSend={sendMessage}
+              onTyping={realtime.notifyTyping}
             />
           )}
         </ChatThread>

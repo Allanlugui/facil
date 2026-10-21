@@ -24,6 +24,22 @@
       "migrations_dir": "migrations"
     }
   ],
+  // Chat de suporte em tempo real: uma sala por solicitação. O D1 continua
+  // sendo a fonte da verdade; o Durable Object só transmite eventos.
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "SUPPORT_ROOM",
+        "class_name": "SupportRoom"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["SupportRoom"]
+    }
+  ],
   // Anexos do chat de suporte (F-19): o binario vive no R2 (free tier), os
   // metadados no D1. O R2 ainda NAO foi habilitado na conta de publicacao, e o
   // `wrangler deploy` recusa binding para bucket inexistente. Sem o binding a

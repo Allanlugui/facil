@@ -1,16 +1,71 @@
-# Fluxo corporativo de compras (v2)
+# Fluxo corporativo de compras (v3)
 
-Este documento descreve o fluxo de compras introduzido na versão **0.2.0** e
-ampliado na **0.3.0** com itens fora do catálogo. Ele convive com o fluxo legado
-(v1), que continua disponível para solicitações antigas e para integrações que
-declarem `workflowVersion: 1`.
+Este documento descreve o fluxo de compras **v3** (por setor), introduzido na
+versão **0.4.0**, e mantém o detalhamento dos fluxos v2 (0.2.0/0.3.0) e v1
+(legado), que continuam disponíveis para solicitações antigas e para integrações
+que declarem `workflowVersion: 1` ou `2`.
+
+## Fluxo v3 — por setor
+
+O v3 é o padrão para solicitações novas. A criação já informa **setor**, **modo**
+(`quote`, `budget` ou `direct`) e **forma de pagamento**.
+
+```text
+Solicitante
+  └─ cria e envia
+       └─ Gestor do setor aprova a necessidade
+            └─ Responsável de Compras autoriza
+                 ├─ cotação   → comprador registra ≥2 propostas → devolve
+                 │             → responsável de Compras aprova → adjudica
+                 ├─ orçamento → comprador registra 1 proposta → devolve
+                 │             → responsável de Compras aprova → adjudica
+                 └─ compra direta → autorização sem cotação → vai ao comprador
+                      └─ Comprador emite pedido por fornecedor
+                           └─ Responsável pelo estoque confere e lança a NF
+```
+
+### Setores, gestores e visibilidade
+
+- `departments` marca o setor de Compras com `is_purchasing`.
+- `department_managers` permite que **um gestor responda por vários setores**.
+- `users.department_id` vincula o usuário ao setor.
+- O gestor só decide em solicitações dos setores que gerencia.
+- A equipe do setor de Compras vê a fila inteira.
+- Quem tem `purchases.view_all` (direção, administração e perfis operacionais)
+  também vê tudo.
+
+### Formas de pagamento
+
+`payment_methods` define `requires_authorization` e `requires_quote`:
+
+- `requires_quote = 1` **bloqueia compra direta** e exige propostas;
+- `requires_authorization = 1` obriga autorização do responsável de Compras
+  antes de o comprador avançar;
+- a regra vale para cotação e orçamento.
+
+### Autorização e aprovação de Compras
+
+- Na autorização, o responsável de Compras confirma o modo (cotação, orçamento
+  ou compra direta) e a forma de pagamento.
+- A cotação exige **pelo menos 2 propostas registradas**; o orçamento aceita 1.
+- A aprovação da proposta cria automaticamente a **adjudicação de todos os
+  itens** e envia a solicitação ao comprador.
+- Quem não tem a permissão recebe erro nomeado: “Você não tem permissão para
+  realizar esta ação. Solicite a [nome], responsável por [ação].”
+
+### Recebimento com nota fiscal
+
+`POST /api/purchases/:id/receipts` (v3) exige número, série, data e total da nota
+fiscal e o local de entrega. O lançamento atualiza a solicitação, o pedido e as
+linhas do pedido e conclui a solicitação quando tudo foi recebido.
 
 ## Princípios
 
 1. **Nada do fluxo antigo foi removido.** Solicitações existentes permanecem
    na versão 1 e continuam usando aprovação única, cotação e pedido legado.
-2. **Solicitações novas nascem na versão 2**, salvo quando o cliente declara
-   explicitamente `workflowVersion: 1`.
+2. **Solicitações novas nascem na versão 3**, salvo quando o cliente declara
+   explicitamente `workflowVersion: 1` ou `2`. A versão é registrada em
+   `workflow_version` + `flow_revision`.
 3. **Separação de funções.** Quem solicita não aprova; quem aprova a necessidade
    não adjudica; quem adjudica não recebe; o recebimento é uma confirmação
    física e financeira.
@@ -41,13 +96,14 @@ cadastro pode ser completado depois no catálogo.
 | --- | --- | --- |
 | `purchases.view` | Ver as próprias solicitações | Solicitante, liderança de limpeza, comprador |
 | `purchases.view_all` | Ver a fila inteira | Gestor do setor, direção, compras, administração |
+| `purchases.approve_department` | Autorizar e aprovar no setor de Compras (v3) | Gestor do setor, gestor de compras, administração |
 | `purchases.create` | Criar e editar rascunhos | Solicitante, comprador, administração |
 | `purchases.approve` | Aprovar a necessidade como gestor do setor | Gestor do setor, administração |
 | `purchases.authorize` | Autorizar necessidade e orçamento na direção | Diretor de operações, administração |
 | `purchases.award` | Adjudicar a cotação item a item | Gestor de compras, administração |
 | `purchases.direct` | Autorizar compra direta sem cotação | Gestor de compras, administração |
 | `purchases.order` | Registrar cotação e emitir pedido | Comprador, gestor de compras, administração |
-| `purchases.receive` | Confirmar recebimento | Comprador, gestor de compras, administração |
+| `purchases.receive` | Confirmar recebimento e lançar nota fiscal | Comprador, gestor de compras, responsável pelo estoque, administração |
 | `purchases.cancel` | Cancelar solicitação | Direção, compras, administração |
 
 Perfis novos:

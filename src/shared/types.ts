@@ -130,6 +130,40 @@ export type PurchaseStatus = (typeof PURCHASE_STATUS)[number];
 export const PURCHASE_WORKFLOW_VERSION = [1, 2] as const;
 export type PurchaseWorkflowVersion = (typeof PURCHASE_WORKFLOW_VERSION)[number];
 
+/**
+ * Revisão do fluxo corporativo. 2 = fluxo com Direção; 3 = fluxo por setor,
+ * com autorização do responsável de Compras e modos cotação/orçamento/direta.
+ */
+export const PURCHASE_FLOW_REVISION = [1, 2, 3] as const;
+export type PurchaseFlowRevision = (typeof PURCHASE_FLOW_REVISION)[number];
+
+export const PURCHASE_MODE = ["quote", "budget", "direct"] as const;
+export type PurchaseMode = (typeof PURCHASE_MODE)[number];
+
+export const PURCHASE_MODE_LABEL: Record<PurchaseMode, string> = {
+  quote: "Cotação com vários fornecedores",
+  budget: "Orçamento de fornecedor único",
+  direct: "Compra direta",
+};
+
+export const PURCHASE_MODE_SHORT_LABEL: Record<PurchaseMode, string> = {
+  quote: "Cotação",
+  budget: "Orçamento",
+  direct: "Compra direta",
+};
+
+/** Forma de pagamento cadastrada; as políticas vêm do servidor. */
+export interface PaymentMethod {
+  id: string;
+  code: string;
+  name: string;
+  requiresAuthorization: boolean;
+  requiresQuote: boolean;
+  isActive: boolean;
+  sortOrder: number;
+  notes: string | null;
+}
+
 export const PURCHASE_APPROVAL_STAGE = [
   "manager",
   "direction",
@@ -290,6 +324,10 @@ export interface SessionUser {
   roleCode: string;
   roleName: string;
   unitId: Id | null;
+  departmentId: Id | null;
+  departmentName: string | null;
+  departmentIsPurchasing: boolean;
+  managedDepartmentIds: Id[];
   mustChangePassword: boolean;
   permissions: string[];
   locationScope: Id[];

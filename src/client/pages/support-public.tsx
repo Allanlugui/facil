@@ -22,6 +22,7 @@ import {
   EMPTY_MESSAGES,
   MessageComposer,
   useOptimisticChat,
+  useSupportRealtime,
   type ChatLimits,
   type SupportMessage,
 } from "../lib/chat";
@@ -492,11 +493,18 @@ export function SupportTrackPage() {
     [token],
   );
 
-  // Atualiza sozinho para acompanhar as respostas do suporte.
+  // Tempo real pelo WebSocket; o polling de 60s cobre quedas de conexão.
   useEffect(() => {
-    const timer = window.setInterval(state.reload, 20000);
+    const timer = window.setInterval(state.reload, 60000);
     return () => window.clearInterval(timer);
   }, [state.reload]);
+
+  const realtime = useSupportRealtime({
+    socketPath: `/api/support/track/${encodeURIComponent(token)}/socket`,
+    typingPath: `/api/support/track/${encodeURIComponent(token)}/typing`,
+    selfType: "requester",
+    onEvent: state.reload,
+  });
 
   const { messages: threadMessages, sendMessage } = useOptimisticChat({
     messages: state.data?.messages ?? EMPTY_MESSAGES,
@@ -576,6 +584,8 @@ export function SupportTrackPage() {
           messages={threadMessages}
           isMine={(message) => message.authorType === "requester"}
           title="Conversa com o suporte"
+          typingName={realtime.typingName}
+          connected={realtime.connected}
           subtitle={`${threadMessages.length} ${plural(threadMessages.length, "mensagem", "mensagens")} · atualiza a cada 20 s`}
           emptyText="Envie a primeira mensagem para o suporte."
         >
@@ -593,12 +603,13 @@ export function SupportTrackPage() {
               hint="Cada mensagem também é enviada por e-mail para o suporte."
               limits={limits}
               onSend={sendMessage}
+              onTyping={realtime.notifyTyping}
             />
           )}
         </ChatThread>
 
         <p className="text-center text-xs text-slate-400">
-          Atualização automática a cada 20 segundos. Guarde este link para voltar depois.
+          Atualização em tempo real. Guarde este link para voltar depois.
         </p>
       </div>
     </div>
