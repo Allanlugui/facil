@@ -47,3 +47,20 @@ e continuar a execucao sem pausas intermediarias.
 
 Encerrar somente ao concluir a fase, encontrar bloqueio critico
 ou chegar a uma decisao arquitetural que exija revisao humana.
+
+## Regra de publicacao (decidida em 22/10/2026)
+
+Toda alteracao de produto (codigo, schema, configuracao ou documentacao
+funcional) deve ser publicada para conferencia, sem parar no commit local:
+
+1. Subir a versao SemVer em `package.json`, `package-lock.json`, README,
+   CHANGELOG e `docs/VERSIONAMENTO.md` (patch/minor conforme o caso).
+2. Rodar `npm run check` e `npm run build`.
+3. Aplicar migrations remotas pendentes com `npm run db:migrate:remote`.
+4. Publicar com `npm run deploy`.
+5. Conferir `https://facil.cf-pilot-disposable.workers.dev/build-info.json`
+   com a versao nova e abrir a aplicacao para validacao visual.
+6. Commitar os artefatos assinados (`SIGNATURE.json`, `build-info.json`,
+   `build-info.generated.ts`), enviar `main` e criar/enviar a tag `vX.Y.Z`.
+
+Memoria operacional (`memory/`) nao exige nova versao nem deploy.
