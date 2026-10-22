@@ -3,6 +3,32 @@
 - **Criado em:** 16/10/2026 22:36:22 pelo bootstrap global (`D:\DEV\criar-projeto.bat`).
 - **Diretório oficial:** `D:\DEV\Opencode\Facil`
 - **Conhecimento global:** `D:\DEV\memory\Facil\`
+- **Fluxo de compras v3 completo (21/10/2026):** versão **0.6.0**. Ordem nova:
+  **solicitação → triagem do comprador → aprovação/refinamento do gestor de Compras →
+  comprador → recebimento**. Triagem (`approval_stage = purchasing` com
+  `triage_completed_at IS NULL`, derivada como `triage` na API) permite editar itens,
+  vincular/cadastrar produto e recusar ou encaminhar; o solicitante não tria a própria
+  solicitação. O gestor de Compras edita itens/quantidades, define modo, pagamento, centro
+  de custo e GL, e pode **solicitar alinhamento** (`request_alignment`, observação ≥5
+  caracteres, permanece na etapa, notifica solicitante/triagem). O destino dos itens
+  acompanha o modo escolhido e preserva ajustes por item. No recebimento, item fora do
+  catálogo pode ser vinculado a produto existente ou cadastrado na hora com unidade; o
+  vínculo é permanente e gera movimentação de estoque. Migration `0021_purchase_triage.sql`
+  aplicada no D1 local; v1/v2 preservados. `npm run check` **180/180 em 20 arquivos**,
+  typecheck, lint, contrato de API; `npm run build`; verificação Playwright ponta a ponta
+  (lote, triagem, alinhamento, compra direta, pedido com preços e recebimento com
+  normalização). Corrigido o aninhamento inválido de `<div>` em `<p>` no `PageHeader`.
+- **Melhorias de usabilidade em Compras (21/10/2026):** versão **0.5.0** entregue. Formulário
+  do solicitante v3 simplificado (Local, Data desejada, Prioridade, Justificativa obrigatória,
+  Observações e itens; setor automático pelo login). Entrada de itens em lote com processamento de
+  texto, tabela editável de quantidade/unidade, vínculo automático ao catálogo e selo "Fora do
+  catálogo" sem bloquear o envio. Criação v3 ignora campos administrativos; `purchaseMode` e
+  `paymentMethodId` são gravados na autorização do responsável de Compras. Detalhe da solicitação
+  com identificador, solicitante e data antes dos badges de status/setor/etapa/prioridade; grade
+  lateral só a partir de `2xl`, colunas `min-w-0` e tabela densa, sem rolagem horizontal de
+  1280 a 1536. Datas puras passaram a ser formatadas em UTC (não recuam um dia).
+  `npm run check` **175/175 em 20 arquivos**, typecheck, lint e contrato de API; verificação visual
+  em 1440×900 e 390×844 do formulário, do lote e do detalhe, além de criação/envio ponta a ponta.
 - **Etapa 4 concluída (21/10/2026):** release **0.4.0** assinada (Ed25519, **172 arquivos**, tree
   `709ac6a2d36cf8eddcb84010caf993eacebe7f24b7a36ab99f01c962bfdbc9e6`, 21/10/2026 06:48:25 −03:00,
   Worker `f0d3af42-bdfd-45f8-b7fe-39b739c8ef42`). Entrega: **compras v3 por setor** — gestor do

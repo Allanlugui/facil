@@ -76,3 +76,17 @@ setor (gestor → Compras autoriza → comprador cota → aprovação → pedido
 lança nota fiscal), setores/gestores, formas de pagamento e chat de suporte em
 tempo real (Durable Object + WebSocket com fallback de polling). Funcionalidades
 novas com mudança relevante de comportamento: subiu o **minor**.
+
+A quinta etapa foi entregue na versão **0.5.0**, em 21/10/2026: usabilidade de
+Compras com formulário do solicitante simplificado, entrada de itens em lote com
+vínculo ao catálogo, detalhe sem rolagem horizontal e criação v3 com forma de
+pagamento/modo definidos por Compras na autorização. Funcionalidade nova e
+mudança relevante de comportamento: subiu o **minor**.
+
+A sexta etapa foi entregue na versão **0.6.0**, em 21/10/2026: fluxo de compras
+v3 completo, com triagem do comprador, aprovação/refinamento do gestor de
+Compras, pedido de alinhamento ao solicitante, execução pelo comprador e
+recebimento com normalização de itens fora do catálogo para produtos existentes
+ou cadastrados na hora. A ordem do fluxo v3 mudou (triagem antes da aprovação) e
+há nova migration; por ser funcionalidade nova com mudança relevante de
+comportamento, subiu o **minor**.

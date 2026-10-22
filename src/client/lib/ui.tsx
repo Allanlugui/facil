@@ -60,16 +60,22 @@ const TONE_DOT: Record<Tone, string> = {
 
 export function Badge({
   tone = "slate",
+  size = "md",
   children,
   className = "",
 }: {
   tone?: Tone;
+  size?: "sm" | "md";
   children: ReactNode;
   className?: string;
 }) {
+  const sizeClasses = {
+    sm: "px-2 py-0.5 text-[10px] leading-3",
+    md: "px-2.5 py-1 text-xs leading-4",
+  };
   return (
     <span
-      className={`inline-flex w-fit shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium leading-4 ring-1 ring-inset ${TONE_BADGE[tone]} ${className}`}
+      className={`inline-flex w-fit shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-full ${sizeClasses[size]} font-medium ring-1 ring-inset ${TONE_BADGE[tone]} ${className}`}
     >
       {children}
     </span>
@@ -317,7 +323,7 @@ export function PageHeader({
     <header className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div className="min-w-0">
         <h1 className="text-xl font-semibold tracking-tight text-slate-900">{title}</h1>
-        {description ? <p className="mt-1 text-sm text-slate-600">{description}</p> : null}
+        {description ? <div className="mt-1 text-sm text-slate-600">{description}</div> : null}
       </div>
       {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
     </header>
@@ -450,25 +456,27 @@ export function Table<T>({
   keyOf,
   empty,
   onRowClick,
+  dense = false,
 }: {
   columns: Column<T>[];
   rows: T[];
   keyOf: (row: T) => string;
   empty: ReactNode;
   onRowClick?: (row: T) => void;
+  dense?: boolean;
 }) {
   if (rows.length === 0) return <>{empty}</>;
 
   return (
     <div className="table-scroll">
-      <table className="w-full min-w-full border-collapse text-sm">
+      <table className={`w-full min-w-full border-collapse ${dense ? "text-xs" : "text-sm"}`}>
         <thead>
           <tr className="border-b border-slate-200 text-left">
             {columns.map((column) => (
               <th
                 key={column.key}
                 scope="col"
-                className={`whitespace-nowrap px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500 ${
+                className={`whitespace-nowrap ${dense ? "px-2 py-1.5" : "px-3 py-2"} text-xs font-semibold uppercase tracking-wide text-slate-500 ${
                   column.align === "right" ? "text-right" : column.align === "center" ? "text-center" : ""
                 } ${column.hideOnMobile ? "hidden md:table-cell" : ""} ${column.className ?? ""}`}
               >
@@ -487,7 +495,7 @@ export function Table<T>({
               {columns.map((column) => (
                 <td
                   key={column.key}
-                  className={`px-3 py-2.5 align-middle text-slate-700 ${
+                  className={`${dense ? "px-2 py-2" : "px-3 py-2.5"} align-middle text-slate-700 ${
                     column.align === "right" ? "text-right tabular-nums" : column.align === "center" ? "text-center" : ""
                   } ${column.hideOnMobile ? "hidden md:table-cell" : ""} ${column.className ?? ""}`}
                 >

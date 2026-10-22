@@ -283,6 +283,7 @@ function PurchaseQueueStrip() {
     () =>
       apiGet<{
         queues: {
+          triage: number;
           manager: number;
           direction: number;
           purchasing: number;
@@ -295,9 +296,10 @@ function PurchaseQueueStrip() {
   );
   if (!can(PERMISSIONS.PURCHASES_VIEW) || !state.data) return null;
   const queues = [
+    { key: "triage", label: "Fazer triagem", count: state.data.queues.triage, show: can(PERMISSIONS.PURCHASES_ORDER) || can(PERMISSIONS.PURCHASES_AUTHORIZE) },
     { key: "manager", label: PURCHASE_APPROVAL_STAGE_LABEL.manager, count: state.data.queues.manager, show: can(PERMISSIONS.PURCHASES_APPROVE) },
     { key: "direction", label: PURCHASE_APPROVAL_STAGE_LABEL.direction, count: state.data.queues.direction, show: can(PERMISSIONS.PURCHASES_AUTHORIZE) },
-    { key: "purchasing", label: "Triagem de compras", count: state.data.queues.purchasing, show: can(PERMISSIONS.PURCHASES_AWARD) || can(PERMISSIONS.PURCHASES_DIRECT) },
+    { key: "purchasing", label: "Aprovar compra", count: state.data.queues.purchasing, show: can(PERMISSIONS.PURCHASES_AUTHORIZE) || can(PERMISSIONS.PURCHASES_AWARD) || can(PERMISSIONS.PURCHASES_DIRECT) },
     { key: "award", label: "Adjudicação", count: state.data.queues.award, show: can(PERMISSIONS.PURCHASES_AWARD) },
     { key: "buyer", label: "Preparar pedido", count: state.data.queues.buyer, show: can(PERMISSIONS.PURCHASES_ORDER) },
     { key: "receipt", label: "Receber", count: state.data.queues.receipt, show: can(PERMISSIONS.PURCHASES_RECEIVE) },

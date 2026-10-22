@@ -165,6 +165,7 @@ export interface PaymentMethod {
 }
 
 export const PURCHASE_APPROVAL_STAGE = [
+  "triage",
   "manager",
   "direction",
   "purchasing",
@@ -176,9 +177,10 @@ export const PURCHASE_APPROVAL_STAGE = [
 export type PurchaseApprovalStage = (typeof PURCHASE_APPROVAL_STAGE)[number];
 
 export const PURCHASE_APPROVAL_STAGE_LABEL: Record<PurchaseApprovalStage, string> = {
+  triage: "Triagem de compras",
   manager: "Gestor do setor",
   direction: "Direção",
-  purchasing: "Triagem de compras",
+  purchasing: "Aprovação de Compras",
   buyer: "Comprador",
   award: "Adjudicação",
   receipt: "Recebimento",
@@ -255,7 +257,11 @@ export const PURCHASE_EVENT_LABEL: Record<string, string> = {
   "purchase_request.create": "Solicitação criada",
   "purchase_request.auto_approved": "Solicitação criada e aprovada automaticamente",
   "purchase_request.update": "Solicitação editada",
-  "purchase_request.submit": "Enviada para aprovação",
+  "purchase_request.submit": "Enviada para Compras",
+  "purchase_request.triage_completed": "Triagem de Compras concluída",
+  "purchase_request.manager_approved": "Aprovada pelo gestor do setor",
+  "purchase_request.alignment_requested": "Alinhamento solicitado ao solicitante",
+  "purchase_request.purchasing_authorized": "Aprovada pelo gestor de Compras",
   "purchase_request.approved": "Aprovada",
   "purchase_request.send_to_purchasing": "Enviada diretamente ao setor de compras",
   "purchase_request.send_to_direction": "Enviada à Direção para análise de orçamento",

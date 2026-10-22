@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { PERMISSIONS } from "@shared/permissions";
 import { PURCHASE_STATUS_LABEL } from "@shared/types";
-import type { AppContext, AppEnv, AuthUser } from "../types";
+import type { AppContext, AppEnv } from "../types";
 import {
   assertLocationAllowed,
   currentUser,
@@ -84,6 +84,9 @@ const createBody = z.object({
   workflowVersion: z.union([z.literal(1), z.literal(2)]).optional().default(2),
   /** 2 = fluxo anterior com Direção; 3 = fluxo por setor. O app envia 3. */
   flowRevision: z.union([z.literal(2), z.literal(3)]).optional().default(2),
+  // Campos administrativos/financeiros:
+  // - v3 (flowRevision=3): preenchidos automaticamente ou nas etapas seguintes por Compras/Gestão
+  // - v1/v2: opcionais no schema, mas obrigatórios no envio se não houver autoaprovação
   departmentId: z.string().trim().min(1).nullish(),
   purchaseMode: z.enum(["quote", "budget", "direct"]).optional().nullish(),
   paymentMethodId: z.string().trim().min(1).nullish(),
@@ -105,6 +108,7 @@ const updateBody = z.object({
   priority: prioritySchema.optional(),
   desiredDate: z.string().trim().max(20).nullish(),
   notes: z.string().trim().max(1000).nullish(),
+  // Campos administrativos/financeiros (opcionais, para aprovadores/Compras nas etapas seguintes)
   costCenterId: z.string().trim().min(1).nullish(),
   glAccount: z.string().trim().max(40).nullish(),
   budgetNotes: z.string().trim().max(1000).nullish(),
@@ -123,12 +127,20 @@ const decideBody = z.object({
     "send_to_purchasing",
     "send_to_direction",
     "authorize_direct",
+    /** v3: triagem concluída, segue para o gestor de Compras. */
+    "forward",
+    /** v3: gestor de Compras pede alinhamento externo antes de decidir. */
+    "request_alignment",
   ]),
   notes: z.string().trim().max(1000).nullish(),
   /** Fluxo v3: modo escolhido pelo responsável de Compras na autorização. */
   purchaseMode: z.enum(["quote", "budget", "direct"]).optional(),
   paymentMethodId: z.string().trim().min(1).optional(),
   paymentTerms: z.string().trim().max(300).nullish(),
+  /** v3: refinamento financeiro feito pelo gestor de Compras. */
+  costCenterId: z.string().trim().min(1).nullish(),
+  glAccount: z.string().trim().max(40).nullish(),
+  budgetNotes: z.string().trim().max(1000).nullish(),
   items: z
     .array(
       z.object({
@@ -138,6 +150,12 @@ const decideBody = z.object({
         /** F-01: direta ou cotação; sem marcação o item segue a cotação. */
         purchaseMode: z.enum(["direct", "quote"]).optional(),
         notes: z.string().trim().max(500).nullish(),
+        /** v3/triagem: ajustes do item solicitado (nome, quantidade e unidade). */
+        description: z.string().trim().max(300).nullish(),
+        qty: z.number().finite().positive("Informe uma quantidade maior que zero.").optional(),
+        uomId: z.string().trim().min(1).nullish(),
+        productId: z.string().trim().min(1).nullish(),
+        remove: z.boolean().optional(),
       }),
     )
     .max(100)
@@ -250,6 +268,12 @@ const receiptBody = z.object({
         /** F-06: este item do recebimento segue direto para uso. */
         directUse: z.boolean().optional().default(false),
         /**
+         * Normalização: item sem produto (ou com produto errado) pode ser
+         * vinculado a um produto existente no recebimento. O vínculo é
+         * permanente no item da solicitação.
+         */
+        productId: z.string().trim().min(1).nullish(),
+        /**
          * Cadastro rápido: item sem produto no catálogo pode ser recebido
          * criando o produto aqui mesmo, apenas com o nome. Ele nasce marcado
          * como incompleto até a correção no catálogo.
@@ -286,6 +310,7 @@ const REQUEST_SELECT = `
          r.flow_revision, r.department_id, r.purchase_mode,
          r.payment_method_id, r.payment_terms,
          r.purchasing_authorized_by, r.purchasing_authorized_at,
+         r.triage_completed_at, r.triage_completed_by,
          l.name AS location_name, l.path AS location_path,
          rq.name AS requester_name,
          ap.name AS approved_by_name,
@@ -298,6 +323,7 @@ const REQUEST_SELECT = `
          pm.requires_authorization AS payment_requires_authorization,
          pm.requires_quote AS payment_requires_quote,
          pa.name AS purchasing_authorized_by_name,
+         tr.name AS triage_completed_by_name,
          (SELECT COUNT(*) FROM purchase_request_items i WHERE i.request_id = r.id) AS item_count,
          (SELECT COUNT(*) FROM purchase_request_items i WHERE i.request_id = r.id AND i.status = 'pending') AS pending_item_count,
          (SELECT COUNT(*) FROM purchase_request_items i WHERE i.request_id = r.id AND i.purchase_mode = 'quote'
@@ -321,7 +347,8 @@ const REQUEST_SELECT = `
     LEFT JOIN users da ON da.id = r.direct_authorized_by
     LEFT JOIN departments dep ON dep.id = r.department_id
     LEFT JOIN payment_methods pm ON pm.id = r.payment_method_id
-    LEFT JOIN users pa ON pa.id = r.purchasing_authorized_by`;
+    LEFT JOIN users pa ON pa.id = r.purchasing_authorized_by
+    LEFT JOIN users tr ON tr.id = r.triage_completed_by`;
 
 router.get("/", requirePermission(PERMISSIONS.PURCHASES_VIEW), async (c) => {
   const user = currentUser(c);
@@ -352,8 +379,16 @@ router.get("/", requirePermission(PERMISSIONS.PURCHASES_VIEW), async (c) => {
     params.push(status);
   }
   if (stage) {
-    clauses.push("r.approval_stage = ?");
-    params.push(stage);
+    // A triagem v3 compartilha a etapa armazenada `purchasing`; o marco
+    // `triage_completed_at` separa a fila do comprador da fila do gestor.
+    if (stage === "triage") {
+      clauses.push("r.flow_revision = 3 AND r.approval_stage = 'purchasing' AND r.triage_completed_at IS NULL");
+    } else if (stage === "purchasing") {
+      clauses.push("r.approval_stage = 'purchasing' AND (r.flow_revision <> 3 OR r.triage_completed_at IS NOT NULL)");
+    } else {
+      clauses.push("r.approval_stage = ?");
+      params.push(stage);
+    }
   }
   if (mine) {
     clauses.push("r.requester_id = ?");
@@ -362,12 +397,18 @@ router.get("/", requirePermission(PERMISSIONS.PURCHASES_VIEW), async (c) => {
   if (pendingApproval) {
     clauses.push("r.status = 'pending_approval'");
     if (!stage) {
-      // Cada perfil vê a fila da etapa que pode decidir; o legado continua
-      // aparecendo para quem aprova a solicitação.
-      if (user.permissions.has(PERMISSIONS.PURCHASES_AUTHORIZE) && !user.permissions.has(PERMISSIONS.PURCHASES_APPROVE)) {
-        clauses.push("r.approval_stage = 'direction'");
-      } else if (user.permissions.has(PERMISSIONS.PURCHASES_DIRECT) && !user.permissions.has(PERMISSIONS.PURCHASES_APPROVE)) {
+      // Cada perfil vê a fila da etapa que pode decidir. A triagem v3 é feita
+      // por quem tem `purchases.order` ou `purchases.authorize`; o gestor de
+      // Compras vê a etapa `purchasing` inteira (triagem + aprovação).
+      const canApprove = user.permissions.has(PERMISSIONS.PURCHASES_APPROVE);
+      if (!canApprove && user.permissions.has(PERMISSIONS.PURCHASES_AUTHORIZE)) {
         clauses.push("r.approval_stage = 'purchasing'");
+      } else if (!canApprove && user.permissions.has(PERMISSIONS.PURCHASES_ORDER)) {
+        // Comprador: vê a triagem v3 e, por compatibilidade, qualquer pendência
+        // dos fluxos v1/v2. A aprovação v3 depois da triagem é do gestor.
+        clauses.push(
+          "(r.flow_revision <> 3 OR (r.approval_stage = 'purchasing' AND r.triage_completed_at IS NULL))",
+        );
       } else {
         clauses.push("r.approval_stage IN ('manager','direction','purchasing')");
       }
@@ -394,8 +435,11 @@ router.get("/", requirePermission(PERMISSIONS.PURCHASES_VIEW), async (c) => {
     `${REQUEST_SELECT} ${where}
       ORDER BY CASE r.status WHEN 'pending_approval' THEN 0 WHEN 'draft' THEN 1
                              WHEN 'partially_received' THEN 2 WHEN 'ordered' THEN 3 ELSE 4 END,
-               CASE r.approval_stage WHEN 'manager' THEN 0 WHEN 'direction' THEN 1
-                                     WHEN 'purchasing' THEN 2 WHEN 'award' THEN 3 ELSE 4 END,
+               CASE WHEN r.flow_revision = 3 AND r.approval_stage = 'purchasing' AND r.triage_completed_at IS NULL THEN 0
+                    WHEN r.approval_stage = 'purchasing' THEN 1
+                    WHEN r.approval_stage = 'manager' THEN 2
+                    WHEN r.approval_stage = 'direction' THEN 3
+                    WHEN r.approval_stage = 'award' THEN 4 ELSE 5 END,
                r.created_at DESC
       LIMIT ? OFFSET ?`,
     [...params, page.pageSize, offsetOf(page)],
@@ -417,9 +461,12 @@ router.get("/overview", requirePermission(PERMISSIONS.PURCHASES_VIEW), async (c)
   const counts = await oneRow<Record<string, number>>(
     c.env.DB,
     `SELECT
+       SUM(CASE WHEN r.status = 'pending_approval' AND r.flow_revision = 3
+                 AND r.approval_stage = 'purchasing' AND r.triage_completed_at IS NULL THEN 1 ELSE 0 END) AS triage_queue,
        SUM(CASE WHEN r.status = 'pending_approval' AND r.approval_stage = 'manager' THEN 1 ELSE 0 END) AS manager_queue,
        SUM(CASE WHEN r.status = 'pending_approval' AND r.approval_stage = 'direction' THEN 1 ELSE 0 END) AS direction_queue,
-       SUM(CASE WHEN r.status = 'pending_approval' AND r.approval_stage = 'purchasing' THEN 1 ELSE 0 END) AS purchasing_queue,
+       SUM(CASE WHEN r.status = 'pending_approval' AND r.approval_stage = 'purchasing'
+                 AND (r.flow_revision <> 3 OR r.triage_completed_at IS NOT NULL) THEN 1 ELSE 0 END) AS purchasing_queue,
        SUM(CASE WHEN r.status IN ('approved','quoting','quote_approved') AND r.approval_stage = 'buyer' THEN 1 ELSE 0 END) AS buyer_queue,
        SUM(CASE WHEN r.status = 'quote_returned' THEN 1 ELSE 0 END) AS award_queue,
        SUM(CASE WHEN r.status IN ('ordered','partially_received') THEN 1 ELSE 0 END) AS receipt_queue,
@@ -457,6 +504,7 @@ router.get("/overview", requirePermission(PERMISSIONS.PURCHASES_VIEW), async (c)
 
   return c.json({
     queues: {
+      triage: Number(counts?.triage_queue ?? 0),
       manager: Number(counts?.manager_queue ?? 0),
       direction: Number(counts?.direction_queue ?? 0),
       purchasing: Number(counts?.purchasing_queue ?? 0),
@@ -501,6 +549,10 @@ router.get("/options", requirePermission(PERMISSIONS.PURCHASES_VIEW), async (c) 
     c.env.DB,
     `SELECT id, code, name, is_purchasing FROM departments WHERE is_active = 1 ORDER BY name`,
   );
+  const costCenters = await allRows<Record<string, unknown>>(
+    c.env.DB,
+    `SELECT id, code, name FROM cost_centers WHERE is_active = 1 ORDER BY code`,
+  );
   return c.json({
     paymentMethods: paymentMethods.map((row) => ({
       id: String(row.id),
@@ -517,6 +569,11 @@ router.get("/options", requirePermission(PERMISSIONS.PURCHASES_VIEW), async (c) 
       code: String(row.code),
       name: String(row.name),
       isPurchasing: Number(row.is_purchasing) === 1,
+    })),
+    costCenters: costCenters.map((row) => ({
+      id: String(row.id),
+      code: String(row.code),
+      name: String(row.name),
     })),
   });
 });
@@ -927,14 +984,131 @@ router.post("/", requirePermission(PERMISSIONS.PURCHASES_CREATE), async (c) => {
   await assertItemsReference(c.env.DB, body.items);
 
   const isV3 = body.workflowVersion === 2 && body.flowRevision === 3;
-  const departmentId = isV3 ? await resolveRequestDepartment(c.env.DB, user, body.departmentId ?? null) : null;
-  const payment =
-    isV3 && body.paymentMethodId ? await loadPaymentMethod(c.env.DB, body.paymentMethodId) : null;
-  if (isV3 && body.submit && !payment) {
-    throw badRequest("Selecione a forma de pagamento antes de enviar a solicitação.");
+
+  if (isV3) {
+    // v3: campos preenchidos automaticamente ou depois por Compras/Gestão
+    const departmentId = user.departmentId ?? null;
+    const purchaseMode = null; // definido na autorização de Compras
+
+    // v3: validação de justificativa obrigatória no envio
+    if (body.submit && (!body.justification || !body.justification.trim())) {
+      throw badRequest("A justificativa da compra é obrigatória para enviar a solicitação.");
+    }
+
+    const id = uuid();
+    const ts = nowIso();
+    const code = buildCode("SC", await nextCounter(c.env.DB, "purchase_request"));
+    const autoApproved = body.submit && !(await approvalRequired(c.env.DB));
+    const status = body.submit ? "pending_approval" : "draft";
+    // A etapa armazenada continua `purchasing`; sem `triage_completed_at` a API
+    // expõe `triage` e a solicitação entra na fila do comprador.
+    const approvalStage = "purchasing";
+    const displayStage = "triage";
+    const info = clientInfo(c);
+
+    const itemStatements = body.items.map((item) =>
+      insertStatement(c.env.DB, "purchase_request_items", {
+        id: uuid(),
+        request_id: id,
+        product_id: item.productId ?? null,
+        description: item.description ?? null,
+        qty_milli: Math.round(item.qty * 1000),
+        uom_id: item.uomId ?? null,
+        qty_received_milli: 0,
+        status: "pending",
+        qty_approved_milli: null,
+        purchase_mode: null,
+        notes: item.notes ?? null,
+        created_at: ts,
+        updated_at: ts,
+      }),
+    );
+
+    await c.env.DB.batch([
+      insertStatement(c.env.DB, "purchase_requests", {
+        id,
+        code,
+        requester_id: user.id,
+        location_id: body.locationId ?? null,
+        justification: body.justification ?? null,
+        priority: body.priority,
+        status,
+        desired_date: body.desiredDate ?? null,
+        approval_notes: autoApproved ? AUTO_APPROVAL_NOTE : null,
+        approved_at: null,
+        notes: body.notes ?? null,
+        workflow_version: body.workflowVersion,
+        flow_revision: body.flowRevision,
+        approval_stage: approvalStage,
+        routing: "standard",
+        department_id: departmentId,
+        purchase_mode: purchaseMode,
+        payment_method_id: null,
+        payment_terms: null,
+        budget_status: "not_required",
+        budget_notes: null,
+        cost_center_id: null,
+        gl_account: null,
+        finance_status: "not_required",
+        created_at: ts,
+        updated_at: ts,
+      }),
+      ...itemStatements,
+      auditStatement(c.env.DB, {
+        actor: { id: user.id, name: user.name },
+        module: "purchases",
+        action: autoApproved ? "purchase_request.auto_approved" : "purchase_request.create",
+        entityType: "purchase_request",
+        entityId: id,
+        after: {
+          code,
+          status,
+          approvalStage: displayStage,
+          workflowVersion: body.workflowVersion,
+          flowRevision: body.flowRevision,
+          departmentId,
+          purchaseMode,
+          paymentMethodId: null,
+          itemCount: body.items.length,
+          autoApproved,
+        },
+        reason: autoApproved ? AUTO_APPROVAL_NOTE : null,
+        ...info,
+      }),
+    ]);
+
+    if (status === "pending_approval") {
+      await notifyApprovers(c, {
+        requestId: id,
+        code,
+        justification: body.justification ?? null,
+        requesterId: user.id,
+        requesterName: user.name,
+        createdAt: ts,
+        departmentId,
+        stage: "triage",
+      });
+    }
+
+    return c.json(
+      {
+        id,
+        code,
+        status,
+        approvalStage: displayStage,
+        workflowVersion: body.workflowVersion,
+        flowRevision: body.flowRevision,
+      },
+      201,
+    );
   }
+
+  // Fluxos legados (v1/v2) - paymentMethodId opcional (compatibilidade com testes/existentes)
+  const departmentId = body.departmentId ?? user.departmentId ?? null;
   const purchaseMode = body.purchaseMode ?? "quote";
-  if (isV3 && purchaseMode === "direct" && payment?.requires_quote) {
+  const payment = body.paymentMethodId ? await loadPaymentMethod(c.env.DB, body.paymentMethodId) : null;
+
+  if (purchaseMode === "direct" && payment?.requires_quote) {
     throw badRequest(
       `A forma de pagamento "${payment.name}" exige cotação ou orçamento e não permite compra direta.`,
     );
@@ -944,12 +1118,10 @@ router.post("/", requirePermission(PERMISSIONS.PURCHASES_CREATE), async (c) => {
   const ts = nowIso();
   const code = buildCode("SC", await nextCounter(c.env.DB, "purchase_request"));
   const autoApproved = body.submit && !(await approvalRequired(c.env.DB));
-  // No fluxo v3 a aprovação automática dispensa apenas o gestor do setor; a
-  // autorização do responsável de Compras continua obrigatória.
-  const autoApprovedLegacy = autoApproved && !isV3;
+  const autoApprovedLegacy = autoApproved;
   const status = body.submit ? (autoApprovedLegacy ? "approved" : "pending_approval") : "draft";
   const approvalStage =
-    status === "draft" ? "manager" : autoApprovedLegacy ? "buyer" : isV3 && autoApproved ? "purchasing" : "manager";
+    status === "draft" ? "manager" : autoApprovedLegacy ? "buyer" : "manager";
   const info = clientInfo(c);
 
   const itemStatements = body.items.map((item) =>
@@ -963,7 +1135,7 @@ router.post("/", requirePermission(PERMISSIONS.PURCHASES_CREATE), async (c) => {
       qty_received_milli: 0,
       status: autoApprovedLegacy ? "approved" : "pending",
       qty_approved_milli: autoApprovedLegacy ? Math.round(item.qty * 1000) : null,
-      purchase_mode: autoApprovedLegacy ? "direct" : isV3 ? itemRoutingMode(purchaseMode) : null,
+      purchase_mode: autoApprovedLegacy ? "direct" : null,
       notes: item.notes ?? null,
       created_at: ts,
       updated_at: ts,
@@ -988,10 +1160,10 @@ router.post("/", requirePermission(PERMISSIONS.PURCHASES_CREATE), async (c) => {
       approval_stage: approvalStage,
       routing: "standard",
       department_id: departmentId,
-      purchase_mode: isV3 ? purchaseMode : null,
+      purchase_mode: null,
       payment_method_id: payment?.id ?? null,
       payment_terms: body.paymentTerms ?? null,
-      budget_status: isV3 ? "not_required" : autoApproved ? "not_required" : "pending",
+      budget_status: autoApproved ? "not_required" : "pending",
       budget_notes: body.budgetNotes ?? null,
       cost_center_id: body.costCenterId ?? null,
       gl_account: body.glAccount ?? null,
@@ -1013,7 +1185,7 @@ router.post("/", requirePermission(PERMISSIONS.PURCHASES_CREATE), async (c) => {
         workflowVersion: body.workflowVersion,
         flowRevision: body.workflowVersion === 1 ? 1 : body.flowRevision,
         departmentId,
-        purchaseMode: isV3 ? purchaseMode : null,
+        purchaseMode,
         paymentMethodId: payment?.id ?? null,
         itemCount: body.items.length,
         autoApproved,
@@ -1023,8 +1195,6 @@ router.post("/", requirePermission(PERMISSIONS.PURCHASES_CREATE), async (c) => {
     }),
   ]);
 
-  // Criar já enviando para aprovação precisa avisar quem aprova -- sem isso a
-  // solicitação ficaria pendente e invisível até alguém abrir a lista.
   if (status === "pending_approval") {
     await notifyApprovers(c, {
       requestId: id,
@@ -1061,43 +1231,52 @@ router.patch("/:id", requirePermission(PERMISSIONS.PURCHASES_CREATE), async (c) 
   if (!["draft", "pending_approval"].includes(before.status)) {
     throw conflict(`Uma solicitação ${before.status} não pode ser editada.`);
   }
-  if (before.requester_id !== user.id && !user.permissions.has(PERMISSIONS.PURCHASES_APPROVE)) {
+  const isRequester = before.requester_id === user.id;
+  const isApprover = user.permissions.has(PERMISSIONS.PURCHASES_APPROVE) || user.permissions.has(PERMISSIONS.PURCHASES_AUTHORIZE);
+  if (!isRequester && !isApprover) {
     throw conflict("Somente o solicitante ou um aprovador pode editar esta solicitação.");
   }
   if (body.locationId) {
     assertLocationAllowed(user, body.locationId);
     await assertLocationActive(c.env.DB, body.locationId);
   }
-  if (body.costCenterId) await assertCostCenterActive(c.env.DB, body.costCenterId);
-  const departmentId =
-    body.departmentId !== undefined && before.flow_revision === 3
-      ? await resolveRequestDepartment(c.env.DB, user, body.departmentId ?? null)
-      : undefined;
-  const payment = body.paymentMethodId
-    ? await loadPaymentMethod(c.env.DB, body.paymentMethodId)
-    : null;
-  if (before.flow_revision === 3 && body.purchaseMode === "direct" && payment?.requires_quote) {
-    throw badRequest(
-      `A forma de pagamento "${payment.name}" exige cotação ou orçamento e não permite compra direta.`,
-    );
-  }
+
+  const isV3 = before.flow_revision === 3;
+  // v3: solicitante NÃO pode editar campos administrativos/financeiros
+  // Esses campos são preenchidos pelo Compras/Gestão nas etapas seguintes
+  const allowAdminFields = isApprover && !isRequester;
 
   const ts = nowIso();
-  const updated = {
+  const updated: Record<string, unknown> = {
     ...(body.locationId !== undefined ? { location_id: body.locationId ?? null } : {}),
     ...(body.justification !== undefined ? { justification: body.justification ?? null } : {}),
     ...(body.priority !== undefined ? { priority: body.priority } : {}),
     ...(body.desiredDate !== undefined ? { desired_date: body.desiredDate ?? null } : {}),
     ...(body.notes !== undefined ? { notes: body.notes ?? null } : {}),
-    ...(body.costCenterId !== undefined ? { cost_center_id: body.costCenterId ?? null } : {}),
-    ...(body.glAccount !== undefined ? { gl_account: body.glAccount ?? null } : {}),
-    ...(body.budgetNotes !== undefined ? { budget_notes: body.budgetNotes ?? null } : {}),
-    ...(departmentId !== undefined ? { department_id: departmentId } : {}),
-    ...(body.purchaseMode !== undefined ? { purchase_mode: body.purchaseMode } : {}),
-    ...(body.paymentMethodId !== undefined ? { payment_method_id: payment?.id ?? null } : {}),
-    ...(body.paymentTerms !== undefined ? { payment_terms: body.paymentTerms ?? null } : {}),
-    updated_at: ts,
   };
+
+  if (allowAdminFields) {
+    if (body.costCenterId) await assertCostCenterActive(c.env.DB, body.costCenterId);
+    Object.assign(updated, {
+      ...(body.costCenterId !== undefined ? { cost_center_id: body.costCenterId ?? null } : {}),
+      ...(body.glAccount !== undefined ? { gl_account: body.glAccount ?? null } : {}),
+      ...(body.budgetNotes !== undefined ? { budget_notes: body.budgetNotes ?? null } : {}),
+      ...(body.departmentId !== undefined && isV3 ? { department_id: body.departmentId ?? null } : {}),
+      ...(body.purchaseMode !== undefined ? { purchase_mode: body.purchaseMode } : {}),
+      ...(body.paymentMethodId !== undefined ? { payment_method_id: body.paymentMethodId ?? null } : {}),
+      ...(body.paymentTerms !== undefined ? { payment_terms: body.paymentTerms ?? null } : {}),
+    });
+    if (body.paymentMethodId && body.purchaseMode === "direct") {
+      const payment = await loadPaymentMethod(c.env.DB, body.paymentMethodId);
+      if (payment?.requires_quote) {
+        throw badRequest(
+          `A forma de pagamento "${payment.name}" exige cotação ou orçamento e não permite compra direta.`,
+        );
+      }
+    }
+  }
+
+  updated.updated_at = ts;
 
   const info = clientInfo(c);
   await c.env.DB.batch([
@@ -1132,18 +1311,24 @@ router.post("/:id/submit", requirePermission(PERMISSIONS.PURCHASES_CREATE), asyn
     if (!request.department_id) {
       throw badRequest("Vincule a solicitação a um setor antes de enviá-la.");
     }
-    if (!request.payment_method_id) {
-      throw badRequest("Selecione a forma de pagamento antes de enviar a solicitação.");
+    // v3: justificativa obrigatória no envio
+    if (!request.justification || !request.justification.trim()) {
+      throw badRequest("A justificativa da compra é obrigatória para enviar a solicitação.");
     }
+    // v3: NÃO exige payment_method_id no envio (será definido na autorização de Compras)
   }
+  // Fluxos legados: payment_method_id opcional (compatibilidade)
 
   const ts = nowIso();
   const info = clientInfo(c);
   const autoApproved = !(await approvalRequired(c.env.DB));
-  // v3: a dispensa automática vale só para o gestor; Compras sempre autoriza.
+  // v3: a dispensa automática não pula a triagem nem a aprovação de Compras;
+  // ela apenas registra a política. O pagamento e o centro de custo ainda
+  // precisam ser formalizados pelo gestor de Compras.
   const autoApprovedLegacy = autoApproved && !isV3;
   const nextStatus = autoApprovedLegacy ? "approved" : "pending_approval";
-  const nextStage = autoApprovedLegacy ? "buyer" : isV3 && autoApproved ? "purchasing" : "manager";
+  const nextStage = autoApprovedLegacy ? "buyer" : isV3 ? "purchasing" : "manager";
+  const displayStage = isV3 && nextStage === "purchasing" ? "triage" : nextStage;
 
   const statements: D1PreparedStatement[] = [
     updateStatement(c.env.DB, "purchase_requests", id, {
@@ -1179,7 +1364,7 @@ router.post("/:id/submit", requirePermission(PERMISSIONS.PURCHASES_CREATE), asyn
       entityType: "purchase_request",
       entityId: id,
       before: { status: "draft" },
-      after: { status: nextStatus, approvalStage: nextStage, autoApproved },
+      after: { status: nextStatus, approvalStage: displayStage, autoApproved },
       reason: autoApproved ? AUTO_APPROVAL_NOTE : null,
       ...info,
     }),
@@ -1196,13 +1381,13 @@ router.post("/:id/submit", requirePermission(PERMISSIONS.PURCHASES_CREATE), asyn
       requesterName: user.name,
       createdAt: ts,
       departmentId: request.department_id,
-      stage: nextStage,
+      stage: displayStage,
     });
   }
 
   await c.env.DB.batch(statements);
 
-  return c.json({ ok: true, status: nextStatus, approvalStage: nextStage });
+  return c.json({ ok: true, status: nextStatus, approvalStage: displayStage });
 });
 
 /**
@@ -1227,7 +1412,11 @@ async function notifyApprovers(
   let candidates: string[];
   let title = `Solicitação ${input.code} aguarda aprovação`;
 
-  if (input.stage === "purchasing") {
+  if (input.stage === "triage") {
+    // v3: a solicitação nasce na triagem do comprador/analista de Compras.
+    candidates = await usersWithPermission(db, PERMISSIONS.PURCHASES_ORDER);
+    title = `Solicitação ${input.code} aguarda triagem de Compras`;
+  } else if (input.stage === "purchasing") {
     // Fluxo v3: a bola está com o responsável do setor de Compras.
     candidates = await purchasingResponsibleIds(db);
     title = `Solicitação ${input.code} aguarda autorização do setor de Compras`;
@@ -1364,17 +1553,19 @@ router.post("/:id/decide", async (c) => {
 
   // F-01: aprovação com item marcado para cotação segue como "em cotação" -- a
   // bola fica com o comprador até registrar propostas e devolver ao gestor.
+  // Aplica-se quando o gestor define explicitamente purchaseMode nos itens (fluxos v1/v2/v3).
   let effectiveStatus: string = body.decision;
   if (body.decision === "approved") {
-    const hasQuoteItems =
-      (body.items ?? []).some((item) => item.purchaseMode === "quote") ||
+    const hasExplicitQuoteItems = (body.items ?? []).some((item) => item.purchaseMode === "quote");
+    const hasImplicitQuoteItems =
+      !hasExplicitQuoteItems &&
       (await countRows(
         c.env.DB,
         `SELECT COUNT(*) FROM purchase_request_items
           WHERE request_id = ? AND purchase_mode = 'quote' AND status NOT IN ('rejected','cancelled')`,
         [id],
       )) > 0;
-    if (hasQuoteItems) effectiveStatus = "quoting";
+    if (hasExplicitQuoteItems || hasImplicitQuoteItems) effectiveStatus = "quoting";
   }
 
   statements.push(
@@ -1887,33 +2078,6 @@ async function loadPaymentMethod(db: D1Database, id: string): Promise<PaymentMet
   return row;
 }
 
-/** Setor do solicitante ou setor que ele gerencia; nunca um setor alheio. */
-async function resolveRequestDepartment(
-  db: D1Database,
-  user: AuthUser,
-  requested: string | null,
-): Promise<string> {
-  if (requested && requested !== user.departmentId && !managesDepartment(user, requested)) {
-    throw forbidden(
-      "Você não pode abrir solicitação para este setor. Solicite ao gestor responsável ou ao administrador.",
-    );
-  }
-  const departmentId = requested ?? user.departmentId;
-  if (!departmentId) {
-    throw badRequest(
-      "Seu usuário não está vinculado a um setor. Solicite ao administrador a vinculação antes de abrir uma compra.",
-    );
-  }
-  const department = await oneRow<{ id: string; name: string; is_active: number }>(
-    db,
-    `SELECT id, name, is_active FROM departments WHERE id = ?`,
-    [departmentId],
-  );
-  if (!department) throw notFound("Setor não encontrado.");
-  if (department.is_active !== 1) throw badRequest("O setor informado está inativo.");
-  return departmentId;
-}
-
 async function departmentManagerIds(db: D1Database, departmentId: string): Promise<string[]> {
   const rows = await allRows<{ id: string }>(
     db,
@@ -2008,13 +2172,153 @@ async function stageNotifications(
   return { statements, emailIds };
 }
 
+type ItemDecision = NonNullable<z.infer<typeof decideBody>["items"]>[number];
+
+interface RequestItemRow {
+  id: string;
+  product_id: string | null;
+  description: string | null;
+  qty_milli: number;
+  uom_id: string | null;
+  qty_approved_milli: number | null;
+  purchase_mode: string | null;
+  status: string;
+  notes: string | null;
+}
+
+/**
+ * Aplica os ajustes de itens enviados pela triagem ou pela aprovação de Compras.
+ *
+ * A triagem pode corrigir nome/descrição, quantidade, unidade, vínculo com o
+ * catálogo e remover itens; a aprovação do gestor também pode definir a
+ * quantidade aprovada e o modo de compra. A validação roda sobre o estado final
+ * de todos os itens, não só sobre os alterados, para impedir que uma edição
+ * deixe a solicitação sem item ativo ou com referência inválida.
+ */
+async function prepareItemDecisions(
+  db: D1Database,
+  requestId: string,
+  decisions: ItemDecision[],
+  options: { allowApproval: boolean; ts: string },
+): Promise<D1PreparedStatement[]> {
+  if (decisions.length === 0) return [];
+
+  const rows = await allRows<RequestItemRow>(
+    db,
+    `SELECT id, product_id, description, qty_milli, uom_id, qty_approved_milli,
+            purchase_mode, status, notes
+       FROM purchase_request_items WHERE request_id = ?`,
+    [requestId],
+  );
+  if (rows.length === 0) throw conflict("A solicitação não possui itens para ajustar.");
+
+  const byId = new Map(rows.map((row) => [row.id, { ...row }]));
+  const touched = new Set<string>();
+
+  for (const decision of decisions) {
+    const item = byId.get(decision.itemId);
+    if (!item) throw badRequest("Um dos itens informados não pertence a esta solicitação.");
+    if (item.status === "received") throw conflict("Item já recebido não pode ser ajustado.");
+    if (!options.allowApproval && decision.qtyApproved !== undefined) {
+      throw conflict("A triagem não define a quantidade aprovada; isso é feito na aprovação de Compras.");
+    }
+    if (!options.allowApproval && decision.purchaseMode !== undefined) {
+      throw conflict("A triagem não define o modo de compra do item; isso é feito na aprovação de Compras.");
+    }
+    if (!options.allowApproval && decision.status === "approved") {
+      throw conflict("A triagem não aprova itens; encaminhe a solicitação ao gestor de Compras.");
+    }
+
+    const next: RequestItemRow = { ...item };
+    if (decision.remove || decision.status === "cancelled") {
+      next.status = "cancelled";
+    } else if (decision.status !== undefined) {
+      next.status = decision.status;
+    }
+    if (decision.qty !== undefined) next.qty_milli = Math.round(decision.qty * 1000);
+    if (decision.qtyApproved !== undefined) {
+      next.qty_approved_milli = Math.round(decision.qtyApproved * 1000);
+    }
+    if (decision.description !== undefined) next.description = decision.description ?? null;
+    if (decision.uomId !== undefined) next.uom_id = decision.uomId ?? null;
+    if (decision.productId !== undefined) next.product_id = decision.productId ?? null;
+    if (decision.purchaseMode !== undefined) next.purchase_mode = decision.purchaseMode;
+    if (decision.notes !== undefined) next.notes = decision.notes ?? null;
+
+    if (next.qty_milli <= 0) throw badRequest("A quantidade do item deve ser maior que zero.");
+    if (next.qty_approved_milli !== null && next.qty_approved_milli > next.qty_milli) {
+      throw badRequest("A quantidade aprovada não pode ser maior que a quantidade solicitada.");
+    }
+
+    byId.set(item.id, next);
+    touched.add(item.id);
+  }
+
+  const finalItems = [...byId.values()];
+
+  // Produtos: existência, atividade e unidade padrão para itens vinculados.
+  const productIds = [...new Set(finalItems.map((item) => item.product_id).filter((id): id is string => !!id))];
+  const productUom = new Map<string, string>();
+  if (productIds.length > 0) {
+    const found = await allRows<{ id: string; is_active: number; uom_id: string }>(
+      db,
+      `SELECT id, is_active, uom_id FROM products WHERE id IN (${productIds.map(() => "?").join(",")})`,
+      productIds,
+    );
+    if (found.length !== productIds.length) throw badRequest("Um dos produtos informados não existe.");
+    if (found.some((product) => product.is_active !== 1)) {
+      throw badRequest("Produto inativo não pode ser vinculado à solicitação.");
+    }
+    for (const product of found) productUom.set(product.id, product.uom_id);
+    for (const item of finalItems) {
+      if (!touched.has(item.id) || !item.product_id) continue;
+      if (!item.uom_id) item.uom_id = productUom.get(item.product_id) ?? null;
+    }
+  }
+
+  const uomIds = [...new Set(finalItems.map((item) => item.uom_id).filter((id): id is string => !!id))];
+  if (uomIds.length > 0) {
+    const found = await allRows<{ id: string }>(
+      db,
+      `SELECT id FROM uoms WHERE id IN (${uomIds.map(() => "?").join(",")})`,
+      uomIds,
+    );
+    if (found.length !== uomIds.length) throw badRequest("Uma das unidades de medida informadas não existe.");
+  }
+
+  const active = finalItems.filter((item) => !["cancelled", "rejected"].includes(item.status));
+  if (active.length === 0) {
+    throw conflict("Mantenha ao menos um item ativo na solicitação antes de encaminhá-la.");
+  }
+  for (const item of active) {
+    if (!item.product_id && !(item.description ?? "").trim()) {
+      throw badRequest("Cada item precisa de um produto do catálogo ou de uma descrição.");
+    }
+  }
+
+  return finalItems
+    .filter((item) => touched.has(item.id))
+    .map((item) =>
+      updateStatement(db, "purchase_request_items", item.id, {
+        product_id: item.product_id,
+        description: item.description,
+        qty_milli: item.qty_milli,
+        uom_id: item.uom_id,
+        qty_approved_milli: item.qty_approved_milli,
+        purchase_mode: item.purchase_mode,
+        status: item.status,
+        notes: item.notes,
+        updated_at: options.ts,
+      }),
+    );
+}
+
 /**
  * Decisão do fluxo v3 (por setor).
  *
- * manager    -> gestor de um dos setores que gerencia aprova a necessidade;
- * purchasing -> responsável do setor de Compras escolhe cotação, orçamento ou
- *               compra direta e autoriza (a compra direta é uma decisão
- *               explícita, com permissão própria);
+ * triage     -> comprador/analista ajusta itens e encaminha ao gestor de Compras;
+ * purchasing -> gestor de Compras revisa, define pagamento/centro de custo e
+ *               autoriza cotação, orçamento ou compra direta;
  * buyer      -> comprador cota/pede; a etapa de recebimento confere e lança.
  *
  * A Direção não participa das novas solicitações: a autorização é do setor de
@@ -2030,6 +2334,8 @@ async function handleDepartmentWorkflowDecision(
   const ts = nowIso();
   const info = clientInfo(c);
   const stage = request.approval_stage;
+  const isTriage = request.flow_revision === 3 && stage === "purchasing" && !request.triage_completed_at;
+  const beforeStage = isTriage ? "triage" : stage;
 
   if (["received", "cancelled", "rejected"].includes(request.status) || stage === "completed") {
     throw conflict(`Uma solicitação ${request.status} não pode receber novas decisões.`);
@@ -2068,27 +2374,18 @@ async function handleDepartmentWorkflowDecision(
     }
 
     if (body.decision === "approved") {
-      const fallbackMode = itemRoutingMode(request.purchase_mode ?? "quote");
-      statements.push(
-        c.env.DB
-          .prepare(
-            `UPDATE purchase_request_items
-                SET status = 'approved',
-                    qty_approved_milli = COALESCE(qty_approved_milli, qty_milli),
-                    purchase_mode = COALESCE(purchase_mode, ?),
-                    updated_at = ?
-              WHERE request_id = ? AND status = 'pending'`,
-          )
-          .bind(fallbackMode, ts, id),
-      );
+      // Etapa legada: o gestor do setor aprovava a necessidade. No fluxo novo
+      // isso apenas encaminha para a triagem do comprador, sem aprovar itens.
       nextStage = "purchasing";
       nextStatus = "pending_approval";
       auditAction = "purchase_request.manager_approved";
       eventType = "purchase_request.manager_approved";
       requestPatch.manager_approved_by = user.id;
       requestPatch.manager_approved_at = ts;
-      mailTitle = `Solicitação ${request.code} aguarda autorização do setor de Compras`;
-      for (const recipient of await purchasingResponsibleIds(c.env.DB)) {
+      requestPatch.triage_completed_at = null;
+      requestPatch.triage_completed_by = null;
+      mailTitle = `Solicitação ${request.code} aguarda triagem de Compras`;
+      for (const recipient of await usersWithPermission(c.env.DB, PERMISSIONS.PURCHASES_ORDER)) {
         if (recipient !== user.id) notificationTargets.add(recipient);
       }
     } else if (body.decision === "rejected") {
@@ -2110,6 +2407,58 @@ async function handleDepartmentWorkflowDecision(
       if (request.requester_id !== user.id) notificationTargets.add(request.requester_id);
     } else {
       throw conflict("O gestor do setor só pode aprovar ou recusar a solicitação.");
+    }
+  } else if (isTriage) {
+    if (
+      !user.permissions.has(PERMISSIONS.PURCHASES_ORDER) &&
+      !user.permissions.has(PERMISSIONS.PURCHASES_AUTHORIZE)
+    ) {
+      throw conflict(
+        await permissionMessage(c.env.DB, PERMISSIONS.PURCHASES_ORDER, "fazer a triagem da solicitação"),
+      );
+    }
+    if (request.requester_id === user.id && !user.permissions.has(PERMISSIONS.SETTINGS_MANAGE)) {
+      throw conflict("Você não pode triar a sua própria solicitação.");
+    }
+
+    if (body.decision === "forward") {
+      statements.push(
+        ...(await prepareItemDecisions(c.env.DB, id, body.items ?? [], { allowApproval: false, ts })),
+      );
+      nextStatus = "pending_approval";
+      nextStage = "purchasing";
+      requestPatch.triage_completed_by = user.id;
+      requestPatch.triage_completed_at = ts;
+      auditAction = "purchase_request.triage_completed";
+      eventType = "purchase_request.triage_completed";
+      mailTitle = `Solicitação ${request.code} aguarda aprovação do gestor de Compras`;
+      mailBody =
+        body.notes ??
+        "Triagem concluída. Revise os itens, a forma de pagamento e o centro de custo antes de liberar o comprador.";
+      for (const recipient of await purchasingResponsibleIds(c.env.DB)) {
+        if (recipient !== user.id) notificationTargets.add(recipient);
+      }
+    } else if (body.decision === "rejected") {
+      statements.push(
+        c.env.DB
+          .prepare(
+            `UPDATE purchase_request_items SET status = 'rejected', updated_at = ?
+              WHERE request_id = ? AND status IN ('pending','approved')`,
+          )
+          .bind(ts, id),
+      );
+      nextStatus = "rejected";
+      nextStage = "completed";
+      auditAction = "purchase_request.rejected";
+      eventType = "purchase_request.rejected";
+      requestPatch.budget_status = "rejected";
+      requestPatch.finance_status = "not_required";
+      requestPatch.triage_completed_by = user.id;
+      requestPatch.triage_completed_at = ts;
+      mailTitle = `Solicitação ${request.code} recusada na triagem de Compras`;
+      if (request.requester_id !== user.id) notificationTargets.add(request.requester_id);
+    } else {
+      throw conflict("A triagem só pode encaminhar a solicitação ao gestor de Compras ou recusá-la.");
     }
   } else if (stage === "purchasing") {
     if (!user.permissions.has(PERMISSIONS.PURCHASES_AUTHORIZE)) {
@@ -2150,6 +2499,24 @@ async function handleDepartmentWorkflowDecision(
       requestPatch.finance_status = "not_required";
       mailTitle = `Solicitação ${request.code} recusada pelo setor de Compras`;
       if (request.requester_id !== user.id) notificationTargets.add(request.requester_id);
+    } else if (body.decision === "request_alignment") {
+      // O gestor de Compras pode pedir um alinhamento externo (com o
+      // solicitante e/ou quem triou) sem sair da etapa: a solicitação continua
+      // na fila de Compras e o pedido fica registrado na ficha e na trilha.
+      const alignmentNote = body.notes?.trim();
+      if (!alignmentNote || alignmentNote.length < 5) {
+        throw badRequest("Descreva o que precisa ser alinhado com o solicitante.");
+      }
+      nextStatus = "pending_approval";
+      nextStage = "purchasing";
+      auditAction = "purchase_request.alignment_requested";
+      eventType = "purchase_request.alignment_requested";
+      mailTitle = `Solicitação ${request.code} aguarda alinhamento com o solicitante`;
+      mailBody = alignmentNote;
+      if (request.requester_id !== user.id) notificationTargets.add(request.requester_id);
+      if (request.triage_completed_by && request.triage_completed_by !== user.id) {
+        notificationTargets.add(request.triage_completed_by);
+      }
     } else if (body.decision === "approved" || body.decision === "authorize_direct") {
       if (mode === "direct") {
         if (!user.permissions.has(PERMISSIONS.PURCHASES_DIRECT)) {
@@ -2165,13 +2532,19 @@ async function handleDepartmentWorkflowDecision(
       }
       if (!payment) throw badRequest("Selecione a forma de pagamento antes de autorizar a compra.");
 
+      // Ajustes finais do gestor: quantidade aprovada, modo por item, descrição,
+      // unidade e remoção. A validação roda antes de qualquer gravação.
+      statements.push(
+        ...(await prepareItemDecisions(c.env.DB, id, body.items ?? [], { allowApproval: true, ts })),
+      );
+
       statements.push(
         c.env.DB
           .prepare(
             `UPDATE purchase_request_items
                 SET status = 'approved',
                     qty_approved_milli = COALESCE(qty_approved_milli, qty_milli),
-                    purchase_mode = ?,
+                    purchase_mode = COALESCE(purchase_mode, ?),
                     updated_at = ?
               WHERE request_id = ? AND status NOT IN ('rejected','cancelled','received')`,
           )
@@ -2181,6 +2554,12 @@ async function handleDepartmentWorkflowDecision(
       requestPatch.purchase_mode = mode;
       requestPatch.payment_method_id = payment.id;
       if (body.paymentTerms !== undefined) requestPatch.payment_terms = body.paymentTerms ?? null;
+      if (body.costCenterId !== undefined) {
+        if (body.costCenterId) await assertCostCenterActive(c.env.DB, body.costCenterId);
+        requestPatch.cost_center_id = body.costCenterId ?? null;
+      }
+      if (body.glAccount !== undefined) requestPatch.gl_account = body.glAccount ?? null;
+      if (body.budgetNotes !== undefined) requestPatch.budget_notes = body.budgetNotes ?? null;
       requestPatch.purchasing_authorized_by = user.id;
       requestPatch.purchasing_authorized_at = ts;
       requestPatch.approved_by = user.id;
@@ -2221,6 +2600,12 @@ async function handleDepartmentWorkflowDecision(
   });
   statements.push(...staged.statements);
 
+  // A etapa exibida deriva do marco de triagem: `purchasing` sem marco é a
+  // triagem; com marco, é a aprovação do gestor de Compras.
+  const triageAfter =
+    "triage_completed_at" in requestPatch ? requestPatch.triage_completed_at : request.triage_completed_at;
+  const responseStage = nextStage === "purchasing" && !triageAfter ? "triage" : nextStage;
+
   statements.push(
     updateStatement(c.env.DB, "purchase_requests", id, {
       ...requestPatch,
@@ -2234,13 +2619,14 @@ async function handleDepartmentWorkflowDecision(
       action: auditAction,
       entityType: "purchase_request",
       entityId: id,
-      before: { status: request.status, approvalStage: stage },
+      before: { status: request.status, approvalStage: beforeStage },
       after: {
         status: nextStatus,
-        approvalStage: nextStage,
+        approvalStage: responseStage,
         decision: body.decision,
         purchaseMode: requestPatch.purchase_mode ?? request.purchase_mode,
         paymentMethodId: requestPatch.payment_method_id ?? request.payment_method_id,
+        itemDecisions: body.items ?? [],
       },
       reason: body.notes ?? null,
       ...info,
@@ -2258,7 +2644,7 @@ async function handleDepartmentWorkflowDecision(
           requestId: id,
           code: request.code,
           status: nextStatus,
-          approvalStage: nextStage,
+          approvalStage: responseStage,
           decision: body.decision,
           purchaseMode: requestPatch.purchase_mode ?? request.purchase_mode,
           paymentMethodId: requestPatch.payment_method_id ?? request.payment_method_id,
@@ -2272,7 +2658,7 @@ async function handleDepartmentWorkflowDecision(
 
   await c.env.DB.batch(statements);
   await deliverOutbox(c.env.DB, staged.emailIds);
-  return c.json({ ok: true, status: nextStatus, approvalStage: nextStage });
+  return c.json({ ok: true, status: nextStatus, approvalStage: responseStage });
 }
 
 router.post("/:id/quotes", requirePermission(PERMISSIONS.PURCHASES_ORDER), async (c) => {
@@ -3617,6 +4003,10 @@ router.post("/:id/receipts", requirePermission(PERMISSIONS.PURCHASES_RECEIVE), a
   // `catalog_status = 'incomplete'`; o alerta e a notificação para quem cuida
   // do catálogo só saem quando o cadastro for completado.
   const quickProducts: { id: string; name: string; uomId: string; requestItemId: string }[] = [];
+  // Itens vinculados a um produto existente no recebimento. O vínculo é
+  // permanente no item da solicitação (e vale como correção de um vínculo
+  // anterior), para que o próximo recebimento e os relatórios usem o catálogo.
+  const normalizedProducts: { requestItemId: string; productId: string; uomId: string }[] = [];
   const quickNames = new Set<string>();
   let fallbackUomId: string | null = null;
   const resolveQuickUom = async (uomId: string | null | undefined): Promise<string> => {
@@ -3638,7 +4028,28 @@ router.post("/:id/receipts", requirePermission(PERMISSIONS.PURCHASES_RECEIVE), a
   for (const line of body.items) {
     const item = byId.get(line.requestItemId)!;
     let productId = item.product_id;
-    if (!productId) {
+
+    if (line.productId) {
+      // Normalização para um produto existente: também corrige um vínculo
+      // anterior. O item passa a usar o produto e a unidade padrão dele.
+      const product = await oneRow<{ id: string; is_active: number; uom_id: string }>(
+        c.env.DB,
+        `SELECT id, is_active, uom_id FROM products WHERE id = ?`,
+        [line.productId],
+      );
+      if (!product) throw badRequest("O produto informado para o recebimento não existe.");
+      if (product.is_active !== 1) {
+        throw badRequest("Produto inativo não pode ser vinculado ao recebimento.");
+      }
+      productId = product.id;
+      if (item.product_id !== product.id) {
+        normalizedProducts.push({
+          requestItemId: item.id,
+          productId: product.id,
+          uomId: product.uom_id,
+        });
+      }
+    } else if (!productId) {
       if (!line.newProduct) {
         throw badRequest(
           "Itens sem produto cadastrado (apenas descrição) não entram no estoque. Informe o nome para cadastrar o produto agora ou vincule um produto existente no catálogo.",
@@ -3660,6 +4071,9 @@ router.post("/:id/receipts", requirePermission(PERMISSIONS.PURCHASES_RECEIVE), a
         uomId: await resolveQuickUom(line.newProduct.uomId),
         requestItemId: item.id,
       });
+    }
+    if (!productId) {
+      throw badRequest("Não foi possível determinar o produto do item recebido.");
     }
     if (["rejected", "cancelled"].includes(item.status)) {
       throw conflict(`O item "${item.description ?? item.id}" esta ${item.status} e não pode ser recebido.`);
@@ -3768,6 +4182,16 @@ router.post("/:id/receipts", requirePermission(PERMISSIONS.PURCHASES_RECEIVE), a
     quickStatements.push(
       updateStatement(c.env.DB, "purchase_request_items", product.requestItemId, {
         product_id: product.id,
+        uom_id: product.uomId,
+        updated_at: ts,
+      }),
+    );
+  }
+  for (const product of normalizedProducts) {
+    quickStatements.push(
+      updateStatement(c.env.DB, "purchase_request_items", product.requestItemId, {
+        product_id: product.productId,
+        uom_id: product.uomId,
         updated_at: ts,
       }),
     );
@@ -4041,6 +4465,8 @@ interface RequestRow {
   purchase_mode: string | null;
   payment_method_id: string | null;
   purchasing_authorized_by: string | null;
+  triage_completed_at: string | null;
+  triage_completed_by: string | null;
 }
 
 async function requireRequest(db: D1Database, id: string | undefined): Promise<RequestRow> {
@@ -4049,7 +4475,8 @@ async function requireRequest(db: D1Database, id: string | undefined): Promise<R
     db,
     `SELECT id, code, status, priority, requester_id, location_id, justification,
             workflow_version, flow_revision, approval_stage, routing, manager_approved_by,
-            department_id, purchase_mode, payment_method_id, purchasing_authorized_by
+            department_id, purchase_mode, payment_method_id, purchasing_authorized_by,
+            triage_completed_at, triage_completed_by
        FROM purchase_requests WHERE id = ?`,
     [id],
   );
@@ -4126,6 +4553,13 @@ function findDuplicates(ids: string[]): string[] {
 function mapRequest(row: Record<string, unknown>) {
   const expected = Number(row.expected_qty_milli ?? 0);
   const received = Number(row.received_qty_milli ?? 0);
+  const flowRevision = Number(row.flow_revision ?? 1);
+  const rawStage = String(row.approval_stage ?? "completed");
+  const triageCompletedAt = row.triage_completed_at ? String(row.triage_completed_at) : null;
+  // v3: `purchasing` sem o marco de triagem é a fila do comprador; depois do
+  // marco, a etapa exibida é a aprovação do gestor de Compras.
+  const approvalStage =
+    flowRevision === 3 && rawStage === "purchasing" && !triageCompletedAt ? "triage" : rawStage;
   return {
     id: String(row.id),
     code: String(row.code),
@@ -4138,8 +4572,11 @@ function mapRequest(row: Record<string, unknown>) {
     priority: String(row.priority),
     status: String(row.status),
     workflowVersion: Number(row.workflow_version ?? 1),
-    flowRevision: Number(row.flow_revision ?? 1),
-    approvalStage: String(row.approval_stage ?? "completed"),
+    flowRevision,
+    approvalStage,
+    triageCompletedAt,
+    triageCompletedBy: row.triage_completed_by ? String(row.triage_completed_by) : null,
+    triageCompletedByName: row.triage_completed_by_name ? String(row.triage_completed_by_name) : null,
     departmentId: row.department_id ? String(row.department_id) : null,
     departmentName: row.department_name ? String(row.department_name) : null,
     purchaseMode: row.purchase_mode ? String(row.purchase_mode) : null,

@@ -37,8 +37,8 @@ Atualizado em 21/10/2026. Este é o **backlog oficial** do projeto (plano + pend
 
 - [x] **Item fora do catálogo:** formulário com alternativa explícita, descrição livre obrigatória,
       quantidade/unidade e aviso de que o cadastro será feito durante o processo ou no recebimento.
-- [x] **Descoberta:** busca de produto sem resultado oferece “Solicitar este item fora do catálogo”,
-      aproveitando o texto digitado; detalhe exibe o selo “Fora do catálogo”.
+- [x] **Descoberta:** busca de produto sem resultado oferece "Solicitar este item fora do catálogo",
+      aproveitando o texto digitado; detalhe exibe o selo "Fora do catálogo".
 - [x] **Backend e recebimento:** item v2 aceito com `product_id = NULL` + `description`; cotação,
       adjudicação e pedido usam a descrição; recebimento mantém o cadastro rápido do produto.
 - [x] **Qualidade:** `npm run check` **169/169 em 18 arquivos**, typecheck, lint, contrato de API;
@@ -149,7 +149,7 @@ Frontend (React Router 7, SPA com chunks por página):
 
 ## FASE 4 — Correções do uso real (17/10/2026) — CONCLUÍDA
 
-- [x] P-07: cliente de inventário chamava `/api/inventory` (worker monta `/api/inventories`) —
+- [x] P-07: cliente de inventário chamava `/api/inventories` (worker monta `/api/inventories`) —
       10 chamadas corrigidas; fluxo criar/encerrar inventário verificado pela interface.
 - [x] P-08: anexos existiam só no backend — implementado card Anexos no chamado (enviar, listar,
       baixar, remover) com verificação E2E real (upload → download 200 → remoção auditada).
@@ -354,6 +354,53 @@ Frontend (React Router 7, SPA com chunks por página):
 - [ ] (Opcional) Anexos também em ordens de serviço (backend já suporta `entityType: work_order`).
 - [ ] (Opcional, cosmético) remover o registro antigo `facilities-management` no dashboard do Serena.
 - [ ] (Opcional, sem prioridade declarada) CI no GitHub Actions espelhando `npm run check`.
+
+## NOVA FASE — CONCLUÍDA: Melhorias de Usabilidade em Compras (21/10/2026)
+
+### 1. Correções de Layout no Painel de Detalhe da Solicitação
+- [x] Eliminar compressão horizontal e rolagem lateral forçada — grade `minmax(0,1fr) 320px` só em `2xl`, colunas `min-w-0` e tabela densa; sem rolagem em 1280, 1440 e 1536
+- [x] Reorganizar cabeçalho: status, etapa e prioridade como badges organizados (não botões soltos)
+- [x] Manter ficha principal e linha do tempo (funcionais)
+
+### 2. Novo Formulário de Solicitação (Visão Solicitante) — Simplificado
+- [x] **Remover campos:** Setor (auto pelo login), Forma de pagamento, Como comprar, Centro de custo, Conta contábil, Observação de orçamento
+- [x] **Manter campos:** Local de destino, Data desejada, Prioridade, Justificativa (obrigatória, textarea), Observações, Lista de itens
+- [x] **Ação:** Botão "Enviar para aprovação" / "Salvar rascunho"
+
+### 3. Inclusão Inteligente de Itens em Lote
+- [x] Área de texto para colar/digitar lista completa (ex: "10 Teclados modelo X", "5 Monitores 24 polegadas")
+- [x] Botão "Processar lista" → interpreta texto, extrai itens, sugere quantidades
+- [x] Tabela editável para ajustar quantidade e unidade de medida
+- [x] Vínculo automático com catálogo (ProductPicker interno)
+- [x] Itens fora do catálogo: badge informativo "Fora do catálogo" (não bloqueia envio)
+
+### 4. Backend: Ajustes de Validação e Schema
+- [x] Fluxo v3 ignora `departmentId`, `purchaseMode`, `paymentMethodId`, `paymentTerms`, `costCenterId`, `glAccount`, `budgetNotes` no create; schema mantém os campos opcionais apenas para compatibilidade v1/v2
+- [x] Validação: `justification` obrigatória no submit; `departmentId` preenchido automaticamente pelo `user.departmentId`
+- [x] `purchaseMode` e `paymentMethodId` definidos depois pelo Responsável de Compras na autorização
+
+### 5. Testes e Validação
+- [x] Testes de regressão: criação, envio, aprovação, cotação, pedido, recebimento (v1/v2/v3)
+- [x] Verificação visual: formulário simplificado, batch entry, painel de detalhe responsivo (1440×900 e 390×844)
+- [x] `npm run check` verde: **175/175 testes em 20 arquivos**, typecheck, lint e contrato de API
+- [x] Correção extra: datas puras (`YYYY-MM-DD`) formatadas em UTC para não deslocar um dia no fuso local
+
+### 6. Auditoria do requisito (21/10/2026)
+
+- [x] Layout sem rolagem horizontal também em 1280–1440: colunas laterais só a partir de `2xl`; tabela de itens em largura total abaixo disso. Medido sem overflow em 1280, 1440 e 1536.
+- [x] Cabeçalho com identificador, solicitante e data antes dos badges de status/setor/etapa/prioridade.
+- [x] Justificativa visível na faixa "Próxima etapa", acima dos itens, para a leitura do gestor.
+- [x] Permissões conferidas e inalteradas: `purchases.create` para líder de limpeza, gestor, comprador, responsável de estoque, responsável de Compras e admin; solicitante comum sem criação.
+- [x] **Ordem do fluxo pós-envio definida e implementada (0.6.0):** solicitação → triagem do comprador → aprovação/refinamento do gestor de Compras → comprador → recebimento. A etapa `manager`/direção deixa de existir no v3; v1/v2 preservados. Migration `0021_purchase_triage.sql`.
+- [x] **UI de centro de custo/conta contábil na formalização:** o diálogo do gestor de Compras expõe modo, forma de pagamento, condições, centro de custo e conta contábil (GL) antes de autorizar.
+- [x] **Ação "solicitar alinhamento":** `request_alignment` exige observação ≥5 caracteres, mantém `pending_approval`/`purchasing`, notifica solicitante e responsável pela triagem, grava auditoria/outbox/linha do tempo.
+- [x] **Entrada manual de item:** mantida como fallback do lote; o fluxo principal recomendado continua sendo colar a lista.
+- [x] **Mensagem do item fora do catálogo:** badge curto na lista/detalhe e explicação completa no lote e no recebimento; a normalização agora pode ser feita na triagem ou no recebimento.
+- [x] **Normalização no recebimento:** vincular a produto existente (`productId`) ou cadastrar produto novo (`newProduct` + `uomId`), com vínculo permanente em `purchase_request_items` e movimentação de estoque.
+- [x] `npm run check` verde: **180/180 testes em 20 arquivos**, typecheck, lint e contrato de API; `npm run build` verde.
+- [x] Verificação Playwright ponta a ponta: lote com itens fora do catálogo, triagem, alinhamento, autorização em compra direta, pedido com preços e recebimento com produto existente + cadastro rápido.
+- [x] Corrigido aviso de hidratação do `PageHeader` (`<div>` dentro de `<p>`).
+
 
 ## Regras permanentes de execução
 

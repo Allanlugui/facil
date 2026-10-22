@@ -39,6 +39,18 @@ const dateFormat = () =>
     year: "numeric",
   });
 
+/**
+ * Datas puras (`YYYY-MM-DD`) não têm fuso: formatar em UTC evita que
+ * "2026-10-28" vire 27/10 em fusos negativos como America/Sao_Paulo.
+ */
+const dateOnlyFormat = () =>
+  new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "UTC",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+
 export function formatDateTime(iso: string | null | undefined): string {
   if (!iso) return "-";
   const date = new Date(iso);
@@ -48,7 +60,12 @@ export function formatDateTime(iso: string | null | undefined): string {
 
 export function formatDate(iso: string | null | undefined): string {
   if (!iso) return "-";
-  const date = new Date(iso.includes("T") ? iso : `${iso}T00:00:00.000Z`);
+  if (!iso.includes("T")) {
+    const [year, month, day] = iso.split("-").map(Number);
+    if (!year || !month || !day) return "-";
+    return dateOnlyFormat().format(new Date(Date.UTC(year, month - 1, day)));
+  }
+  const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return "-";
   return dateFormat().format(date);
 }

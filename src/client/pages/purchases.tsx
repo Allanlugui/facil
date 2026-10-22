@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { locationLabel } from "@shared/locations";
 import { PERMISSIONS } from "@shared/permissions";
@@ -30,7 +30,7 @@ import {
   plural,
 } from "../lib/format";
 import { useAsync, useDebounced } from "../lib/hooks";
-import { useLocations, useSuppliers, useUoms } from "../lib/lookups";
+import { useLocations, useProducts, useSuppliers, useUoms, useCategories, type ProductOption } from "../lib/lookups";
 import { ProductPicker } from "../lib/product-picker";
 import { useSession } from "../lib/session";
 import {
@@ -249,10 +249,12 @@ interface PurchaseOptions {
     notes: string | null;
   }>;
   departments: Array<{ id: string; code: string; name: string; isPurchasing: boolean }>;
+  costCenters: Array<{ id: string; code: string; name: string }>;
 }
 
 interface PurchaseOverview {
   queues: {
+    triage: number;
     manager: number;
     direction: number;
     purchasing: number;
@@ -368,9 +370,10 @@ export function PurchasesPage() {
 
   const queueItems = overview.data
     ? [
+        { key: "triage", label: "Fazer triagem", count: overview.data.queues.triage, show: can(PERMISSIONS.PURCHASES_ORDER) || can(PERMISSIONS.PURCHASES_AUTHORIZE) },
         { key: "manager", label: "Aprovar como gestor", count: overview.data.queues.manager, show: can(PERMISSIONS.PURCHASES_APPROVE) },
         { key: "direction", label: "Autorizar orçamento", count: overview.data.queues.direction, show: can(PERMISSIONS.PURCHASES_AUTHORIZE) },
-        { key: "purchasing", label: "Triagem de compras", count: overview.data.queues.purchasing, show: can(PERMISSIONS.PURCHASES_AWARD) || can(PERMISSIONS.PURCHASES_DIRECT) },
+        { key: "purchasing", label: "Aprovar compra", count: overview.data.queues.purchasing, show: can(PERMISSIONS.PURCHASES_AUTHORIZE) || can(PERMISSIONS.PURCHASES_AWARD) || can(PERMISSIONS.PURCHASES_DIRECT) },
         { key: "award", label: "Adjudicar cotação", count: overview.data.queues.award, show: can(PERMISSIONS.PURCHASES_AWARD) },
         { key: "buyer", label: "Preparar pedido", count: overview.data.queues.buyer, show: can(PERMISSIONS.PURCHASES_ORDER) },
         { key: "receipt", label: "Receber material", count: overview.data.queues.receipt, show: can(PERMISSIONS.PURCHASES_RECEIVE) },
@@ -608,17 +611,38 @@ export function PurchasesPage() {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Criação                                                                    */
+/* Criação — Formulário Simplificado (Visão Solicitante)                      */
 /* -------------------------------------------------------------------------- */
 
-interface ItemDraft {
-  productId: string;
+interface BatchItemDraft {
+  /** Produto do catálogo (se encontrado) */
+  productId: string | null;
+  /** Nome do produto do catálogo (para exibição) */
+  productName: string | null;
+  /** SKU do produto do catálogo */
+  sku: string | null;
+  /** Unidade de medida padrão do produto */
+  defaultUomId: string | null;
+  /** Unidade de medida padrão do produto (código) */
+  defaultUomCode: string | null;
+  /** Descrição livre (item do catálogo ou item fora do catálogo) */
   description: string;
+  /** Quantidade em string (para input) */
   qty: string;
-  uomId: string;
+  /** Unidade de medida selecionada */
+  uomId: string | null;
+  /** Observações do item */
   notes: string;
-  /** Item que ainda não existe no catálogo: a descrição é obrigatória. */
-  freeText: boolean;
+  /** Item não encontrado no catálogo */
+  isFreeText: boolean;
+  /** Linha original do texto colado (para referência) */
+  rawLine: string;
+}
+
+interface ParsedBatchItem {
+  qty: number;
+  uom: string | null;
+  description: string;
 }
 
 export function CreatePurchaseDialog({
@@ -631,84 +655,223 @@ export function CreatePurchaseDialog({
   const toast = useToast();
   const locations = useLocations();
   const uoms = useUoms();
-  const { user, can } = useSession();
-  const overview = useAsync(() => apiGet<PurchaseOverview>("/api/purchases/overview"), []);
-  const options = useAsync(() => apiGet<PurchaseOptions>("/api/purchases/options"), []);
-  const [departmentId, setDepartmentId] = useState(user?.departmentId ?? "");
-  const [purchaseMode, setPurchaseMode] = useState<"quote" | "budget" | "direct">("quote");
-  const [paymentMethodId, setPaymentMethodId] = useState("");
-  const [paymentTerms, setPaymentTerms] = useState("");
+  const products = useProducts();
   const [locationId, setLocationId] = useState("");
   const [justification, setJustification] = useState("");
   const [priority, setPriority] = useState<Priority>("normal");
   const [desiredDate, setDesiredDate] = useState(addDaysIsoDate(7));
-  const [costCenterId, setCostCenterId] = useState("");
-  const [glAccount, setGlAccount] = useState("");
-  const [budgetNotes, setBudgetNotes] = useState("");
   const [notes, setNotes] = useState("");
   const [submitNow, setSubmitNow] = useState(true);
-  const [items, setItems] = useState<ItemDraft[]>([
-    { productId: "", description: "", qty: "", uomId: "", notes: "", freeText: false },
-  ]);
+  const [items, setItems] = useState<BatchItemDraft[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showBatchEntry, setShowBatchEntry] = useState(false);
+  const [batchText, setBatchText] = useState("");
+  const [batchPreview, setBatchPreview] = useState<BatchItemDraft[] | null>(null);
+  const [processingBatch, setProcessingBatch] = useState(false);
 
-  const updateItem = (index: number, patch: Partial<ItemDraft>) => {
+  // Busca produtos do catálogo para matching
+  const productMap = useMemo(() => {
+    const map = new Map<string, { id: string; name: string; sku: string | null; uomId: string | null; uomCode: string | null }>();
+    (products.data ?? []).forEach((product: ProductOption) => {
+      map.set(product.id, { id: product.id, name: product.name, sku: product.sku, uomId: product.uomId, uomCode: product.uomCode });
+      // Também indexa por nome normalizado e SKU para busca fuzzy
+      const normalizedName = product.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      map.set(`name:${normalizedName}`, { id: product.id, name: product.name, sku: product.sku, uomId: product.uomId, uomCode: product.uomCode });
+      if (product.sku) {
+        map.set(`sku:${product.sku.toLowerCase()}`, { id: product.id, name: product.name, sku: product.sku, uomId: product.uomId, uomCode: product.uomCode });
+      }
+    });
+    return map;
+  }, [products.data]);
+
+  const updateItem = useCallback((index: number, patch: Partial<BatchItemDraft>) => {
     setItems((current) => current.map((item, i) => (i === index ? { ...item, ...patch } : item)));
+  }, []);
+
+  const removeItem = useCallback((index: number) => {
+    setItems((current) => current.filter((_, i) => i !== index));
+  }, []);
+
+  const parseBatchText = useCallback((text: string): ParsedBatchItem[] => {
+    const lines = text.split(/\r?\n/).map((l) => l.trim()).filter((l) => l.length > 0);
+    const results: ParsedBatchItem[] = [];
+
+    for (const line of lines) {
+      // Padrões suportados:
+      // "10 Teclado modelo X"
+      // "5 Monitores 24 polegadas UN"
+      // "3 - Cabo HDMI 2m"
+      // "2x Mouse sem fio"
+      // "1 Cadeira ergonômica PC"
+
+      let qty = 1;
+      let uom: string | null = null;
+      let description = line;
+
+      // Tenta extrair quantidade no início: "10 ", "5x ", "3 - ", "2x"
+      const qtyMatch = line.match(/^(\d+(?:[.,]\d+)?)\s*[xX×\-–—]?\s*(.+)$/);
+      if (qtyMatch) {
+        const qtyStr = qtyMatch[1] ?? "1";
+        const descStr = qtyMatch[2] ?? "";
+        const parsedQty = parseQuantityInput(qtyStr);
+        qty = parsedQty > 0 ? parsedQty : 1;
+        description = descStr.trim();
+      }
+
+      // Tenta extrair unidade no final: " 5 UN", " 10 PC", " 3 CX"
+      const uomMatch = description.match(/\s+([A-Z]{1,3})$/);
+      if (uomMatch) {
+        const possibleUom = (uomMatch[1] ?? "").toUpperCase();
+        const uomExists = (uoms.data ?? []).some((u) => u.code.toUpperCase() === possibleUom);
+        if (uomExists) {
+          uom = possibleUom;
+          const matchLength = uomMatch[0]?.length ?? 0;
+          description = description.slice(0, -matchLength).trim();
+        }
+      }
+
+      results.push({ qty, uom, description });
+    }
+
+    return results;
+  }, [uoms.data]);
+
+  const matchProducts = useCallback((parsed: ParsedBatchItem[]): BatchItemDraft[] => {
+    return parsed.map((p): BatchItemDraft => {
+      const normalizedDesc = p.description.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+      // Busca exata por nome normalizado
+      let product = productMap.get(`name:${normalizedDesc}`);
+
+      // Busca parcial: tenta encontrar produto contendo as palavras-chave
+      if (!product) {
+        const words = normalizedDesc.split(/\s+/).filter((w) => w.length > 2);
+        for (const [key, prod] of productMap.entries()) {
+          if (key.startsWith("name:") && words.every((w) => key.includes(w))) {
+            product = prod;
+            break;
+          }
+        }
+      }
+
+      // Busca por SKU se a descrição parece um SKU
+      if (!product && /^[A-Z0-9\-]{3,}$/i.test(p.description.trim())) {
+        product = productMap.get(`sku:${p.description.trim().toLowerCase()}`);
+      }
+
+      const defaultUomId = product?.uomId ?? null;
+      const defaultUomCode = product?.uomCode ?? null;
+      const matchedUomId = p.uom
+        ? (uoms.data ?? []).find((u) => u.code.toUpperCase() === p.uom?.toUpperCase())?.id ?? defaultUomId
+        : defaultUomId;
+
+      return {
+        productId: product?.id ?? null,
+        productName: product?.name ?? null,
+        sku: product?.sku ?? null,
+        defaultUomId,
+        defaultUomCode,
+        description: product ? "" : p.description,
+        qty: String(p.qty),
+        uomId: matchedUomId,
+        notes: "",
+        isFreeText: !product,
+        rawLine: `${p.qty}${p.uom ? ` ${p.uom}` : ""} ${p.description}`.trim(),
+      };
+    });
+  }, [productMap, uoms.data]);
+
+  const handleBatchProcess = () => {
+    if (!batchText.trim()) {
+      setError("Cole ou digite a lista de itens antes de processar.");
+      return;
+    }
+    setProcessingBatch(true);
+    setError(null);
+    try {
+      const parsed = parseBatchText(batchText);
+      if (parsed.length === 0) {
+        setError("Nenhum item válido encontrado no texto.");
+        return;
+      }
+      const matched = matchProducts(parsed);
+      setBatchPreview(matched);
+    } catch (cause) {
+      setError("Erro ao processar a lista. Verifique o formato.");
+      console.error(cause);
+    } finally {
+      setProcessingBatch(false);
+    }
+  };
+
+  const handleBatchConfirm = () => {
+    if (!batchPreview) return;
+    setItems((current) => [...current, ...batchPreview]);
+    setBatchPreview(null);
+    setBatchText("");
+    setShowBatchEntry(false);
+  };
+
+  const handleBatchCancel = () => {
+    setBatchPreview(null);
+    setBatchText("");
+    setShowBatchEntry(false);
   };
 
   const submit = async () => {
+    // Validação: justificativa obrigatória no envio
+    if (submitNow && !justification.trim()) {
+      setError("A justificativa da compra é obrigatória para enviar a solicitação.");
+      return;
+    }
+
+    const validItems = items.filter(
+      (item) => parseQuantityInput(item.qty) > 0 && Boolean(item.productId || item.description.trim())
+    );
+    if (validItems.length === 0) {
+      setError("Inclua ao menos um item com quantidade e descrição.");
+      return;
+    }
+
+    // Verifica itens com quantidade mas sem descrição
     const incomplete = items.find(
       (item) =>
-        Number(item.qty.replace(",", ".")) > 0 &&
+        parseQuantityInput(item.qty) > 0 &&
         !item.productId &&
-        item.description.trim().length < 3,
+        item.description.trim().length === 0
     );
     if (incomplete) {
-      setError("Informe o produto do catálogo ou descreva o item que deve ser comprado (mínimo 3 caracteres).");
+      setError("Todos os itens com quantidade devem ter descrição.");
       return;
     }
-    if (submitNow && !paymentMethodId) {
-      setError("Escolha a forma de pagamento. É ela que orienta a autorização do setor de Compras.");
-      return;
-    }
-    const parsed = items
-      .filter((item) => (item.productId || item.description.trim().length > 0) && Number(item.qty.replace(",", ".")) > 0)
-      .map((item) => ({
-        productId: item.freeText ? null : item.productId || null,
-        description: item.description.trim() || null,
-        qty: Number(item.qty.replace(",", ".")),
-        uomId: item.uomId || null,
-        notes: item.notes || null,
-      }));
-    if (parsed.length === 0) {
-      setError("Inclua ao menos um item com quantidade; informe o produto ou a descrição.");
-      return;
-    }
+
     setSaving(true);
     setError(null);
     try {
+      const parsed = validItems.map((item) => ({
+        productId: item.productId,
+        description: item.description.trim(),
+        qty: parseQuantityInput(item.qty),
+        uomId: item.uomId,
+        notes: item.notes || null,
+      }));
+
       const result = await apiPost<{ id: string; code: string; status: PurchaseStatus }>("/api/purchases", {
         workflowVersion: 2,
         flowRevision: 3,
-        departmentId: departmentId || null,
-        purchaseMode,
-        paymentMethodId: paymentMethodId || null,
-        paymentTerms: paymentTerms || null,
+        // departmentId preenchido automaticamente no backend pelo user.departmentId
         locationId: locationId || null,
-        justification: justification || null,
+        justification: justification.trim() || null,
         priority,
         desiredDate: desiredDate || null,
-        costCenterId: costCenterId || null,
-        glAccount: glAccount || null,
-        budgetNotes: budgetNotes || null,
         notes: notes || null,
         submit: submitNow,
         items: parsed,
       });
       toast.success(
         result.status === "pending_approval"
-          ? `Solicitação ${result.code} enviada para aprovação.`
+          ? `Solicitação ${result.code} enviada para Compras.`
           : `Rascunho ${result.code} salvo.`,
       );
       onCreated(result.id);
@@ -719,22 +882,12 @@ export function CreatePurchaseDialog({
     }
   };
 
-  const allowedDepartments = (options.data?.departments ?? []).filter(
-    (department) =>
-      department.id === user?.departmentId ||
-      (user?.managedDepartmentIds ?? []).includes(department.id) ||
-      can(PERMISSIONS.SETTINGS_MANAGE),
-  );
-  const selectedPayment = (options.data?.paymentMethods ?? []).find(
-    (method) => method.id === paymentMethodId,
-  );
-
   return (
     <Dialog
       open
       wide
       title="Nova solicitação de compra"
-      description="O gestor do setor aprova a necessidade; o responsável de Compras autoriza a cotação, o orçamento ou a compra direta; o comprador executa e o estoque confere a nota fiscal."
+      description="Preencha os dados essenciais. O setor é identificado automaticamente pelo seu login. Condições de pagamento, centro de custo e conta contábil serão definidos pelo time de Compras nas etapas seguintes."
       onClose={onClose}
       footer={
         <>
@@ -742,13 +895,15 @@ export function CreatePurchaseDialog({
             Cancelar
           </Button>
           <Button onClick={submit} loading={saving}>
-            {submitNow ? "Enviar ao gestor" : "Salvar rascunho"}
+            {submitNow ? "Enviar para Compras" : "Salvar rascunho"}
           </Button>
         </>
       }
     >
       <div className="space-y-4">
         {error ? <Alert tone="red">{error}</Alert> : null}
+
+        {/* Campos principais do solicitante */}
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Local de destino" hint="Para onde o material será entregue." htmlFor="prLocation">
             <Select id="prLocation" value={locationId} onChange={(event) => setLocationId(event.target.value)}>
@@ -781,247 +936,277 @@ export function CreatePurchaseDialog({
               ))}
             </Select>
           </Field>
-          <Field
-            label="Setor solicitante"
-            hint="O gestor deste setor aprova a necessidade antes de Compras."
-            htmlFor="prDepartment"
-          >
-            <Select
-              id="prDepartment"
-              value={departmentId}
-              onChange={(event) => setDepartmentId(event.target.value)}
-            >
-              <option value="">Selecione o setor...</option>
-              {allowedDepartments.map((department) => (
-                <option key={department.id} value={department.id}>
-                  {department.name}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          <Field
-            label="Forma de pagamento"
-            hint={
-              selectedPayment?.requiresQuote
-                ? "Esta forma exige cotação ou orçamento; não permite compra direta."
-                : selectedPayment?.requiresAuthorization
-                  ? "Exige autorização explícita do responsável de Compras."
-                  : "A escolha acompanha a cotação, o pedido e o recebimento."
-            }
-            htmlFor="prPaymentMethod"
-          >
-            <Select
-              id="prPaymentMethod"
-              value={paymentMethodId}
-              onChange={(event) => {
-                const next = event.target.value;
-                setPaymentMethodId(next);
-                const method = (options.data?.paymentMethods ?? []).find((item) => item.id === next);
-                if (method?.requiresQuote && purchaseMode === "direct") setPurchaseMode("quote");
-              }}
-            >
-              <option value="">Selecione...</option>
-              {(options.data?.paymentMethods ?? []).map((method) => (
-                <option key={method.id} value={method.id}>
-                  {method.name}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          <Field
-            label="Como comprar"
-            hint="O responsável de Compras confirma o modo ao autorizar."
-            htmlFor="prMode"
-          >
-            <Select
-              id="prMode"
-              value={purchaseMode}
-              onChange={(event) => setPurchaseMode(event.target.value as "quote" | "budget" | "direct")}
-            >
-              <option value="quote">Cotação — comparar fornecedores (mínimo 2)</option>
-              <option value="budget">Orçamento — fornecedor único</option>
-              <option value="direct" disabled={selectedPayment?.requiresQuote}>
-                Compra direta — sem cotação
-              </option>
-            </Select>
-          </Field>
-          <Field
-            label="Condições de pagamento"
-            hint="Opcional: prazo, parcelas ou observação combinada."
-            htmlFor="prPaymentTerms"
-          >
-            <Input
-              id="prPaymentTerms"
-              value={paymentTerms}
-              onChange={(event) => setPaymentTerms(event.target.value)}
-              placeholder="Ex.: 30 dias após a nota fiscal"
-              maxLength={300}
-            />
-          </Field>
-          <Field label="Justificativa" htmlFor="prJustification">
-            <Input
+          <Field label="Justificativa *" htmlFor="prJustification" className="sm:col-span-2">
+            <Textarea
               id="prJustification"
+              rows={2}
               value={justification}
               onChange={(event) => setJustification(event.target.value)}
-              placeholder="Ex.: reposição de estoque mínimo"
-            />
-          </Field>
-          <Field
-            label="Centro de custo"
-            hint="Usado na análise de orçamento e na exportação ao ERP."
-            htmlFor="prCostCenter"
-          >
-            <Select id="prCostCenter" value={costCenterId} onChange={(event) => setCostCenterId(event.target.value)}>
-              <option value="">Selecione...</option>
-              {(overview.data?.costCenters ?? []).map((center) => (
-                <option key={center.id} value={center.id}>
-                  {center.code} — {center.name}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          <Field label="Conta contábil" hint="Opcional; o financeiro pode completar depois." htmlFor="prGlAccount">
-            <Input
-              id="prGlAccount"
-              value={glAccount}
-              onChange={(event) => setGlAccount(event.target.value)}
-              placeholder="Ex.: 4.2.01"
-            />
-          </Field>
-          <Field label="Observação de orçamento" htmlFor="prBudgetNotes">
-            <Input
-              id="prBudgetNotes"
-              value={budgetNotes}
-              onChange={(event) => setBudgetNotes(event.target.value)}
-              placeholder="Verba, contrato ou centro de aprovação"
+              placeholder="Ex.: reposição de estoque mínimo, nova demanda do setor..."
+              maxLength={1000}
+              required
             />
           </Field>
         </div>
 
-        <div className="rounded-lg border border-slate-200">
-          <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
-            <p className="text-sm font-medium text-slate-700">Itens</p>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() =>
-                setItems((current) => [
-                  ...current,
-                  { productId: "", description: "", qty: "", uomId: "", notes: "", freeText: false },
-                ])
-              }
-            >
-              Adicionar item
-            </Button>
-          </div>
-          <div className="space-y-3 p-3">
-            {items.map((item, index) => (
-              <div key={index} className="rounded-lg border border-slate-100 p-2">
-                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                    Item {index + 1}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() =>
-                      updateItem(
-                        index,
-                        item.freeText
-                          ? { freeText: false }
-                          : { freeText: true, productId: "" },
-                      )
-                    }
-                  >
-                    {item.freeText ? "Voltar ao catálogo" : "Item fora do catálogo"}
+        {/* Batch Entry - Entrada em lote */}
+        <Card title="Itens da solicitação" description="Adicione itens um a um ou use a entrada em lote para colar sua lista completa.">
+          <div className="space-y-3">
+            {/* Botões de ação */}
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setShowBatchEntry(true)}
+                className="whitespace-nowrap"
+              >
+                Entrada em lote (colar lista)
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() =>
+                  setItems((current) => [
+                    ...current,
+                    { productId: null, productName: null, sku: null, defaultUomId: null, defaultUomCode: null, description: "", qty: "", uomId: null, notes: "", isFreeText: true, rawLine: "" },
+                  ])
+                }
+              >
+                Adicionar item
+              </Button>
+            </div>
+
+            {/* Área de entrada em lote */}
+            {showBatchEntry && !batchPreview && (
+              <div className="rounded-lg border border-brand-200 bg-brand-50 p-4 space-y-3">
+                <p className="text-sm text-slate-700">
+                  Cole sua lista (um item por linha). Exemplos:
+                </p>
+                <pre className="rounded bg-slate-100 px-3 py-2 text-xs text-slate-600 overflow-x-auto">
+{`10 Teclado mecânico modelo X
+5 Monitores 24 polegadas UN
+3 Cabo HDMI 2m
+2x Mouse sem fio
+1 Cadeira ergonômica PC`}
+                </pre>
+                <Textarea
+                  rows={4}
+                  value={batchText}
+                  onChange={(event) => setBatchText(event.target.value)}
+                  placeholder="Cole aqui sua lista de itens..."
+                  aria-label="Lista de itens em lote"
+                />
+                <div className="flex items-center justify-end gap-2">
+                  <Button variant="secondary" size="sm" onClick={handleBatchCancel}>
+                    Cancelar
                   </Button>
-                </div>
-                {item.freeText ? (
-                  <p className="mb-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-                    Este item não está no catálogo. A solicitação pode seguir normalmente; o cadastro
-                    será feito durante o processo de compra ou no recebimento.
-                  </p>
-                ) : null}
-                <div
-                  className={`grid gap-2 ${
-                    item.freeText
-                      ? "sm:grid-cols-[2.4fr_7rem_9rem_2rem]"
-                      : "sm:grid-cols-[1.4fr_1fr_7rem_9rem_2rem]"
-                  }`}
-                >
-                  {item.freeText ? (
-                    <Input
-                      value={item.description}
-                      onChange={(event) => updateItem(index, { description: event.target.value })}
-                      placeholder="Descreva o item (marca, modelo, medidas...)"
-                      aria-label={`Descrição do item fora do catálogo ${index + 1}`}
-                      maxLength={300}
-                    />
-                  ) : (
-                    <>
-                      <ProductPicker
-                        value={item.productId}
-                        onChange={(productId, product) =>
-                          updateItem(index, {
-                            productId,
-                            // Ajuda o comprador: a unidade do cadastro já vem escolhida.
-                            ...(product && !item.uomId ? { uomId: product.uomId } : {}),
-                          })
-                        }
-                        onRequestFreeText={(query) =>
-                          updateItem(index, {
-                            freeText: true,
-                            productId: "",
-                            description: query || item.description,
-                          })
-                        }
-                        ariaLabel={`Produto ${index + 1}`}
-                        placeholder="Buscar produto no catálogo..."
-                      />
-                      <Input
-                        value={item.description}
-                        onChange={(event) => updateItem(index, { description: event.target.value })}
-                        placeholder="Descrição/complemento (opcional)"
-                        aria-label={`Descrição ${index + 1}`}
-                        maxLength={300}
-                      />
-                    </>
-                  )}
-                  <Input
-                    value={item.qty}
-                    onChange={(event) => updateItem(index, { qty: event.target.value })}
-                    placeholder="Qtd."
-                    inputMode="decimal"
-                    aria-label={`Quantidade ${index + 1}`}
-                  />
-                  <Select
-                    value={item.uomId}
-                    onChange={(event) => updateItem(index, { uomId: event.target.value })}
-                    aria-label={`Unidade ${index + 1}`}
-                  >
-                    <option value="">Unidade...</option>
-                    {(uoms.data ?? [])
-                      .filter((uom) => uom.isActive)
-                      .map((uom) => (
-                        <option key={uom.id} value={uom.id}>
-                          {uom.code}
-                        </option>
-                      ))}
-                  </Select>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={items.length === 1}
-                    onClick={() => setItems((current) => current.filter((_, i) => i !== index))}
-                    aria-label="Remover item"
-                  >
-                    ×
+                  <Button size="sm" onClick={handleBatchProcess} loading={processingBatch} disabled={processingBatch}>
+                    Processar lista
                   </Button>
                 </div>
               </div>
-            ))}
+            )}
+
+            {/* Preview da entrada em lote */}
+            {batchPreview && batchPreview.length > 0 && (
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium text-emerald-900">
+                    {batchPreview.length} {plural(batchPreview.length, "item encontrado", "itens encontrados")} — revise e confirme
+                  </p>
+                  <Button variant="ghost" size="sm" onClick={handleBatchCancel}>
+                    Descartar
+                  </Button>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-100 text-xs uppercase tracking-wide text-slate-500">
+                      <tr>
+                        <th className="px-3 py-1.5 text-left">Item</th>
+                        <th className="px-3 py-1.5 text-left">Catálogo</th>
+                        <th className="px-3 py-1.5 text-right">Qtd</th>
+                        <th className="px-3 py-1.5 text-left">Unidade</th>
+                        <th className="px-3 py-1.5 text-left">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {batchPreview.map((item, index) => (
+                        <tr key={index} className={item.isFreeText ? "bg-amber-50/50" : ""}>
+                          <td className="px-3 py-1.5 text-slate-700">{item.productName ?? item.description}</td>
+                          <td className="px-3 py-1.5 text-slate-600">
+                            {item.productName ? (
+                              <>
+                                <span className="font-medium">{item.productName}</span>
+                                {item.sku && <span className="ml-1 text-xs text-slate-400">({item.sku})</span>}
+                              </>
+                            ) : (
+                              <span className="text-slate-400">—</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-1.5 text-right">
+                            <Input
+                              value={item.qty}
+                              onChange={(e) => {
+                                setBatchPreview((prev) => prev ? prev.map((it, i) => i === index ? { ...it, qty: e.target.value } : it) : null);
+                              }}
+                              className="w-20 text-right"
+                              inputMode="decimal"
+                            />
+                          </td>
+                          <td className="px-3 py-1.5">
+                            <Select
+                              value={item.uomId ?? ""}
+                              onChange={(e) => {
+                                setBatchPreview((prev) => prev ? prev.map((it, i) => i === index ? { ...it, uomId: e.target.value || null } : it) : null);
+                              }}
+                              className="w-full"
+                            >
+                              <option value="">—</option>
+                              {(uoms.data ?? []).filter((u) => u.isActive).map((uom) => (
+                                <option key={uom.id} value={uom.id}>{uom.code}</option>
+                              ))}
+                            </Select>
+                          </td>
+                          <td className="px-3 py-1.5">
+                            {item.isFreeText ? (
+                              <Badge tone="amber" size="sm">Fora do catálogo</Badge>
+                            ) : (
+                              <Badge tone="green" size="sm">No catálogo</Badge>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="text-xs text-amber-800 flex items-center gap-1">
+                  <span>⚠</span>
+                  Itens "Fora do catálogo" seguem na solicitação normalmente; o cadastro será feito durante o processo de compra ou no recebimento.
+                </p>
+                <div className="flex justify-end">
+                  <Button onClick={handleBatchConfirm}>Confirmar e adicionar</Button>
+                </div>
+              </div>
+            )}
+
+            {/* Lista de itens adicionados */}
+            {items.length === 0 && !showBatchEntry && (
+              <p className="text-sm text-slate-500 text-center py-4">
+                Nenhum item adicionado. Use "Entrada em lote" ou "Adicionar item".
+              </p>
+            )}
+
+            <div className="space-y-2">
+              {items.map((item, index) => (
+                <div key={index} className={`rounded-lg border p-3 ${!item.productId ? "border-amber-200 bg-amber-50/30" : "border-slate-100"}`}>
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                      Item {index + 1}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      {!item.productId && (
+                        <Badge tone="amber" size="sm">Fora do catálogo</Badge>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeItem(index)}
+                        aria-label="Remover item"
+                      >
+                        Remover
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-2 sm:grid-cols-[2fr_1fr_7rem_9rem_auto]">
+                    {/* Produto / Descrição */}
+                    {item.productId ? (
+                      <>
+                        <ProductPicker
+                          value={item.productId}
+                          onChange={(productId, product) =>
+                            updateItem(index, {
+                              productId,
+                              productName: product?.name ?? null,
+                              sku: product?.sku ?? null,
+                              defaultUomId: product?.uomId ?? null,
+                              defaultUomCode: product?.uomCode ?? null,
+                              uomId: product?.uomId ?? item.uomId,
+                              isFreeText: false,
+                            })
+                          }
+                          onRequestFreeText={(query) =>
+                            updateItem(index, {
+                              productId: null,
+                              productName: null,
+                              sku: null,
+                              defaultUomId: null,
+                              defaultUomCode: null,
+                              description: query || item.description,
+                              isFreeText: true,
+                            })
+                          }
+                          ariaLabel={`Produto ${index + 1}`}
+                          placeholder="Buscar produto no catálogo..."
+                        />
+                        <Input
+                          value={item.description}
+                          onChange={(event) => updateItem(index, { description: event.target.value })}
+                          placeholder="Descrição/complemento (opcional)"
+                          aria-label={`Descrição ${index + 1}`}
+                          maxLength={300}
+                        />
+                      </>
+                    ) : (
+                      <div className="sm:col-span-2">
+                        <Input
+                          value={item.description}
+                          onChange={(event) => updateItem(index, { description: event.target.value })}
+                          placeholder="Descreva o item (marca, modelo, medidas...)"
+                          aria-label={`Descrição do item ${index + 1}`}
+                          maxLength={300}
+                        />
+                      </div>
+                    )}
+
+                    {/* Quantidade */}
+                    <Input
+                      value={item.qty}
+                      onChange={(event) => updateItem(index, { qty: event.target.value })}
+                      placeholder="Qtd."
+                      inputMode="decimal"
+                      aria-label={`Quantidade ${index + 1}`}
+                    />
+
+                    {/* Unidade */}
+                    <Select
+                      value={item.uomId ?? ""}
+                      onChange={(event) => updateItem(index, { uomId: event.target.value || null })}
+                      aria-label={`Unidade ${index + 1}`}
+                    >
+                      <option value="">Unidade...</option>
+                      {(uoms.data ?? []).filter((uom) => uom.isActive).map((uom) => (
+                        <option key={uom.id} value={uom.id}>{uom.code}</option>
+                      ))}
+                    </Select>
+
+                    {/* Ações */}
+                    <div className="flex items-center">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeItem(index)}
+                        aria-label="Remover item"
+                      >
+                        ×
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        </Card>
 
         <Field label="Observações" htmlFor="prNotes">
           <Textarea id="prNotes" rows={2} value={notes} onChange={(event) => setNotes(event.target.value)} />
@@ -1035,7 +1220,7 @@ export function CreatePurchaseDialog({
             onChange={(event) => setSubmitNow(event.target.checked)}
           />
           <span>
-            <span className="font-medium">Enviar para aprovação agora</span>
+            <span className="font-medium">Enviar para Compras agora</span>
             <span className="block text-xs text-slate-500">
               Desmarque para salvar como rascunho e revisar depois.
             </span>
@@ -1097,6 +1282,7 @@ export function PurchaseDetailPage() {
   const [ordering, setOrdering] = useState(false);
   const [receiving, setReceiving] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [triaging, setTriaging] = useState(false);
   const [quoting, setQuoting] = useState(false);
   const [returningQuote, setReturningQuote] = useState(false);
   const [quoteDecision, setQuoteDecision] = useState<{ quote: QuoteSummary; action: "approve" | "reject" } | null>(
@@ -1118,18 +1304,26 @@ export function PurchaseDetailPage() {
     !!request.departmentId && (user?.managedDepartmentIds.includes(request.departmentId) ?? false);
   const canSubmit = request.status === "draft" && can(PERMISSIONS.PURCHASES_CREATE);
   const stageAllowed =
-    request.approvalStage === "manager"
-      ? isV3
-        ? can(PERMISSIONS.PURCHASES_APPROVE_DEPARTMENT) && managesRequestDepartment
-        : can(PERMISSIONS.PURCHASES_APPROVE)
-      : request.approvalStage === "direction"
-        ? can(PERMISSIONS.PURCHASES_AUTHORIZE)
-        : request.approvalStage === "purchasing"
-          ? isV3
-            ? can(PERMISSIONS.PURCHASES_AUTHORIZE) &&
-              (user?.departmentIsPurchasing || can(PERMISSIONS.SETTINGS_MANAGE))
-            : can(PERMISSIONS.PURCHASES_AWARD) || can(PERMISSIONS.PURCHASES_DIRECT)
-          : false;
+    request.approvalStage === "triage"
+      ? isV3 && (can(PERMISSIONS.PURCHASES_ORDER) || can(PERMISSIONS.PURCHASES_AUTHORIZE))
+      : request.approvalStage === "manager"
+        ? isV3
+          ? can(PERMISSIONS.PURCHASES_APPROVE_DEPARTMENT) && managesRequestDepartment
+          : can(PERMISSIONS.PURCHASES_APPROVE)
+        : request.approvalStage === "direction"
+          ? can(PERMISSIONS.PURCHASES_AUTHORIZE)
+          : request.approvalStage === "purchasing"
+            ? isV3
+              ? can(PERMISSIONS.PURCHASES_AUTHORIZE) &&
+                (user?.departmentIsPurchasing || can(PERMISSIONS.SETTINGS_MANAGE))
+              : can(PERMISSIONS.PURCHASES_AWARD) || can(PERMISSIONS.PURCHASES_DIRECT)
+            : false;
+  const canTriage =
+    request.status === "pending_approval" &&
+    isV3 &&
+    request.approvalStage === "triage" &&
+    stageAllowed &&
+    user?.id !== request.requesterId;
   const canDecide =
     request.status === "pending_approval" &&
     stageAllowed &&
@@ -1180,6 +1374,14 @@ export function PurchaseDetailPage() {
   const approvedQuote = quotes.find((quote) => quote.status === "approved") ?? null;
   const nextStep = (() => {
     if (!isV3 || ["received", "cancelled", "rejected"].includes(request.status)) return null;
+    if (request.approvalStage === "triage") {
+      return {
+        title: "Triagem de Compras",
+        responsible: "Comprador ou analista de Compras",
+        action:
+          "Ajustar itens e quantidades, cadastrar produtos fora do catálogo e encaminhar ao gestor de Compras.",
+      };
+    }
     if (request.approvalStage === "manager") {
       return {
         title: "Aprovação do gestor do setor",
@@ -1189,12 +1391,10 @@ export function PurchaseDetailPage() {
     }
     if (request.approvalStage === "purchasing") {
       return {
-        title: "Autorização do responsável de Compras",
-        responsible: "Responsável pelo setor de Compras",
+        title: "Aprovação do gestor de Compras",
+        responsible: "Gestor ou diretor do setor de Compras",
         action:
-          request.purchaseMode === "direct"
-            ? "Autorizar a compra direta e liberar o comprador."
-            : "Escolher o modo e liberar a cotação ou o orçamento.",
+          "Revisar itens e quantidades, definir forma de pagamento e centro de custo e liberar o comprador.",
       };
     }
     if (request.status === "quoting") {
@@ -1267,7 +1467,7 @@ export function PurchaseDetailPage() {
   const submitForApproval = async () => {
     try {
       await apiPost(`/api/purchases/${request.id}/submit`, {});
-      toast.success("Solicitação enviada para aprovação.");
+      toast.success("Solicitação enviada para Compras.");
       state.reload();
     } catch (cause) {
       toast.error(apiErrorMessage(cause));
@@ -1370,7 +1570,7 @@ export function PurchaseDetailPage() {
       key: "status",
       header: "Situação",
       cell: (row) => (
-        <Badge tone={ITEM_STATUS_TONE[row.status]}>{PURCHASE_ITEM_STATUS_LABEL[row.status]}</Badge>
+        <Badge size="sm" tone={ITEM_STATUS_TONE[row.status]}>{PURCHASE_ITEM_STATUS_LABEL[row.status]}</Badge>
       ),
     },
   ];
@@ -1380,47 +1580,60 @@ export function PurchaseDetailPage() {
       <PageHeader
         title={`Solicitação ${request.code}`}
         description={
-          <span className="flex flex-wrap items-center gap-2">
-            <Badge tone={PURCHASE_STATUS_TONE[request.status]}>{PURCHASE_STATUS_LABEL[request.status]}</Badge>
-            {request.departmentName ? <Badge tone="brand">{request.departmentName}</Badge> : null}
-            {isV3 ? (
-              <Badge tone="violet">
-                Etapa:{" "}
-                {request.status === "quote_returned"
-                  ? "Aprovação da proposta"
-                  : PURCHASE_APPROVAL_STAGE_LABEL[
-                      request.approvalStage as keyof typeof PURCHASE_APPROVAL_STAGE_LABEL
-                    ] ?? request.approvalStage}
-              </Badge>
-            ) : isV2 ? (
-              <Badge tone={request.routing === "direct_to_purchasing" ? "violet" : "brand"}>
-                {request.routing === "direct_to_purchasing"
-                  ? "Enviada direto a Compras"
-                  : `Etapa: ${
-                      PURCHASE_APPROVAL_STAGE_LABEL[
+          <div className="space-y-2">
+            <p className="text-sm text-slate-600">
+              Solicitante: <span className="font-medium text-slate-800">{request.requesterName}</span>
+              <span className="mx-1.5 text-slate-300">·</span>
+              Criada em {formatDateTime(request.createdAt)}
+            </p>
+            {/* Badges de status principais - linha 1 */}
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge tone={PURCHASE_STATUS_TONE[request.status]}>{PURCHASE_STATUS_LABEL[request.status]}</Badge>
+              {request.departmentName ? <Badge tone="brand">{request.departmentName}</Badge> : null}
+              {isV3 ? (
+                <Badge tone="violet">
+                  Etapa:{" "}
+                  {request.status === "quote_returned"
+                    ? "Aprovação da proposta"
+                    : PURCHASE_APPROVAL_STAGE_LABEL[
                         request.approvalStage as keyof typeof PURCHASE_APPROVAL_STAGE_LABEL
-                      ] ?? request.approvalStage
-                    }`}
-              </Badge>
-            ) : (
-              <Badge tone="slate">Fluxo anterior</Badge>
-            )}
-            {request.purchaseMode ? (
-              <Badge tone={request.purchaseMode === "direct" ? "amber" : "slate"}>
-                {PURCHASE_MODE_SHORT_LABEL[request.purchaseMode]}
-              </Badge>
-            ) : null}
-            {request.paymentMethodName ? (
-              <Badge tone="slate">Pagamento: {request.paymentMethodName}</Badge>
-            ) : null}
-            <Badge tone={PRIORITY_TONE[request.priority]}>Prioridade {PRIORITY_LABEL[request.priority]}</Badge>
-            {request.costCenterCode ? (
-              <Badge tone="slate">
-                {request.costCenterCode} - {request.costCenterName}
-              </Badge>
-            ) : null}
-            {request.desiredDate ? <Badge tone="slate">Desejada para {formatDate(request.desiredDate)}</Badge> : null}
-          </span>
+                      ] ?? request.approvalStage}
+                </Badge>
+              ) : isV2 ? (
+                <Badge tone={request.routing === "direct_to_purchasing" ? "violet" : "brand"}>
+                  {request.routing === "direct_to_purchasing"
+                    ? "Enviada direto a Compras"
+                    : `Etapa: ${
+                        PURCHASE_APPROVAL_STAGE_LABEL[
+                          request.approvalStage as keyof typeof PURCHASE_APPROVAL_STAGE_LABEL
+                        ] ?? request.approvalStage
+                      }`}
+                </Badge>
+              ) : (
+                <Badge tone="slate">Fluxo anterior</Badge>
+              )}
+              <Badge tone={PRIORITY_TONE[request.priority]}>Prioridade {PRIORITY_LABEL[request.priority]}</Badge>
+            </div>
+            {/* Badges informativos secundários - linha 2 */}
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              {request.purchaseMode ? (
+                <Badge tone={request.purchaseMode === "direct" ? "amber" : "slate"} size="sm">
+                  {PURCHASE_MODE_SHORT_LABEL[request.purchaseMode]}
+                </Badge>
+              ) : null}
+              {request.paymentMethodName ? (
+                <Badge tone="slate" size="sm">Pagamento: {request.paymentMethodName}</Badge>
+              ) : null}
+              {request.costCenterCode ? (
+                <Badge tone="slate" size="sm">
+                  {request.costCenterCode} - {request.costCenterName}
+                </Badge>
+              ) : null}
+              {request.desiredDate ? (
+                <Badge tone="slate" size="sm">Desejada para {formatDate(request.desiredDate)}</Badge>
+              ) : null}
+            </div>
+          </div>
         }
         actions={
           <>
@@ -1428,7 +1641,10 @@ export function PurchaseDetailPage() {
               <Button variant="secondary">Voltar</Button>
             </Link>
             {canSubmit ? (
-              <Button onClick={() => void submitForApproval()}>Enviar ao gestor</Button>
+              <Button onClick={() => void submitForApproval()}>Enviar para Compras</Button>
+            ) : null}
+            {canTriage ? (
+              <Button onClick={() => setTriaging(true)}>Fazer triagem</Button>
             ) : null}
             {canDecide ? (
               <Button onClick={() => setDeciding(true)}>
@@ -1436,7 +1652,7 @@ export function PurchaseDetailPage() {
                   ? "Analisar necessidade"
                   : request.approvalStage === "direction"
                     ? "Analisar orçamento"
-                    : "Triagem de compras"}
+                    : "Aprovar compra"}
               </Button>
             ) : null}
             {canQuote ? (
@@ -1477,11 +1693,17 @@ export function PurchaseDetailPage() {
             <p className="text-xs text-slate-600">Responsável: {nextStep.responsible}</p>
           </div>
           <p className="mt-1 text-sm text-slate-700">{nextStep.action}</p>
+          {request.justification ? (
+            <p className="mt-2 whitespace-pre-line border-t border-brand-100 pt-2 text-sm text-slate-700">
+              <span className="font-medium text-slate-900">Justificativa: </span>
+              {request.justification}
+            </p>
+          ) : null}
         </div>
       ) : null}
 
-      <div className="grid gap-5 lg:grid-cols-3">
-        <div className="space-y-5 lg:col-span-2">
+      <div className="grid gap-5 2xl:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="min-w-0 space-y-5">
           {isV2 || isV3 ? (
             <Card title="Fluxo da compra">
               <WorkflowProgress request={request} />
@@ -1490,6 +1712,7 @@ export function PurchaseDetailPage() {
 
           <Card padded={false} title="Itens da solicitação">
             <Table
+              dense
               columns={columns}
               rows={items}
               keyOf={(row) => row.id}
@@ -1735,7 +1958,7 @@ export function PurchaseDetailPage() {
           </Card>
         </div>
 
-        <div className="space-y-5">
+        <div className="min-w-0 space-y-5">
           <Card title="Ficha da solicitação">
             <dl className="space-y-3 text-sm">
               <InfoRow label="Solicitante" value={request.requesterName} />
@@ -1853,6 +2076,18 @@ export function PurchaseDetailPage() {
           </Card>
         </div>
       </div>
+
+      {triaging ? (
+        <TriageDialog
+          request={request}
+          items={items}
+          onClose={() => setTriaging(false)}
+          onSaved={() => {
+            setTriaging(false);
+            state.reload();
+          }}
+        />
+      ) : null}
 
       {deciding ? (
         request.workflowVersion === 2 ? (
@@ -1982,8 +2217,9 @@ function WorkflowProgress({ request }: { request: PurchaseRow }) {
   const standard = request.routing !== "direct_to_purchasing";
   const steps = isV3
     ? [
-        { key: "manager", label: "Gestor do setor" },
-        { key: "purchasing", label: "Compras autoriza" },
+        { key: "sent", label: "Solicitação" },
+        { key: "triage", label: "Triagem" },
+        { key: "purchasing", label: "Aprovação de Compras" },
         { key: "buyer", label: "Comprador" },
         { key: "receipt", label: "Recebimento" },
       ]
@@ -1996,12 +2232,12 @@ function WorkflowProgress({ request }: { request: PurchaseRow }) {
       ];
   const stageOrder: Record<string, number> = isV3
     ? {
-        manager: 0,
-        purchasing: 1,
-        buyer: 2,
-        award: 2,
-        receipt: 3,
-        completed: 4,
+        manager: 1,
+        purchasing: 2,
+        buyer: 3,
+        award: 3,
+        receipt: 4,
+        completed: steps.length,
       }
     : {
         manager: 0,
@@ -2012,10 +2248,10 @@ function WorkflowProgress({ request }: { request: PurchaseRow }) {
         receipt: standard ? 4 : 3,
         completed: steps.length,
       };
-  const current = stageOrder[request.approvalStage] ?? 0;
+  const current = request.status === "draft" ? 0 : stageOrder[request.approvalStage] ?? 0;
 
   return (
-    <ol className={`grid gap-2 ${isV3 ? "sm:grid-cols-4" : "sm:grid-cols-5"}`}>
+    <ol className="grid gap-2 sm:grid-cols-5">
       {steps.map((step, index) => {
         const done = request.approvalStage === "completed" || index < current;
         const active = index === current && request.approvalStage !== "completed";
@@ -2044,6 +2280,398 @@ function WorkflowProgress({ request }: { request: PurchaseRow }) {
   );
 }
 
+/* -------------------------------------------------------------------------- */
+/* Triagem de compras (v3)                                                    */
+/* -------------------------------------------------------------------------- */
+
+interface TriageDraft {
+  itemId: string;
+  label: string;
+  productId: string;
+  description: string;
+  qty: string;
+  uomId: string;
+  remove: boolean;
+}
+
+/** Aceita "1.000,5" (pt-BR), "1000.5" e "10,5". */
+function parseQuantityInput(value: string): number {
+  const trimmed = value.trim();
+  if (!trimmed) return Number.NaN;
+  const normalized = trimmed.includes(",")
+    ? trimmed.replace(/\./g, "").replace(",", ".")
+    : trimmed;
+  return Number(normalized);
+}
+
+function TriageDialog({
+  request,
+  items,
+  onClose,
+  onSaved,
+}: {
+  request: PurchaseRow;
+  items: PurchaseItem[];
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const toast = useToast();
+  const { can } = useSession();
+  const uoms = useUoms();
+  const categories = useCategories();
+  const [notes, setNotes] = useState("");
+  const [saving, setSaving] = useState<"forward" | "rejected" | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [drafts, setDrafts] = useState<TriageDraft[]>(() =>
+    items
+      .filter((item) => !["received", "cancelled", "rejected"].includes(item.status))
+      .map((item) => ({
+        itemId: item.id,
+        label: item.productName ?? item.description ?? "Item",
+        productId: item.productId ?? "",
+        description: item.description ?? "",
+        qty: formatQuantity(item.qtyMilli, 3),
+        uomId: item.uomId ?? "",
+        remove: false,
+      })),
+  );
+  const [registering, setRegistering] = useState<string | null>(null);
+  const [creatingProduct, setCreatingProduct] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newUomId, setNewUomId] = useState("");
+  const [newCategoryId, setNewCategoryId] = useState("");
+  const [newSku, setNewSku] = useState("");
+
+  const canManageCatalog = can(PERMISSIONS.CATALOG_MANAGE);
+  const defaultUomId = uoms.data?.find((uom) => uom.code === "UN")?.id ?? uoms.data?.[0]?.id ?? "";
+
+  const patchDraft = (itemId: string, patch: Partial<TriageDraft>) => {
+    setDrafts((current) =>
+      current.map((draft) => (draft.itemId === itemId ? { ...draft, ...patch } : draft)),
+    );
+  };
+
+  const startRegistration = (draft: TriageDraft, query?: string) => {
+    setRegistering(draft.itemId);
+    setNewName((query ?? draft.description ?? draft.label).trim());
+    setNewUomId(draft.uomId || defaultUomId);
+    setNewCategoryId("");
+    setNewSku("");
+    setError(null);
+  };
+
+  const createProduct = async (itemId: string) => {
+    const name = newName.trim();
+    if (name.length < 2) {
+      setError("Informe o nome do produto.");
+      return;
+    }
+    if (!newUomId) {
+      setError("Selecione a unidade de medida do produto.");
+      return;
+    }
+    setCreatingProduct(true);
+    setError(null);
+    try {
+      const created = await apiPost<{ id: string }>("/api/catalog/products", {
+        name,
+        sku: newSku.trim() || null,
+        categoryId: newCategoryId || null,
+        uomId: newUomId,
+        tracksStock: true,
+      });
+      patchDraft(itemId, { productId: created.id, uomId: newUomId });
+      setRegistering(null);
+      toast.success("Produto cadastrado no catálogo.");
+    } catch (cause) {
+      setError(apiErrorMessage(cause));
+    } finally {
+      setCreatingProduct(false);
+    }
+  };
+
+  const submit = async (decision: "forward" | "rejected") => {
+    setError(null);
+    if (decision === "rejected") {
+      if (notes.trim().length < 5) {
+        setError("Explique o motivo da recusa (mínimo de 5 caracteres).");
+        return;
+      }
+      setSaving("rejected");
+      try {
+        await apiPost(`/api/purchases/${request.id}/decide`, {
+          decision: "rejected",
+          notes: notes.trim(),
+        });
+        toast.success("Solicitação recusada na triagem.");
+        onSaved();
+      } catch (cause) {
+        setError(apiErrorMessage(cause));
+      } finally {
+        setSaving(null);
+      }
+      return;
+    }
+
+    const active = drafts.filter((draft) => !draft.remove);
+    if (active.length === 0) {
+      setError("Mantenha ao menos um item ativo na solicitação.");
+      return;
+    }
+    for (const draft of active) {
+      const qty = parseQuantityInput(draft.qty);
+      if (!Number.isFinite(qty) || qty <= 0) {
+        setError(`Informe uma quantidade maior que zero para ${draft.label}.`);
+        return;
+      }
+      if (!draft.productId && !draft.description.trim()) {
+        setError(`Vincule um produto do catálogo ou descreva ${draft.label}.`);
+        return;
+      }
+    }
+
+    setSaving("forward");
+    try {
+      await apiPost(`/api/purchases/${request.id}/decide`, {
+        decision: "forward",
+        notes: notes.trim() || null,
+        items: drafts.map((draft) =>
+          draft.remove
+            ? { itemId: draft.itemId, remove: true }
+            : {
+                itemId: draft.itemId,
+                qty: parseQuantityInput(draft.qty),
+                description: draft.description.trim() || null,
+                productId: draft.productId || null,
+                uomId: draft.uomId || null,
+              },
+        ),
+      });
+      toast.success("Triagem concluída. A solicitação foi para o gestor de Compras.");
+      onSaved();
+    } catch (cause) {
+      setError(apiErrorMessage(cause));
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  return (
+    <Dialog
+      open
+      wide
+      title={`Triagem de ${request.code}`}
+      description="Ajuste os itens à necessidade real e ao catálogo. Ao encaminhar, a solicitação segue para o gestor de Compras definir pagamento e centro de custo."
+      onClose={onClose}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button
+            variant="danger"
+            onClick={() => void submit("rejected")}
+            loading={saving === "rejected"}
+            disabled={saving === "forward"}
+          >
+            Recusar
+          </Button>
+          <Button
+            onClick={() => void submit("forward")}
+            loading={saving === "forward"}
+            disabled={saving === "rejected"}
+          >
+            Encaminhar ao gestor
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        {error ? <Alert tone="red">{error}</Alert> : null}
+
+        <div className="rounded-lg border border-brand-100 bg-brand-50/70 p-3 text-sm text-brand-900">
+          <p className="font-medium">O que a triagem pode fazer</p>
+          <ul className="mt-1 list-disc space-y-0.5 pl-5 text-xs">
+            <li>Corrigir nome, descrição, quantidade e unidade dos itens.</li>
+            <li>Vincular itens fora do catálogo a um produto existente ou cadastrar um produto novo.</li>
+            <li>Remover itens que não fazem parte da compra. A solicitação precisa manter ao menos um item.</li>
+          </ul>
+        </div>
+
+        {drafts.map((draft) => (
+          <div
+            key={draft.itemId}
+            className={`rounded-lg border p-3 ${
+              draft.remove ? "border-slate-200 bg-slate-50 opacity-60" : "border-slate-200 bg-white"
+            }`}
+          >
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-slate-800">{draft.label}</p>
+                <p className="text-xs text-slate-500">
+                  {draft.productId ? "Vinculado ao catálogo" : "Fora do catálogo — descreva ou cadastre o produto"}
+                </p>
+              </div>
+              <label className="flex items-center gap-2 text-xs text-slate-600">
+                <input
+                  type="checkbox"
+                  className="size-4 rounded border-slate-300 text-brand-700 focus:ring-brand-600"
+                  checked={!draft.remove}
+                  onChange={(event) => patchDraft(draft.itemId, { remove: !event.target.checked })}
+                />
+                Manter item
+              </label>
+            </div>
+
+            <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_110px_130px]">
+              <Field label="Produto do catálogo" htmlFor={`triageProduct-${draft.itemId}`}>
+                <ProductPicker
+                  id={`triageProduct-${draft.itemId}`}
+                  value={draft.productId}
+                  onChange={(productId, product) =>
+                    patchDraft(draft.itemId, {
+                      productId,
+                      ...(product ? { uomId: product.uomId } : {}),
+                    })
+                  }
+                  onRequestFreeText={
+                    canManageCatalog ? (query) => startRegistration(draft, query) : undefined
+                  }
+                  disabled={draft.remove}
+                />
+              </Field>
+              <Field label="Quantidade" htmlFor={`triageQty-${draft.itemId}`}>
+                <Input
+                  id={`triageQty-${draft.itemId}`}
+                  value={draft.qty}
+                  onChange={(event) => patchDraft(draft.itemId, { qty: event.target.value })}
+                  inputMode="decimal"
+                  disabled={draft.remove}
+                />
+              </Field>
+              <Field label="Unidade" htmlFor={`triageUom-${draft.itemId}`}>
+                <Select
+                  id={`triageUom-${draft.itemId}`}
+                  value={draft.uomId}
+                  onChange={(event) => patchDraft(draft.itemId, { uomId: event.target.value })}
+                  disabled={draft.remove}
+                >
+                  <option value="">Selecione...</option>
+                  {(uoms.data ?? []).map((uom) => (
+                    <option key={uom.id} value={uom.id}>
+                      {uom.code} — {uom.name}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            </div>
+
+            <div className="mt-3">
+              <Field label="Descrição / nome do item" htmlFor={`triageDesc-${draft.itemId}`}>
+                <Input
+                  id={`triageDesc-${draft.itemId}`}
+                  value={draft.description}
+                  onChange={(event) => patchDraft(draft.itemId, { description: event.target.value })}
+                  placeholder="Ex.: detergente neutro 500 ml"
+                  maxLength={300}
+                  disabled={draft.remove}
+                />
+              </Field>
+            </div>
+
+            {!draft.remove && canManageCatalog && registering === draft.itemId ? (
+              <div className="mt-3 rounded-md border border-brand-200 bg-brand-50/60 p-3">
+                <p className="text-sm font-medium text-slate-800">Cadastrar produto no catálogo</p>
+                <p className="mb-2 text-xs text-slate-600">
+                  O cadastro é permanente e ficará disponível para as próximas compras.
+                </p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Field label="Nome do produto" htmlFor={`newProductName-${draft.itemId}`}>
+                    <Input
+                      id={`newProductName-${draft.itemId}`}
+                      value={newName}
+                      onChange={(event) => setNewName(event.target.value)}
+                      maxLength={160}
+                    />
+                  </Field>
+                  <Field label="Unidade de medida" htmlFor={`newProductUom-${draft.itemId}`}>
+                    <Select
+                      id={`newProductUom-${draft.itemId}`}
+                      value={newUomId}
+                      onChange={(event) => setNewUomId(event.target.value)}
+                    >
+                      <option value="">Selecione...</option>
+                      {(uoms.data ?? []).map((uom) => (
+                        <option key={uom.id} value={uom.id}>
+                          {uom.code} — {uom.name}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                  <Field label="Categoria (opcional)" htmlFor={`newProductCategory-${draft.itemId}`}>
+                    <Select
+                      id={`newProductCategory-${draft.itemId}`}
+                      value={newCategoryId}
+                      onChange={(event) => setNewCategoryId(event.target.value)}
+                    >
+                      <option value="">Sem categoria</option>
+                      {(categories.data ?? []).map((category) => (
+                        <option key={category.id} value={category.id}>
+                          {category.name}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                  <Field label="SKU (opcional)" htmlFor={`newProductSku-${draft.itemId}`}>
+                    <Input
+                      id={`newProductSku-${draft.itemId}`}
+                      value={newSku}
+                      onChange={(event) => setNewSku(event.target.value)}
+                      maxLength={40}
+                    />
+                  </Field>
+                </div>
+                <div className="mt-3 flex justify-end gap-2">
+                  <Button variant="secondary" size="sm" onClick={() => setRegistering(null)}>
+                    Cancelar cadastro
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => void createProduct(draft.itemId)}
+                    loading={creatingProduct}
+                  >
+                    Salvar produto
+                  </Button>
+                </div>
+              </div>
+            ) : !draft.remove && canManageCatalog ? (
+              <div className="mt-2 flex justify-end">
+                <Button variant="secondary" size="sm" onClick={() => startRegistration(draft)}>
+                  Cadastrar produto no catálogo
+                </Button>
+              </div>
+            ) : null}
+          </div>
+        ))}
+
+        <Field
+          label="Observação da triagem"
+          hint="Explique ajustes, itens removidos ou oriente o gestor de Compras."
+          htmlFor="triageNotes"
+        >
+          <Textarea
+            id="triageNotes"
+            rows={3}
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+            placeholder="Ex.: item 2 ajustado para a embalagem de 5 L; item 3 removido por já existir em estoque."
+          />
+        </Field>
+      </div>
+    </Dialog>
+  );
+}
+
 function WorkflowDecisionDialog({
   request,
   items,
@@ -2066,6 +2694,7 @@ function WorkflowDecisionDialog({
         ]
       : [
           { value: "approved", label: "Autorizar a compra e liberar o comprador" },
+          { value: "request_alignment", label: "Solicitar alinhamento ao solicitante" },
           { value: "rejected", label: "Recusar solicitação" },
         ]
     : stage === "manager"
@@ -2092,8 +2721,11 @@ function WorkflowDecisionDialog({
   const [purchaseMode, setPurchaseMode] = useState<"quote" | "budget" | "direct">(
     request.purchaseMode ?? "quote",
   );
+  const defaultItemMode: "quote" | "direct" = purchaseMode === "direct" ? "direct" : "quote";
   const [paymentMethodId, setPaymentMethodId] = useState(request.paymentMethodId ?? "");
   const [paymentTerms, setPaymentTerms] = useState(request.paymentTerms ?? "");
+  const [costCenterId, setCostCenterId] = useState(request.costCenterId ?? "");
+  const [glAccount, setGlAccount] = useState(request.glAccount ?? "");
   const [notes, setNotes] = useState("");
   const [drafts, setDrafts] = useState(() =>
     items
@@ -2101,15 +2733,27 @@ function WorkflowDecisionDialog({
       .map((item) => ({
         itemId: item.id,
         label: item.productName ?? item.description ?? "Item",
+        description: item.description ?? "",
         requestedMilli: item.qtyMilli,
         approved: true,
         qtyApproved: formatQuantity(item.qtyApprovedMilli ?? item.qtyMilli, 3),
-        mode: item.purchaseMode ?? "quote",
+        mode: item.purchaseMode ?? defaultItemMode,
+        notes: item.notes ?? "",
+        uomCode: item.uomCode ?? "",
       })),
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const editItems = !isV3 && (stage === "manager" || stage === "direction");
+  const changePurchaseMode = (next: "quote" | "budget" | "direct") => {
+    setPurchaseMode(next);
+    // O destino de cada item acompanha a escolha do modo de compra; o gestor
+    // ainda pode ajustar item a item depois.
+    const itemMode = next === "direct" ? "direct" : "quote";
+    setDrafts((current) => current.map((draft) => ({ ...draft, mode: itemMode })));
+  };
+  const editItems = isV3
+    ? stage === "purchasing" && decision === "approved"
+    : stage === "manager" || stage === "direction";
   const selectedPayment = (optionsData.data?.paymentMethods ?? []).find(
     (method) => method.id === paymentMethodId,
   );
@@ -2130,18 +2774,37 @@ function WorkflowDecisionDialog({
           return;
         }
       }
+      if (isV3 && stage === "purchasing" && decision === "request_alignment" && notes.trim().length < 5) {
+        setError("Descreva o que precisa ser alinhado com o solicitante (mínimo 5 caracteres).");
+        setSaving(false);
+        return;
+      }
       const payload: Record<string, unknown> = { decision, notes: notes || null };
-      if (isV3 && stage === "purchasing") {
+      if (isV3 && stage === "purchasing" && decision === "approved") {
         payload.purchaseMode = purchaseMode;
         payload.paymentMethodId = paymentMethodId || null;
         payload.paymentTerms = paymentTerms || null;
+        payload.costCenterId = costCenterId || null;
+        payload.glAccount = glAccount.trim() || null;
       }
       if (editItems && drafts.length > 0) {
+        const invalid = drafts.find((draft) => {
+          if (!draft.approved) return false;
+          const value = parseQuantityInput(draft.qtyApproved);
+          return !Number.isFinite(value) || value <= 0;
+        });
+        if (invalid) {
+          setError(`Informe uma quantidade aprovada maior que zero para ${invalid.label}.`);
+          setSaving(false);
+          return;
+        }
         payload.items = drafts.map((draft) => ({
           itemId: draft.itemId,
           status: draft.approved ? "approved" : "rejected",
-          qtyApproved: draft.approved ? Number(draft.qtyApproved.replace(",", ".")) : undefined,
+          qtyApproved: draft.approved ? parseQuantityInput(draft.qtyApproved) : undefined,
           purchaseMode: draft.approved ? draft.mode : undefined,
+          description: draft.description.trim() || null,
+          notes: draft.notes.trim() || null,
         }));
       }
       await apiPost(`/api/purchases/${request.id}/decide`, payload);
@@ -2191,14 +2854,14 @@ function WorkflowDecisionDialog({
           <div className="grid gap-4 sm:grid-cols-2">
             <Field
               label="Como comprar"
-              hint="Cotação exige 2 propostas; orçamento aceita 1; compra direta dispensa proposta."
+              hint="Cotação exige 2 propostas; orçamento aceita 1; compra direta dispensa proposta. O destino dos itens acompanha esta escolha; ajuste item a item se precisar."
               htmlFor="decisionMode"
             >
               <Select
                 id="decisionMode"
                 value={purchaseMode}
                 onChange={(event) =>
-                  setPurchaseMode(event.target.value as "quote" | "budget" | "direct")
+                  changePurchaseMode(event.target.value as "quote" | "budget" | "direct")
                 }
               >
                 <option value="quote">Cotação — comparar fornecedores</option>
@@ -2240,13 +2903,40 @@ function WorkflowDecisionDialog({
                 maxLength={300}
               />
             </Field>
+            <Field
+              label="Centro de custo"
+              hint="Rateio financeiro da compra; pode ser ajustado antes de liberar."
+              htmlFor="decisionCostCenter"
+            >
+              <Select
+                id="decisionCostCenter"
+                value={costCenterId}
+                onChange={(event) => setCostCenterId(event.target.value)}
+              >
+                <option value="">Não definido</option>
+                {(optionsData.data?.costCenters ?? []).map((center) => (
+                  <option key={center.id} value={center.id}>
+                    {center.code} - {center.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Conta contábil (GL)" hint="Opcional; usada na integração contábil." htmlFor="decisionGl">
+              <Input
+                id="decisionGl"
+                value={glAccount}
+                onChange={(event) => setGlAccount(event.target.value)}
+                placeholder="Ex.: 4.02.001"
+                maxLength={40}
+              />
+            </Field>
           </div>
         ) : null}
         <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
           {isV3
             ? stage === "manager"
-              ? "Você confirma a necessidade do seu setor. A solicitação segue para o responsável de Compras, que escolhe e autoriza o modo de compra."
-              : "Escolha como comprar e confirme a forma de pagamento. A autorização libera o comprador e registra o responsável pela decisão."
+              ? "Você confirma a necessidade do seu setor. A solicitação segue para a triagem do comprador e depois para o gestor de Compras."
+              : "Ajuste itens e quantidades, escolha como comprar, confirme a forma de pagamento e o centro de custo. Se faltar informação, solicite alinhamento ao solicitante sem sair da etapa. A aprovação libera o comprador."
             : stage === "manager"
               ? "O gestor confirma a necessidade. A Direção fará a análise de orçamento antes de Compras."
               : stage === "direction"
@@ -2262,15 +2952,34 @@ function WorkflowDecisionDialog({
                   <th className="px-3 py-2 text-right font-medium">Solicitado</th>
                   <th className="px-3 py-2 text-right font-medium">Aprovado</th>
                   <th className="px-3 py-2 text-left font-medium">Destino</th>
+                  <th className="px-3 py-2 text-left font-medium">Observação</th>
                   <th className="px-3 py-2 text-center font-medium">Incluir</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {drafts.map((draft) => (
                   <tr key={draft.itemId}>
-                    <td className="px-3 py-2 text-slate-700">{draft.label}</td>
+                    <td className="px-3 py-2 text-slate-700">
+                      <p className="font-medium text-slate-800">{draft.label}</p>
+                      <Input
+                        value={draft.description}
+                        onChange={(event) =>
+                          setDrafts((current) =>
+                            current.map((entry) =>
+                              entry.itemId === draft.itemId
+                                ? { ...entry, description: event.target.value }
+                                : entry,
+                            ),
+                          )
+                        }
+                        className="mt-1 h-8 text-xs"
+                        placeholder="Descrição / complemento"
+                        maxLength={300}
+                        aria-label={`Descrição de ${draft.label}`}
+                      />
+                    </td>
                     <td className="px-3 py-2 text-right tabular-nums text-slate-500">
-                      {formatQuantity(draft.requestedMilli)}
+                      {formatQuantity(draft.requestedMilli)} {draft.uomCode}
                     </td>
                     <td className="px-3 py-2 text-right">
                       <Input
@@ -2307,6 +3016,24 @@ function WorkflowDecisionDialog({
                         <option value="direct">Compra direta</option>
                         <option value="quote">Cotação</option>
                       </Select>
+                    </td>
+                    <td className="px-3 py-2">
+                      <Input
+                        value={draft.notes}
+                        onChange={(event) =>
+                          setDrafts((current) =>
+                            current.map((entry) =>
+                              entry.itemId === draft.itemId
+                                ? { ...entry, notes: event.target.value }
+                                : entry,
+                            ),
+                          )
+                        }
+                        className="w-40"
+                        placeholder="Opcional"
+                        maxLength={500}
+                        aria-label={`Observação de ${draft.label}`}
+                      />
                     </td>
                     <td className="px-3 py-2 text-center">
                       <input
@@ -2796,7 +3523,7 @@ function DecideDialog({
         payload.items = drafts.map((draft) => ({
           itemId: draft.itemId,
           status: draft.approved ? "approved" : "rejected",
-          qtyApproved: draft.approved ? Number(draft.qtyApproved.replace(",", ".")) : undefined,
+          qtyApproved: draft.approved ? parseQuantityInput(draft.qtyApproved) : undefined,
           purchaseMode: draft.approved ? draft.mode : undefined,
         }));
       }
@@ -3391,9 +4118,12 @@ interface ReceiptDraft {
   discrepancyNote: string;
   /** F-06: item que entra e já é consumido (entrada + saída com justificativa). */
   directUse: boolean;
-  /** Item sem produto no catálogo: recebe aqui o cadastro rápido (apenas o nome). */
+  /** Produto existente escolhido para normalizar um item fora do catálogo. */
+  productId: string;
+  /** Item sem produto no catálogo: recebe aqui o cadastro rápido. */
   newProduct: boolean;
   newProductName: string;
+  newProductUomId: string;
 }
 
 function ReceiptDialog({
@@ -3409,6 +4139,7 @@ function ReceiptDialog({
 }) {
   const toast = useToast();
   const locations = useLocations();
+  const uoms = useUoms();
   const [locationId, setLocationId] = useState(request.locationId ?? "");
   const [documentRef, setDocumentRef] = useState("");
   const [invoiceNumber, setInvoiceNumber] = useState("");
@@ -3431,8 +4162,10 @@ function ReceiptDialog({
         hasDiscrepancy: false,
         discrepancyNote: "",
         directUse: false,
+        productId: "",
         newProduct: !item.productId,
         newProductName: item.description ?? "",
+        newProductUomId: item.uomId ?? "",
       })),
   );
   const [saving, setSaving] = useState(false);
@@ -3444,7 +4177,7 @@ function ReceiptDialog({
   };
 
   const chosen = useMemo(
-    () => drafts.filter((draft) => draft.include && Number(draft.receivedQty.replace(",", ".")) > 0),
+    () => drafts.filter((draft) => draft.include && parseQuantityInput(draft.receivedQty) > 0),
     [drafts],
   );
   const directUseChosen = useMemo(() => chosen.filter((draft) => draft.directUse), [chosen]);
@@ -3478,10 +4211,12 @@ function ReceiptDialog({
       return;
     }
     const missingProductName = chosen.find(
-      (draft) => draft.newProduct && draft.newProductName.trim().length < 2,
+      (draft) => !draft.productId && draft.newProduct && draft.newProductName.trim().length < 2,
     );
     if (missingProductName) {
-      setError(`Informe o nome do produto para o item ${missingProductName.label} (cadastro rápido).`);
+      setError(
+        `Vincule um produto existente ou informe o nome do produto para o item ${missingProductName.label}.`,
+      );
       return;
     }
     setSaving(true);
@@ -3498,17 +4233,24 @@ function ReceiptDialog({
         invoiceNumber: invoiceNumber || null,
         invoiceSeries: invoiceSeries || null,
         invoiceDate: invoiceDate || null,
-        invoiceTotal: invoiceTotal ? Number(invoiceTotal.replace(",", ".")) : undefined,
+        invoiceTotal: invoiceTotal ? parseQuantityInput(invoiceTotal) : undefined,
         notes: notes || null,
         directUseReason: directUseChosen.length > 0 ? directUseReason.trim() : null,
         items: chosen.map((draft) => ({
           requestItemId: draft.requestItemId,
-          receivedQty: Number(draft.receivedQty.replace(",", ".")),
-          unitPrice: draft.unitPrice ? Number(draft.unitPrice.replace(",", ".")) : undefined,
+          receivedQty: parseQuantityInput(draft.receivedQty),
+          unitPrice: draft.unitPrice ? parseQuantityInput(draft.unitPrice) : undefined,
           hasDiscrepancy: draft.hasDiscrepancy,
           discrepancyNote: draft.discrepancyNote || null,
           directUse: draft.directUse,
-          newProduct: draft.newProduct ? { name: draft.newProductName.trim() } : undefined,
+          productId: draft.productId || undefined,
+          newProduct:
+            !draft.productId && draft.newProduct
+              ? {
+                  name: draft.newProductName.trim(),
+                  uomId: draft.newProductUomId || null,
+                }
+              : undefined,
         })),
       });
       const createdCount = result.createdProducts?.length ?? 0;
@@ -3683,19 +4425,56 @@ function ReceiptDialog({
                   {draft.newProduct ? (
                     <div className="mt-2 rounded-md border border-amber-200 bg-amber-50/60 p-2">
                       <p className="text-xs text-amber-900">
-                        Item sem produto no catálogo. Informe o nome e o produto será cadastrado agora, com
-                        cadastro incompleto para correção posterior no catálogo.
+                        Item sem produto no catálogo. Vincule a um produto existente (recomendado) ou
+                        cadastre um novo agora. O vínculo fica permanente no item da solicitação.
                       </p>
-                      <Input
-                        value={draft.newProductName}
-                        onChange={(event) =>
-                          updateDraft(draft.requestItemId, { newProductName: event.target.value })
-                        }
-                        placeholder="Nome do produto"
-                        className="mt-1"
-                        aria-label={`Nome do produto novo para ${draft.label}`}
-                        disabled={!draft.include}
-                      />
+                      <div className="mt-2">
+                        <Field label="Produto existente" htmlFor={`receiptProduct-${draft.requestItemId}`}>
+                          <ProductPicker
+                            id={`receiptProduct-${draft.requestItemId}`}
+                            value={draft.productId}
+                            onChange={(productId) =>
+                              updateDraft(draft.requestItemId, { productId })
+                            }
+                            disabled={!draft.include}
+                            ariaLabel={`Produto para ${draft.label}`}
+                            placeholder="Buscar produto no catálogo..."
+                          />
+                        </Field>
+                      </div>
+                      {!draft.productId ? (
+                        <div className="mt-2 grid gap-2 sm:grid-cols-[minmax(0,1fr)_10rem]">
+                          <Field label="Ou cadastre um produto novo" htmlFor={`receiptNewProduct-${draft.requestItemId}`}>
+                            <Input
+                              id={`receiptNewProduct-${draft.requestItemId}`}
+                              value={draft.newProductName}
+                              onChange={(event) =>
+                                updateDraft(draft.requestItemId, { newProductName: event.target.value })
+                              }
+                              placeholder="Nome do produto"
+                              aria-label={`Nome do produto novo para ${draft.label}`}
+                              disabled={!draft.include}
+                            />
+                          </Field>
+                          <Field label="Unidade" htmlFor={`receiptNewProductUom-${draft.requestItemId}`}>
+                            <Select
+                              id={`receiptNewProductUom-${draft.requestItemId}`}
+                              value={draft.newProductUomId}
+                              onChange={(event) =>
+                                updateDraft(draft.requestItemId, { newProductUomId: event.target.value })
+                              }
+                              disabled={!draft.include}
+                            >
+                              <option value="">Padrão (UN)</option>
+                              {(uoms.data ?? []).filter((uom) => uom.isActive).map((uom) => (
+                                <option key={uom.id} value={uom.id}>
+                                  {uom.code} — {uom.name}
+                                </option>
+                              ))}
+                            </Select>
+                          </Field>
+                        </div>
+                      ) : null}
                     </div>
                   ) : null}
                 </div>

@@ -1,28 +1,91 @@
 # Fluxo corporativo de compras (v3)
 
 Este documento descreve o fluxo de compras **v3** (por setor), introduzido na
-versão **0.4.0**, e mantém o detalhamento dos fluxos v2 (0.2.0/0.3.0) e v1
-(legado), que continuam disponíveis para solicitações antigas e para integrações
-que declarem `workflowVersion: 1` ou `2`.
+versão **0.4.0** e refinado na **0.6.0** com triagem, aprovação/refinamento do
+gestor de Compras e normalização de itens no recebimento. Mantém o detalhamento
+dos fluxos v2 (0.2.0/0.3.0) e v1 (legado), que continuam disponíveis para
+solicitações antigas e para integrações que declarem `workflowVersion: 1` ou `2`.
 
 ## Fluxo v3 — por setor
 
-O v3 é o padrão para solicitações novas. A criação já informa **setor**, **modo**
-(`quote`, `budget` ou `direct`) e **forma de pagamento**.
+O v3 é o padrão para solicitações novas. Na criação, o solicitante informa
+apenas **local de destino**, **data desejada**, **prioridade**, **justificativa**
+e **itens**; o setor vem do login e o **modo** (`quote`, `budget` ou `direct`) e a
+**forma de pagamento** são definidos pelo responsável de Compras na autorização.
 
 ```text
 Solicitante
   └─ cria e envia
-       └─ Gestor do setor aprova a necessidade
-            └─ Responsável de Compras autoriza
-                 ├─ cotação   → comprador registra ≥2 propostas → devolve
-                 │             → responsável de Compras aprova → adjudica
-                 ├─ orçamento → comprador registra 1 proposta → devolve
-                 │             → responsável de Compras aprova → adjudica
-                 └─ compra direta → autorização sem cotação → vai ao comprador
-                      └─ Comprador emite pedido por fornecedor
-                           └─ Responsável pelo estoque confere e lança a NF
+       └─ Triagem de Compras (comprador/analista)
+            ├─ ajusta itens, cadastra ou vincula produtos fora do catálogo
+            ├─ recusa → encerra
+            └─ encaminha ao gestor de Compras
+                 └─ Aprovação/refinamento do gestor de Compras
+                      ├─ solicita alinhamento → solicitante responde, etapa continua
+                      ├─ recusa → encerra
+                      └─ autoriza (cotação, orçamento ou compra direta)
+                           ├─ cotação/orçamento → comprador registra propostas
+                           │    → gestor de Compras aprova → adjudica por item
+                           └─ compra direta → segue direto ao comprador
+                                └─ Comprador emite pedido por fornecedor
+                                     └─ Estoque confere, lança a NF e normaliza itens
 ```
+
+### Triagem de Compras
+
+A primeira etapa depois do envio é a **triagem**, feita por quem tem
+`purchases.order` ou `purchases.authorize`. O solicitante não pode triar a
+própria solicitação. O triador pode:
+
+- corrigir nome, descrição, quantidade e unidade dos itens;
+- vincular um item fora do catálogo a um produto existente pelo `ProductPicker`;
+- cadastrar um produto novo (o cadastro nasce `catalog_status = incomplete`);
+- remover itens, desde que reste ao menos um;
+- encaminhar ao gestor de Compras (`forward`) ou recusar (`rejected`).
+
+No banco, a triagem é representada por `approval_stage = 'purchasing'` com
+`triage_completed_at IS NULL`; a API deriva `approvalStage: "triage"` para o
+cliente. O encaminhamento grava `triage_completed_at` e
+`triage_completed_by`.
+
+### Aprovação e refinamento do gestor de Compras
+
+O gestor ou diretor de Compras revisa a necessidade e pode:
+
+- editar itens, quantidades, unidades e observações;
+- definir o destino de cada item (cotação ou compra direta);
+- escolher o modo da solicitação (cotação, orçamento ou compra direta);
+- informar forma de pagamento, condições, centro de custo e conta contábil (GL);
+- **solicitar alinhamento** ao solicitante, com observação de pelo menos 5
+  caracteres, sem sair da etapa e sem perder a fila de aprovação;
+- autorizar a compra ou recusar.
+
+Ao trocar o modo da solicitação, o destino dos itens acompanha a escolha
+(cotação/orçamento → `quote`; compra direta → `direct`); o gestor ainda pode
+ajustar item a item depois. A autorização preserva modos já definidos por item
+(`COALESCE(purchase_mode, ...)`).
+
+```text
+Etapa derivada    Status típico                          Quem age                 Ação
+triage            pending_approval                       comprador/analista       forward, rejected
+purchasing        pending_approval                       gestor/diretor Compras   approved, request_alignment, rejected
+buyer             approved/quoting/quote_returned/...    comprador                cotação, pedido
+receipt           ordered/partially_received             estoque/comprador        recebimento + NF
+completed         received/rejected/cancelled            —                        fim
+```
+
+
+### Solicitação simplificada e entrada em lote
+
+- O formulário do solicitante mostra somente Local de destino, Data desejada,
+  Prioridade, Justificativa (obrigatória para enviar), Observações e itens.
+- A **entrada em lote** aceita uma lista colada (uma linha por item) no formato
+  `quantidade descrição unidade`; o processamento extrai quantidade e unidade,
+  associa ao catálogo por nome/palavras-chave/SKU e abre uma tabela editável
+  antes de confirmar.
+- Itens sem correspondência no catálogo entram como **texto livre**, recebem o
+  selo "Fora do catálogo" e **não bloqueiam** o envio; o cadastro pode ser feito
+  durante o processo de compra ou no recebimento.
 
 ### Setores, gestores e visibilidade
 
@@ -50,14 +113,54 @@ Solicitante
 - A cotação exige **pelo menos 2 propostas registradas**; o orçamento aceita 1.
 - A aprovação da proposta cria automaticamente a **adjudicação de todos os
   itens** e envia a solicitação ao comprador.
+- A ação `request_alignment` registra a observação, mantém a solicitação em
+  `pending_approval`/`purchasing`, notifica solicitante e responsável pela
+  triagem e grava auditoria, outbox e evento na linha do tempo.
 - Quem não tem a permissão recebe erro nomeado: “Você não tem permissão para
   realizar esta ação. Solicite a [nome], responsável por [ação].”
+- No v3 atual não existe aprovação separada do gestor do setor nem etapa de
+  direção: o solicitante envia direto para a triagem e a aprovação é feita pelo
+  gestor de Compras. As etapas antigas permanecem para solicitações v1/v2.
+
 
 ### Recebimento com nota fiscal
 
-`POST /api/purchases/:id/receipts` (v3) exige número, série, data e total da nota
-fiscal e o local de entrega. O lançamento atualiza a solicitação, o pedido e as
-linhas do pedido e conclui a solicitação quando tudo foi recebido.
+`POST /api/purchases/:id/receipts` (v3) exige número e data da nota fiscal e o
+local de entrega; série e total são opcionais. O lançamento atualiza a
+solicitação, o pedido e as linhas do pedido, gera a movimentação de estoque e
+conclui a solicitação quando tudo foi recebido.
+
+Itens que ainda estão como texto livre podem ser **normalizados no recebimento**:
+
+- vincular a um produto existente (`productId`), herdando a unidade do produto;
+- cadastrar um produto novo (`newProduct.name` + `uomId` opcional), que nasce
+  com `catalog_status = incomplete`;
+- o vínculo é gravado permanentemente em
+  `purchase_request_items.product_id` e `uom_id`, e o recebimento passa a
+  movimentar o produto normalizado.
+
+```json
+{
+  "locationId": "loc-almoxarifado",
+  "invoiceNumber": "NF-9001",
+  "invoiceDate": "2026-10-21",
+  "items": [
+    {
+      "requestItemId": "item-cabo",
+      "receivedQty": 2,
+      "unitPrice": 12.5,
+      "productId": "produto-existente"
+    },
+    {
+      "requestItemId": "item-caixa",
+      "receivedQty": 4,
+      "unitPrice": 3.2,
+      "newProduct": { "name": "Caixa de papelão 30x30", "uomId": "uom_un" }
+    }
+  ]
+}
+```
+
 
 ## Princípios
 
@@ -86,9 +189,16 @@ oferece duas formas de identificar o item:
   no recebimento, e a solicitação segue normalmente.
 
 No banco, o item aceita `product_id = NULL` desde que tenha `description`
-preenchida. A descrição acompanha cotação, adjudicação e pedido. No recebimento,
-o cadastro rápido cria o produto com o nome informado e o vincula ao item; o
-cadastro pode ser completado depois no catálogo.
+preenchida. A descrição acompanha cotação, adjudicação e pedido. Na **triagem**,
+o comprador pode vincular o item a um produto existente ou cadastrar um produto
+novo; no **recebimento**, o mesmo vínculo pode ser feito (`productId`) ou o
+cadastro rápido pode criar o produto (`newProduct`) com unidade de medida.
+
+A normalização é permanente: o item da solicitação passa a apontar para o
+produto e a unidade escolhidos. Produtos criados na triagem ou no recebimento
+nascem `catalog_status = incomplete` e podem ser completados depois no catálogo.
+O recebimento de um item normalizado gera movimentação de estoque para o
+produto vinculado, como qualquer item de catálogo.
 
 ## Papéis e permissões
 
@@ -96,13 +206,13 @@ cadastro pode ser completado depois no catálogo.
 | --- | --- | --- |
 | `purchases.view` | Ver as próprias solicitações | Solicitante, liderança de limpeza, comprador |
 | `purchases.view_all` | Ver a fila inteira | Gestor do setor, direção, compras, administração |
-| `purchases.approve_department` | Autorizar e aprovar no setor de Compras (v3) | Gestor do setor, gestor de compras, administração |
+| `purchases.approve_department` | Aprovar solicitações dos setores gerenciados (histórico v2; a ordem v3 atual usa a aprovação de Compras) | Gestor do setor, administração |
 | `purchases.create` | Criar e editar rascunhos | Solicitante, comprador, administração |
-| `purchases.approve` | Aprovar a necessidade como gestor do setor | Gestor do setor, administração |
-| `purchases.authorize` | Autorizar necessidade e orçamento na direção | Diretor de operações, administração |
+| `purchases.approve` | Aprovar a necessidade como gestor do setor (v2/histórico) | Gestor do setor, administração |
+| `purchases.authorize` | Autorizar e refinar compras na etapa de aprovação de Compras; também habilita a triagem | Gestor de Compras, direção, administração |
 | `purchases.award` | Adjudicar a cotação item a item | Gestor de compras, administração |
 | `purchases.direct` | Autorizar compra direta sem cotação | Gestor de compras, administração |
-| `purchases.order` | Registrar cotação e emitir pedido | Comprador, gestor de compras, administração |
+| `purchases.order` | Fazer a triagem e registrar cotação/pedido | Comprador, gestor de compras, administração |
 | `purchases.receive` | Confirmar recebimento e lançar nota fiscal | Comprador, gestor de compras, responsável pelo estoque, administração |
 | `purchases.cancel` | Cancelar solicitação | Direção, compras, administração |
 
@@ -116,6 +226,12 @@ Perfis novos:
 O perfil `manager` (gestor do setor) perdeu `purchases.order` e
 `purchases.receive` de propósito: a aprovação da necessidade não deve se
 confundir com a execução da compra.
+
+## Fluxo corporativo v2 (legado)
+
+As seções a seguir descrevem o fluxo v2, mantido para solicitações antigas e
+integrações que declaram `workflowVersion: 2`. A ordem v3 atual está descrita no
+início deste documento.
 
 ## Caminho principal
 
@@ -329,6 +445,9 @@ O recebimento parcial mantém a etapa em `receipt`.
 - `tests/18-purchase-workflow.spec.ts` — caminho completo v2, adjudicação
   dividida por fornecedor, recebimento parcial por pedido, envio direto,
   compra direta, visibilidade e intake externo.
+- `tests/19-purchases-v3.spec.ts` — triagem, aprovação/refinamento do gestor de
+  Compras, pedido de alinhamento, compra direta, cotação/orçamento, pedido e
+  recebimento com normalização de item fora do catálogo.
 - `tests/09-reports.spec.ts` — relatórios e painel com solicitações legadas.
 
 ## O que ainda não está implementado

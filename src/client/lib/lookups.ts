@@ -91,6 +91,13 @@ export function useUoms(): AsyncState<UomOption[]> {
   }, []);
 }
 
+export function useProducts(): AsyncState<ProductOption[]> {
+  return useAsync(async () => {
+    const result = await apiGet<{ items: ProductOption[] }>("/api/catalog/products", { pageSize: 500 });
+    return result.items;
+  }, []);
+}
+
 export function useUnits(): AsyncState<NamedOption[]> {
   return useAsync(async () => {
     const result = await apiGet<{ items: NamedOption[] }>("/api/structure/units");

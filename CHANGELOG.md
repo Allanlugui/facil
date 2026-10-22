@@ -3,6 +3,116 @@
 Todas as alterações relevantes do Facil são registradas aqui. O projeto segue o
 versionamento descrito em `docs/VERSIONAMENTO.md`.
 
+## [0.6.0] — 2026-10-21
+
+Fluxo de compras v3 completo: triagem do comprador, aprovação/refinamento do
+gestor de Compras, execução pelo comprador e recebimento com normalização de
+itens fora do catálogo.
+
+### Adicionado
+
+- **Triagem de Compras:** nova etapa entre o envio do solicitante e a aprovação
+  do gestor de Compras. O comprador/analista ajusta nome, descrição, quantidade
+  e unidade, vincula itens fora do catálogo a um produto existente, cadastra um
+  produto novo ou remove itens. A solicitação só segue com ao menos um item.
+- **Aprovação e refinamento do gestor de Compras:** o gestor revisa a
+  necessidade, edita itens e quantidades, define o destino de cada item
+  (cotação/compra direta), a forma de pagamento, o centro de custo e a conta
+  contábil antes de liberar o comprador.
+- **Solicitar alinhamento:** o gestor pode devolver a solicitação ao solicitante
+  com uma observação (mínimo 5 caracteres) sem sair da etapa `purchasing`. A
+  ação notifica solicitante e responsável pela triagem, registra auditoria,
+  outbox e evento na linha do tempo, e a solicitação continua na fila de
+  aprovação.
+- **Normalização no recebimento:** itens de texto livre podem ser vinculados a
+  um produto existente ou cadastrados na hora, com unidade de medida. O vínculo
+  (`product_id` + `uom_id`) é permanente no item da solicitação e o recebimento
+  gera movimentação de estoque para o produto normalizado.
+- **Migration 0021:** colunas de triagem (`triage_completed_at`,
+  `triage_completed_by`) e índice da fila; solicitações em voo no estágio
+  `manager` são encaminhadas para a triagem.
+
+### Alterado
+
+- **Ordem do fluxo v3:** `submit → triage → purchasing → buyer → receipt`. A
+  aprovação do gestor do setor e a etapa de direção deixam de existir no v3;
+  solicitações v1/v2 continuam no fluxo anterior.
+- **Modo de compra por item:** ao escolher cotação, orçamento ou compra direta,
+  o destino dos itens acompanha a escolha; o gestor ainda pode ajustar item a
+  item depois. Aprovações novas ficam consistentes entre o modo da solicitação
+  e o dos itens.
+- **Formulário do solicitante:** quantidade aceita vírgula decimal; itens
+  manuais sem produto recebem o selo "Fora do catálogo"; o envio mostra a
+  mensagem "enviada para Compras".
+- **Detalhe da solicitação:** cabeçalho com badges de status, setor, etapa,
+  prioridade, modo e pagamento; tabela densa em largura total, sem rolagem
+  horizontal; ficha e linha do tempo preservadas.
+
+### Corrigido
+
+- `PageHeader` não envolve mais conteúdo rico em `<p>`, eliminando o aviso de
+  hidratação `<div> cannot be a descendant of <p>` no detalhe de compras.
+- Datas puras continuam formatadas em UTC; a data desejada não recua um dia.
+- Edição de itens no recebimento não perde o produto/unidade selecionados ao
+  alternar entre produto existente e cadastro novo.
+
+### Validação
+
+- `npm run check` verde: **180/180 testes em 20 arquivos**, typecheck, lint e
+  contrato de API (53 caminhos do cliente × 135 rotas do worker).
+- `npm run build` verde.
+- Verificação Playwright ponta a ponta: criação com entrada em lote e itens
+  fora do catálogo, triagem, pedido de alinhamento, aprovação com compra direta,
+  pedido por fornecedor e recebimento com vínculo a produto existente e cadastro
+  rápido com unidade, incluindo conferência de estoque e linha do tempo.
+
+## [0.5.0] — 2026-10-21
+
+Usabilidade de Compras: formulário do solicitante simplificado, entrada de itens
+em lote e detalhe da solicitação sem rolagem horizontal.
+
+### Adicionado
+
+- **Entrada de itens em lote:** cole a lista completa, clique em "Processar lista"
+  e revise quantidade/unidade em uma tabela editável antes de confirmar.
+- **Vínculo automático com o catálogo:** cada linha é associada ao produto por
+  nome, palavras-chave ou SKU; itens sem correspondência viram texto livre com o
+  selo "Fora do catálogo" e seguem no fluxo normalmente.
+- **Seleção de produto por linha:** o `ProductPicker` permite trocar ou limpar o
+  produto associado sem perder a descrição da linha.
+
+### Alterado
+
+- **Formulário do solicitante (v3):** mostra apenas Local de destino, Data
+  desejada, Prioridade, Justificativa (obrigatória), Observações e itens. Setor,
+  forma de pagamento, modo de compra, centro de custo, conta contábil e
+  observação de orçamento saem da criação — o setor vem do login e os demais
+  campos são definidos por Compras na autorização.
+- **Criação v3:** `purchaseMode` e `paymentMethodId` ficam nulos até a
+  autorização do responsável de Compras; campos administrativos enviados por
+  engano são ignorados nesse fluxo, preservando v1/v2.
+- **Detalhe da solicitação:** cabeçalho com identificador, solicitante e data,
+  seguido de badges de status, setor, etapa e prioridade; justificativa em
+  destaque na faixa "Próxima etapa", acima dos itens. Grade lateral apenas a
+  partir de `2xl`, colunas `min-w-0` e tabela densa para eliminar a rolagem
+  lateral entre 1280 e 1536.
+- **Justificativa** passou a usar área de texto e continua obrigatória no envio
+  (rascunho pode ser salvo sem ela).
+
+### Corrigido
+
+- Datas puras (`YYYY-MM-DD`), como a data desejada, eram formatadas no fuso local
+  e podiam recuar um dia; agora usam UTC na exibição.
+- Itens de texto livre duplicavam o campo de descrição no formulário.
+
+### Validação
+
+- `npm run check` verde: **175/175 testes em 20 arquivos**, typecheck, lint e
+  contrato de API (53 caminhos do cliente × 135 rotas do worker).
+- Verificação visual em 1440×900 e 390×844: formulário simplificado, entrada em
+  lote com itens de catálogo e texto livre, detalhe sem rolagem horizontal e
+  fluxo ponta a ponta de criação/envio.
+
 ## [0.4.0] — 2026-10-21
 
 Compras por setor (v3) com autorização de Compras e chat de suporte em tempo real.

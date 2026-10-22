@@ -14,25 +14,27 @@ import {
 } from "./helpers";
 
 /**
- * Fluxo de compras v3 (por setor): gestor do setor -> responsavel de Compras ->
- * comprador -> estoque com nota fiscal. As solicitacoes v1/v2 continuam
- * cobertas por 07 e 18; aqui o foco e a convivencia e as novas regras.
+ * Fluxo de compras v3 (por setor): solicitacao -> triagem do comprador ->
+ * aprovacao/refinamento do gestor de Compras -> comprador -> estoque com nota
+ * fiscal. As solicitacoes v1/v2 continuam cobertas por 07 e 18; aqui o foco e
+ * a convivencia e as novas regras.
  */
-describe("compras v3: setores, autorizacao, cotacao/orcamento e nota fiscal", () => {
+describe("compras v3: triagem, aprovacao de Compras, cotacao/orcamento e nota fiscal", () => {
   let admin: Actor;
   let structure: Structure;
   let requester: Actor;
   let manager: Actor;
-  let otherManager: Actor;
   let purchasing: Actor;
   let buyer: Actor;
   let stock: Actor;
   let supplierA: string;
   let supplierB: string;
   let productId: string;
+  let uomId: string;
+  let costCenterId: string;
+  let costCenterCode: string;
 
   const LIMPEZA = "dept_lim";
-  const MANUTENCAO = "dept_man";
   const COMPRAS = "dept_compras";
 
   async function createSupplier(name: string): Promise<string> {
@@ -47,13 +49,9 @@ describe("compras v3: setores, autorizacao, cotacao/orcamento e nota fiscal", ()
   }
 
   async function createRequest(extra: Record<string, unknown> = {}): Promise<{ id: string; itemId: string }> {
-    const created = await requester.api.post<{ id: string }>("/api/purchases", {
+    const created = await requester.api.post<{ id: string; approvalStage: string }>("/api/purchases", {
       workflowVersion: 2,
       flowRevision: 3,
-      departmentId: LIMPEZA,
-      purchaseMode: "quote",
-      paymentMethodId: "pay_invoice",
-      paymentTerms: "30 dias apos a nota fiscal",
       locationId: structure.warehouseId,
       justification: "Reposicao do setor de limpeza",
       priority: "normal",
@@ -62,17 +60,22 @@ describe("compras v3: setores, autorizacao, cotacao/orcamento e nota fiscal", ()
       ...extra,
     });
     expect(created.status).toBe(201);
-    const detail = await manager.api.get<{
+    expect(created.body.approvalStage).toBe("triage");
+    const detail = await buyer.api.get<{
       items: Array<{ id: string }>;
     }>(`/api/purchases/${created.body.id}`);
     expect(detail.status).toBe(200);
     return { id: created.body.id, itemId: detail.body.items[0]!.id };
   }
 
-  async function managerApprove(id: string): Promise<void> {
-    const response = await manager.api.post<{ status: string; approvalStage: string }>(
+  async function triageForward(id: string, body: Record<string, unknown> = {}): Promise<void> {
+    const response = await buyer.api.post<{ status: string; approvalStage: string }>(
       `/api/purchases/${id}/decide`,
-      { decision: "approved", notes: "Necessidade confirmada." },
+      {
+        decision: "forward",
+        notes: "Itens conferidos na triagem.",
+        ...body,
+      },
     );
     expect(response.status).toBe(200);
     expect(response.body).toMatchObject({ status: "pending_approval", approvalStage: "purchasing" });
@@ -88,11 +91,15 @@ describe("compras v3: setores, autorizacao, cotacao/orcamento e nota fiscal", ()
         decision: "approved",
         purchaseMode: "quote",
         paymentMethodId: "pay_invoice",
+        paymentTerms: "30 dias apos a nota fiscal",
+        costCenterId,
+        glAccount: "4.02.001",
         notes: "Autorizado pelo setor de Compras.",
         ...body,
       },
     );
     expect(response.status).toBe(200);
+    expect(response.body.approvalStage).toBe("buyer");
   }
 
   async function quote(
@@ -118,6 +125,16 @@ describe("compras v3: setores, autorizacao, cotacao/orcamento e nota fiscal", ()
     supplierA = await createSupplier("Fornecedor Alfa");
     supplierB = await createSupplier("Fornecedor Beta");
 
+    const uom = await queryOne<{ id: string }>("SELECT id FROM uoms WHERE code = 'UN' LIMIT 1");
+    expect(uom?.id).toBeTruthy();
+    uomId = uom!.id;
+    const costCenter = await queryOne<{ id: string; code: string }>(
+      "SELECT id, code FROM cost_centers WHERE is_active = 1 ORDER BY code LIMIT 1",
+    );
+    expect(costCenter?.id).toBeTruthy();
+    costCenterId = costCenter!.id;
+    costCenterCode = costCenter!.code;
+
     requester = await createUser(admin, {
       name: "Solicitante da limpeza",
       email: "solicitante.v3@facil.test",
@@ -129,14 +146,7 @@ describe("compras v3: setores, autorizacao, cotacao/orcamento e nota fiscal", ()
       email: "gestor.limpeza@facil.test",
       roleId: await findRoleId("facilities_manager"),
       departmentId: LIMPEZA,
-      managedDepartmentIds: [LIMPEZA, MANUTENCAO],
-    });
-    otherManager = await createUser(admin, {
-      name: "Gestor da manutencao",
-      email: "gestor.manutencao@facil.test",
-      roleId: await findRoleId("facilities_manager"),
-      departmentId: MANUTENCAO,
-      managedDepartmentIds: [MANUTENCAO],
+      managedDepartmentIds: [LIMPEZA, "dept_man"],
     });
     purchasing = await createUser(admin, {
       name: "Responsavel de compras",
@@ -159,10 +169,10 @@ describe("compras v3: setores, autorizacao, cotacao/orcamento e nota fiscal", ()
     });
   });
 
-  it("percorre gestor, autorizacao, duas cotacoes, pedido e recebimento com nota", async () => {
+  it("percorre triagem, aprovacao, duas cotacoes, pedido e recebimento com nota", async () => {
     const { id, itemId } = await createRequest();
 
-    const detail = await manager.api.get<{
+    const detail = await buyer.api.get<{
       request: {
         status: string;
         approvalStage: string;
@@ -170,33 +180,43 @@ describe("compras v3: setores, autorizacao, cotacao/orcamento e nota fiscal", ()
         departmentName: string | null;
         paymentMethodName: string | null;
         paymentTerms: string | null;
+        triageCompletedAt: string | null;
       };
     }>(`/api/purchases/${id}`);
     expect(detail.body.request).toMatchObject({
       status: "pending_approval",
-      approvalStage: "manager",
+      approvalStage: "triage",
       flowRevision: 3,
       departmentName: "Limpeza e conservacao",
-      paymentMethodName: "Faturado 30 dias",
-      paymentTerms: "30 dias apos a nota fiscal",
+      // O solicitante nao escolhe forma de pagamento: Compras define na aprovacao.
+      paymentMethodName: null,
+      paymentTerms: null,
+      triageCompletedAt: null,
     });
 
     // A visao resumida repete o filtro de visibilidade em tres subconsultas;
     // cada uma precisa receber os proprios parametros.
-    const overview = await requester.api.get<{ openCount: number }>("/api/purchases/overview");
+    const overview = await requester.api.get<{ openCount: number; queues: { triage: number } }>(
+      "/api/purchases/overview",
+    );
     expect(overview.status).toBe(200);
     expect(overview.body.openCount).toBe(1);
+    expect(overview.body.queues.triage).toBe(1);
 
-    // Outro gestor nao aprova setor alheio e a mensagem diz a quem pedir.
-    const forbidden = await otherManager.api.post(`/api/purchases/${id}/decide`, {
-      decision: "approved",
+    // O gestor do setor nao participa mais do fluxo v3: a triagem e de Compras.
+    const managerCannotTriage = await manager.api.post(`/api/purchases/${id}/decide`, {
+      decision: "forward",
     });
-    expectError(forbidden, "FORBIDDEN");
-    expect(JSON.stringify(forbidden.body)).toContain("gestor do setor");
+    expect(managerCannotTriage.status).toBeGreaterThanOrEqual(400);
+    expect(JSON.stringify(managerCannotTriage.body)).toContain("permissão");
 
-    await managerApprove(id);
-    const afterManager = await buyer.api.get<{ request: { approvalStage: string } }>(`/api/purchases/${id}`);
-    expect(afterManager.body.request.approvalStage).toBe("purchasing");
+    await triageForward(id);
+    const afterTriage = await buyer.api.get<{
+      request: { approvalStage: string; triageCompletedAt: string | null; triageCompletedByName: string | null };
+    }>(`/api/purchases/${id}`);
+    expect(afterTriage.body.request.approvalStage).toBe("purchasing");
+    expect(afterTriage.body.request.triageCompletedAt).toBeTruthy();
+    expect(afterTriage.body.request.triageCompletedByName).toBe("Comprador");
 
     // Comprador nao autoriza a compra.
     const buyerCannotAuthorize = await buyer.api.post(`/api/purchases/${id}/decide`, {
@@ -207,10 +227,26 @@ describe("compras v3: setores, autorizacao, cotacao/orcamento e nota fiscal", ()
     expect(buyerCannotAuthorize.status).toBeGreaterThanOrEqual(400);
 
     await purchasingAuthorize(id);
-    const quoting = await buyer.api.get<{ request: { status: string; approvalStage: string } }>(
-      `/api/purchases/${id}`,
-    );
-    expect(quoting.body.request).toMatchObject({ status: "quoting", approvalStage: "buyer" });
+    const quoting = await buyer.api.get<{
+      request: {
+        status: string;
+        approvalStage: string;
+        paymentMethodName: string | null;
+        paymentTerms: string | null;
+        costCenterId: string | null;
+        costCenterCode: string | null;
+        glAccount: string | null;
+      };
+    }>(`/api/purchases/${id}`);
+    expect(quoting.body.request).toMatchObject({
+      status: "quoting",
+      approvalStage: "buyer",
+      paymentMethodName: "Faturado 30 dias",
+      paymentTerms: "30 dias apos a nota fiscal",
+      costCenterId,
+      costCenterCode,
+      glAccount: "4.02.001",
+    });
 
     const quoteA = await quote(id, itemId, supplierA, 12.5);
     const onlyOne = await buyer.api.post(`/api/purchases/${id}/quotes/return`, {});
@@ -267,7 +303,7 @@ describe("compras v3: setores, autorizacao, cotacao/orcamento e nota fiscal", ()
       payment_terms: "30 dias apos a nota fiscal",
     });
 
-    // O pedido tem observacao propria; a aprovacao de Compras continua sendo
+    // O pedido tem observacao propria; a aprovacao da proposta continua sendo
     // a ultima decisao registrada na ficha da solicitacao.
     const afterOrder = await buyer.api.get<{ request: { approvalNotes: string | null } }>(
       `/api/purchases/${id}`,
@@ -321,8 +357,8 @@ describe("compras v3: setores, autorizacao, cotacao/orcamento e nota fiscal", ()
   });
 
   it("orcamento aceita um fornecedor e recusa o segundo antes do envio", async () => {
-    const { id, itemId } = await createRequest({ purchaseMode: "budget" });
-    await managerApprove(id);
+    const { id, itemId } = await createRequest();
+    await triageForward(id);
     await purchasingAuthorize(id, { purchaseMode: "budget" });
 
     await quote(id, itemId, supplierA, 10);
@@ -339,20 +375,20 @@ describe("compras v3: setores, autorizacao, cotacao/orcamento e nota fiscal", ()
   });
 
   it("compra direta dispensa cotacao, mas respeita a forma de pagamento", async () => {
-    const blocked = await requester.api.post("/api/purchases", {
-      workflowVersion: 2,
-      flowRevision: 3,
-      departmentId: LIMPEZA,
+    // A forma de pagamento entra na aprovacao de Compras: adiantamento exige
+    // cotacao/orcamento e bloqueia a compra direta.
+    const blocked = await createRequest();
+    await triageForward(blocked.id);
+    const blockedAuthorization = await purchasing.api.post(`/api/purchases/${blocked.id}/decide`, {
+      decision: "approved",
       purchaseMode: "direct",
       paymentMethodId: "pay_advance",
-      submit: true,
-      items: [{ productId, qty: 2 }],
     });
-    expectError(blocked, "BAD_REQUEST");
-    expect(JSON.stringify(blocked.body)).toContain("exige cotação");
+    expectError(blockedAuthorization, "BAD_REQUEST");
+    expect(JSON.stringify(blockedAuthorization.body)).toContain("exige cotação");
 
-    const { id, itemId } = await createRequest({ purchaseMode: "direct", paymentMethodId: "pay_transfer" });
-    await managerApprove(id);
+    const { id, itemId } = await createRequest();
+    await triageForward(id);
 
     const authorized = await purchasing.api.post<{ status: string; approvalStage: string }>(
       `/api/purchases/${id}/decide`,
@@ -386,7 +422,7 @@ describe("compras v3: setores, autorizacao, cotacao/orcamento e nota fiscal", ()
 
   it("recusa de proposta devolve ao comprador sem perder a cotacao", async () => {
     const { id, itemId } = await createRequest();
-    await managerApprove(id);
+    await triageForward(id);
     await purchasingAuthorize(id);
     const quoteA = await quote(id, itemId, supplierA, 11);
     await quote(id, itemId, supplierB, 12);
@@ -410,5 +446,300 @@ describe("compras v3: setores, autorizacao, cotacao/orcamento e nota fiscal", ()
       [id],
     );
     expect(request).toMatchObject({ status: "quoting", approval_stage: "buyer" });
+  });
+
+  it("triagem cadastra produto, ajusta o item e o gestor refina quantidade e centro de custo", async () => {
+    const created = await requester.api.post<{ id: string }>("/api/purchases", {
+      workflowVersion: 2,
+      flowRevision: 3,
+      locationId: structure.warehouseId,
+      justification: "Compra de panos para o setor",
+      priority: "normal",
+      submit: true,
+      items: [{ description: "Panos multiuso", qty: 5, uomId }],
+    });
+    expect(created.status).toBe(201);
+
+    const initial = await buyer.api.get<{
+      items: Array<{
+        id: string;
+        productId: string | null;
+        description: string | null;
+        qtyMilli: number;
+      }>;
+    }>(`/api/purchases/${created.body.id}`);
+    const item = initial.body.items[0]!;
+    expect(item.productId).toBeNull();
+    expect(item.qtyMilli).toBe(5000);
+
+    // O comprador tem catalog.manage e pode cadastrar o produto na triagem.
+    const product = await buyer.api.post<{ id: string }>("/api/catalog/products", {
+      name: "Pano multiuso 40x40",
+      uomId,
+      tracksStock: true,
+    });
+    expect(product.status).toBe(201);
+
+    await triageForward(created.body.id, {
+      items: [
+        {
+          itemId: item.id,
+          qty: 6,
+          description: "Pano multiuso 40x40",
+          productId: product.body.id,
+          uomId,
+        },
+      ],
+    });
+
+    const afterTriage = await buyer.api.get<{
+      items: Array<{
+        id: string;
+        productId: string | null;
+        productName: string | null;
+        description: string | null;
+        qtyMilli: number;
+      }>;
+    }>(`/api/purchases/${created.body.id}`);
+    expect(afterTriage.body.items[0]).toMatchObject({
+      productId: product.body.id,
+      productName: "Pano multiuso 40x40",
+      description: "Pano multiuso 40x40",
+      qtyMilli: 6000,
+    });
+
+    await purchasingAuthorize(created.body.id, {
+      items: [
+        {
+          itemId: item.id,
+          qtyApproved: 4,
+          purchaseMode: "quote",
+          notes: "Aprovado 4 unidades.",
+        },
+      ],
+    });
+
+    const afterApproval = await buyer.api.get<{
+      request: { approvalStage: string; costCenterId: string | null; glAccount: string | null };
+      items: Array<{
+        id: string;
+        qtyMilli: number;
+        qtyApprovedMilli: number | null;
+        purchaseMode: string | null;
+        notes: string | null;
+      }>;
+    }>(`/api/purchases/${created.body.id}`);
+    expect(afterApproval.body.request).toMatchObject({
+      approvalStage: "buyer",
+      costCenterId,
+      glAccount: "4.02.001",
+    });
+    expect(afterApproval.body.items[0]).toMatchObject({
+      qtyMilli: 6000,
+      qtyApprovedMilli: 4000,
+      purchaseMode: "quote",
+      notes: "Aprovado 4 unidades.",
+    });
+  });
+
+  it("triagem remove item, mas nao deixa a solicitacao sem item ativo", async () => {
+    const created = await requester.api.post<{ id: string }>("/api/purchases", {
+      workflowVersion: 2,
+      flowRevision: 3,
+      locationId: structure.warehouseId,
+      justification: "Reposicao com dois itens",
+      priority: "normal",
+      submit: true,
+      items: [
+        { productId, qty: 1 },
+        { productId, qty: 2 },
+      ],
+    });
+    expect(created.status).toBe(201);
+
+    const detail = await buyer.api.get<{ items: Array<{ id: string; qtyMilli: number }> }>(
+      `/api/purchases/${created.body.id}`,
+    );
+    const [first, second] = detail.body.items;
+    expect(first?.id).toBeTruthy();
+    expect(second?.id).toBeTruthy();
+
+    const empty = await buyer.api.post(`/api/purchases/${created.body.id}/decide`, {
+      decision: "forward",
+      items: detail.body.items.map((item) => ({ itemId: item.id, remove: true })),
+    });
+    expect(empty.status).toBeGreaterThanOrEqual(400);
+    expect(JSON.stringify(empty.body)).toContain("ao menos um item");
+
+    await triageForward(created.body.id, {
+      items: [
+        { itemId: first!.id, remove: true },
+        { itemId: second!.id, qty: 3 },
+      ],
+    });
+
+    const after = await buyer.api.get<{
+      items: Array<{ id: string; status: string; qtyMilli: number }>;
+    }>(`/api/purchases/${created.body.id}`);
+    expect(after.body.items.find((item) => item.id === first!.id)?.status).toBe("cancelled");
+    expect(after.body.items.find((item) => item.id === second!.id)).toMatchObject({
+      status: "pending",
+      qtyMilli: 3000,
+    });
+  });
+
+  it("comprador nao tria a propria solicitacao; gestor de Compras pode assumir", async () => {
+    const created = await buyer.api.post<{ id: string; approvalStage: string }>("/api/purchases", {
+      workflowVersion: 2,
+      flowRevision: 3,
+      locationId: structure.warehouseId,
+      justification: "Compra solicitada pelo proprio comprador",
+      priority: "normal",
+      submit: true,
+      items: [{ productId, qty: 1 }],
+    });
+    expect(created.status).toBe(201);
+    expect(created.body.approvalStage).toBe("triage");
+
+    const own = await buyer.api.post(`/api/purchases/${created.body.id}/decide`, {
+      decision: "forward",
+    });
+    expect(own.status).toBeGreaterThanOrEqual(400);
+    expect(JSON.stringify(own.body)).toContain("própria");
+
+    const assumed = await purchasing.api.post<{ status: string; approvalStage: string }>(
+      `/api/purchases/${created.body.id}/decide`,
+      { decision: "forward", notes: "Triagem assumida pelo gestor de Compras." },
+    );
+    expect(assumed.status).toBe(200);
+    expect(assumed.body).toMatchObject({ status: "pending_approval", approvalStage: "purchasing" });
+  });
+
+  it("gestor de Compras solicita alinhamento sem sair da etapa e depois autoriza", async () => {
+    const { id } = await createRequest();
+    await triageForward(id);
+
+    const withoutNote = await purchasing.api.post(`/api/purchases/${id}/decide`, {
+      decision: "request_alignment",
+    });
+    expectError(withoutNote, "BAD_REQUEST");
+    expect(JSON.stringify(withoutNote.body)).toContain("alinhado");
+
+    const alignmentNote = "Confirmar a marca e a quantidade com o solicitante antes de autorizar.";
+    const alignment = await purchasing.api.post<{ status: string; approvalStage: string }>(
+      `/api/purchases/${id}/decide`,
+      { decision: "request_alignment", notes: alignmentNote },
+    );
+    expect(alignment.status).toBe(200);
+    expect(alignment.body).toMatchObject({
+      status: "pending_approval",
+      approvalStage: "purchasing",
+    });
+
+    const detail = await purchasing.api.get<{
+      request: {
+        approvalNotes: string | null;
+        triageCompletedAt: string | null;
+        approvalStage: string;
+      };
+      timeline: Array<{ action: string }>;
+    }>(`/api/purchases/${id}`);
+    expect(detail.body.request).toMatchObject({
+      approvalNotes: alignmentNote,
+      approvalStage: "purchasing",
+    });
+    expect(detail.body.request.triageCompletedAt).toBeTruthy();
+    expect(detail.body.timeline.some((event) => event.action === "purchase_request.alignment_requested")).toBe(
+      true,
+    );
+
+    // O pedido de alinhamento avisa o solicitante e fica registrado no outbox.
+    expect(
+      await countRows("SELECT COUNT(*) AS total FROM notifications WHERE type = 'purchase_pending_approval'"),
+    ).toBeGreaterThan(0);
+    expect(
+      await countRows("SELECT COUNT(*) AS total FROM email_outbox WHERE kind = 'purchase_workflow'"),
+    ).toBeGreaterThan(0);
+
+    // Depois do alinhamento externo, o gestor segue o fluxo normal.
+    await purchasingAuthorize(id);
+  });
+
+  it("recebimento vincula item fora do catalogo a produto existente e mantem o vinculo", async () => {
+    const created = await requester.api.post<{ id: string }>("/api/purchases", {
+      workflowVersion: 2,
+      flowRevision: 3,
+      locationId: structure.warehouseId,
+      justification: "Panos para o setor de limpeza",
+      priority: "normal",
+      submit: true,
+      items: [{ description: "Panos multiuso 40x40", qty: 3, uomId }],
+    });
+    expect(created.status).toBe(201);
+
+    const initial = await buyer.api.get<{
+      items: Array<{ id: string; productId: string | null; uomId: string | null }>;
+    }>(`/api/purchases/${created.body.id}`);
+    const item = initial.body.items[0]!;
+    expect(item.productId).toBeNull();
+
+    await triageForward(created.body.id);
+    await purchasingAuthorize(created.body.id, {
+      purchaseMode: "direct",
+      paymentMethodId: "pay_transfer",
+    });
+
+    const order = await buyer.api.post(`/api/purchases/${created.body.id}/orders`, {
+      orders: [
+        {
+          supplierId: supplierA,
+          items: [{ itemId: item.id, qtyOrdered: 3, unitPrice: 20 }],
+        },
+      ],
+    });
+    expect(order.status).toBe(201);
+
+    const receipt = await stock.api.post<{ receipt: { id: string } }>(
+      `/api/purchases/${created.body.id}/receipts`,
+      {
+        requestKey: `recebimento-normalizado-${created.body.id}`,
+        locationId: structure.warehouseId,
+        invoiceNumber: "NF-777",
+        invoiceDate: "2026-10-21",
+        items: [
+          {
+            requestItemId: item.id,
+            receivedQty: 3,
+            unitPrice: 20,
+            productId,
+          },
+        ],
+      },
+    );
+    expect(receipt.status).toBe(201);
+
+    const after = await buyer.api.get<{
+      request: { status: string };
+      items: Array<{
+        id: string;
+        productId: string | null;
+        productName: string | null;
+        uomId: string | null;
+        qtyReceivedMilli: number;
+      }>;
+    }>(`/api/purchases/${created.body.id}`);
+    expect(after.body.request.status).toBe("received");
+    expect(after.body.items[0]).toMatchObject({
+      productId,
+      productName: "Detergente",
+      uomId,
+      qtyReceivedMilli: 3000,
+    });
+
+    const movement = await queryOne<{ product_id: string; qty_milli: number }>(
+      "SELECT product_id, qty_milli FROM movements WHERE type = 'purchase_receipt' AND product_id = ? ORDER BY created_at DESC LIMIT 1",
+      [productId],
+    );
+    expect(movement).toMatchObject({ product_id: productId, qty_milli: 3000 });
   });
 });
