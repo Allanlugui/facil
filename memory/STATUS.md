@@ -18,6 +18,10 @@
   typecheck, lint, contrato de API; `npm run build`; verificação Playwright ponta a ponta
   (lote, triagem, alinhamento, compra direta, pedido com preços e recebimento com
   normalização). Corrigido o aninhamento inválido de `<div>` em `<p>` no `PageHeader`.
+- **Publicado em 22/10/2026:** Worker `facil` em
+  https://facil.cf-pilot-disposable.workers.dev, versão **0.6.0** confirmada no
+  `build-info.json`, migration `0021` aplicada no D1 remoto, release assinada
+  (Ed25519) e version id `6e313fa2-f7ba-47a3-8369-8bc795b4df12`.
 - **Melhorias de usabilidade em Compras (21/10/2026):** versão **0.5.0** entregue. Formulário
   do solicitante v3 simplificado (Local, Data desejada, Prioridade, Justificativa obrigatória,
   Observações e itens; setor automático pelo login). Entrada de itens em lote com processamento de
