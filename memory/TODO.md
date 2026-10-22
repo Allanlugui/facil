@@ -1,6 +1,6 @@
 # Tarefas Pendentes: Facil
 
-Atualizado em 21/10/2026. Este é o **backlog oficial** do projeto (plano + pendências em um só lugar).
+Atualizado em 22/10/2026. Este é o **backlog oficial** do projeto (plano + pendências em um só lugar).
 
 ## ETAPA 4 — CONCLUÍDA (21/10/2026)
 
@@ -217,7 +217,11 @@ Frontend (React Router 7, SPA com chunks por página):
 - [ ] **Captcha (decisão do usuário, 17/10/2026 — D-15):** implementar SOMENTE como camada final,
       depois de o processo de suporte/senha estar 100% validado em uso real; valerá também para os
       logins.
-- [ ] **Dados de demonstração no D1 local:** pedido `SUP-2026-000001` (Carlos Pereira) deixado "Em
+- [x] **Dados de demonstração no D1 local — REMOVIDOS (22/10/2026):** ver a entrada de limpeza em
+      `STATUS.md`. O banco local ficou com catálogo, estrutura, settings e os 7 usuários demo;
+      todo o conteúdo operacional foi zerado (suporte, compras, movimentos, saldos, notificações,
+      outboxes e auditoria) e os sequenciais voltaram a zero. O histórico abaixo fica como rastro
+      do que existia antes da limpeza. Antes: pedido `SUP-2026-000001` (Carlos Pereira) deixado "Em
       atendimento" para o usuário conhecer o fluxo — marcar como resolvido ou remover quando não
       for mais útil. A linha da caixa de saída com erro "Relay respondeu 404…" é rastro explicado da
       verificação da F-13 (URL de teste); "Reenviar" resolve com o relay real configurado.
@@ -239,7 +243,12 @@ Frontend (React Router 7, SPA com chunks por página):
       direto** (`REC-2026-000004` — entrada + saída no livro-razão com a justificativa "Café
       entregue direto à copa…"), fechando os dados de demonstração da compra; pode ser removido
       junto com a solicitação quando não for mais útil.
-- [ ] **Contas de verificação no D1 local:** `qa.admin@demo.local` (admin, senha `Demo@Facil2026`)
+- [x] **Contas de verificação no D1 local — REMOVIDAS (22/10/2026):** a única conta de verificação
+      existente era `usr_qa_v3` (`qa.v3@demo.local`, admin) — as citadas abaixo
+      (`qa.admin@demo.local`, `recepcao.demo@demo.local`, `limpeza.lider@demo.local`) não existiam
+      mais no banco real. Como ela era a única administradora local, foi recriada uma conta oficial:
+      `admin@facil.local` / senha `FacilDev#2026` (`usr_local_admin`, perfil admin, sem troca
+      obrigatória). Histórico: `qa.admin@demo.local` (admin, senha `Demo@Facil2026`)
       criada em 18/10/2026; `recepcao.demo@demo.local` (recepção) e `limpeza.lider@demo.local`
       (liderança de limpeza), mesma senha, criadas na verificação da F-20 fase 2 — remover quando
       não forem mais úteis (o seed demo não as recria).

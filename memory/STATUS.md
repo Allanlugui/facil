@@ -22,6 +22,19 @@
   https://facil.cf-pilot-disposable.workers.dev, versão **0.6.0** confirmada no
   `build-info.json`, migration `0021` aplicada no D1 remoto, release assinada
   (Ed25519) e version id `6e313fa2-f7ba-47a3-8369-8bc795b4df12`.
+- **D1 local limpo (22/10/2026):** removidos os dados de demonstração/verificação do banco
+  **local** — 4 solicitações de compra (com 2 cotações, 3 pedidos e 2 recebimentos), 1 pedido de
+  suporte com 12 mensagens, 4 movimentos e 4 saldos, 41 notificações, 26 linhas de `email_outbox`,
+  15 de `integration_outbox`, 77 linhas de `audit_log`, sessões e a conta `usr_qa_v3`
+  (a única admin que existia no local — a memória antiga citava `qa.admin@demo.local`, que não
+  existia mais). Sequenciais zerados. **Preservados:** 18 produtos, 8 locais, 4 fornecedores,
+  3 artigos de ajuda, 16 settings, 11 perfis e os 7 usuários demo do seed. **Admin local recriado**
+  (`usr_local_admin`, `admin@facil.local`, senha `FacilDev#2026`, `must_change_password = 0`).
+  Backup lógico prévio em `C:\Users\jalla\AppData\Local\Temp\opencode\facil-d1-local-backup-2026-10-22.sql`
+  (233 KB). Verificado com `wrangler dev`: `setup-status` 200 (`needsSetup: false`), login 200,
+  `/api/auth/me` 200, `/api/dashboard/summary` 200 com todos os contadores em zero, e 200 em
+  `users/users`, `purchases/`, `purchases/overview`, `catalog/products`, `support/queue`,
+  `support/my` e `audit`. Produção intocada (0.6.0).
 - **Melhorias de usabilidade em Compras (21/10/2026):** versão **0.5.0** entregue. Formulário
   do solicitante v3 simplificado (Local, Data desejada, Prioridade, Justificativa obrigatória,
   Observações e itens; setor automático pelo login). Entrada de itens em lote com processamento de
