@@ -6,15 +6,15 @@
   "payload": {
     "schema": "facil.signature.v1",
     "project": "Facil — Plataforma de Gestão de Facilities",
-    "version": "0.7.2",
+    "version": "0.7.3",
     "author": "Allan Luiz Silveira Lima",
     "alias": "Allanlugui",
     "company": "CorpServices Group",
-    "signedAt": "2026-10-23T01:33:52-03:00",
-    "treeHash": "033d321ab7b35ee85075b6e816db829e5beb63b93889e95856a2ba9ea636e2b6",
-    "fileCount": 181
+    "signedAt": "2026-10-23T03:15:51-03:00",
+    "treeHash": "65f006dbcf8ab81eb88f153e9043d4bd18087fa8aa6e8ce77d9154a1b49afc2b",
+    "fileCount": 183
   },
-  "signature": "8qogTfYCokpphQd9v+5AwoDPuP0pSzt/8ekXk3h/4kgvMAPFlOBODY1cSOBaldINpdn7dqTZSDOcVGOQuhgBBw==",
+  "signature": "k5EBKecLek0JkJSoVtqtpZ2VdUDbgYMtwDRGUHLHxX1T6FoLw6+IuPE4SclaoX2d0A+gi4QflyIT6Nc/T/YnAA==",
   "verify": "node scripts/verify-release.mjs",
   "files": [
     {
@@ -44,8 +44,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "9b7a43ac4fc8c378b5454d22ed38cbe6acb9a4f42b2ec87f1cefac72c6b670c0",
-      "bytes": 22131
+      "sha256": "a68748ec739e590113aff4725033f8aba7e8666f507d2edf464891358069464d",
+      "bytes": 23126
     },
     {
       "path": "LICENSE",
@@ -54,8 +54,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "262d411af17d748e4b5c72ae059222820425756cfdd89c5f211f6a8f4e941387",
-      "bytes": 19670
+      "sha256": "e3736d3e80b28bfd776f466f12e7892c8766c7a317535dc6ebba6c69b7f2ddf9",
+      "bytes": 19685
     },
     {
       "path": "branding/README.md",
@@ -129,8 +129,8 @@
     },
     {
       "path": "docs/VERSIONAMENTO.md",
-      "sha256": "89f6a84167703935a2e6ecbbc40237a6405d694180ad3bb4ed89e9b80cf65dfa",
-      "bytes": 5183
+      "sha256": "88aee7c8bfb732e61184043fef3c326096415978ef717072e46c09aca4a0f589",
+      "bytes": 5505
     },
     {
       "path": "docs/anexos-suporte.md",
@@ -269,12 +269,12 @@
     },
     {
       "path": "package-lock.json",
-      "sha256": "933e69b2a7b87c23e519e6a46a7c3d593c1c73cf0108be778bc6865f2d545f7b",
+      "sha256": "ca3f066fd105baca34a6cc1a6cca81cece88ab77f8fa5f8eb5a21c1ea81457f3",
       "bytes": 193386
     },
     {
       "path": "package.json",
-      "sha256": "7f369fb49acc4f985615d3a292844d52dfa2ef545bdb9bd41edca6c66344f617",
+      "sha256": "8f5f0499f8b6b68a72c2e73b73ebb2f2b5c2ae25fa975da6a3e0718c4b630996",
       "bytes": 1861
     },
     {
@@ -336,6 +336,11 @@
       "path": "src/client/lib/api.ts",
       "sha256": "8c6792eda8aec45e7f3705339da6156785a41d573ec8d0ae52b344881efad5ec",
       "bytes": 4999
+    },
+    {
+      "path": "src/client/lib/attachments-card.tsx",
+      "sha256": "9bf6d6607d050e5ac9bb40991f4ac917f88ef0ff25f71501333c701bb74748f5",
+      "bytes": 5971
     },
     {
       "path": "src/client/lib/brand.tsx",
@@ -504,8 +509,8 @@
     },
     {
       "path": "src/client/pages/workorders.tsx",
-      "sha256": "21c6a8e75b4ea0b60aa627f81aee5a938d61c8240767e8a8de1ade9a461080fd",
-      "bytes": 58394
+      "sha256": "689ffb835d12c3e5d0907aea82bf08bc9bc2f5ddc4b5738bbcd85709ffdfbc56",
+      "bytes": 58532
     },
     {
       "path": "src/client/public/_headers",
@@ -846,6 +851,11 @@
       "path": "tests/15-locations.spec.ts",
       "sha256": "9e3cda8548947293d0f28247f4ee8c1bbde340ffaab424fd7b319bead9eb0462",
       "bytes": 890
+    },
+    {
+      "path": "tests/15-workorder-attachments.spec.ts",
+      "sha256": "db0e6af84caad91fda33ac58a2c0c8c4d53d1cb09227cba0e73ea28a29a52872",
+      "bytes": 6382
     },
     {
       "path": "tests/16-security.spec.ts",

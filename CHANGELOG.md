@@ -3,6 +3,25 @@
 Todas as alterações relevantes do Facil são registradas aqui. O projeto segue o
 versionamento descrito em `docs/VERSIONAMENTO.md`.
 
+## [0.7.3] — 2026-10-23
+
+Anexos também em ordens de serviço (Fase 5 do plano de melhorias): a tela da OS
+ganhou o card de anexos (upload/download/remoção) reutilizando o módulo genérico
+`/api/attachments`, com controle de entidade, limite configurável
+(`attachments.max_bytes`, padrão 20 MB), restrição de documentos
+(`attachments.documents` para não-imagem) e auditoria de upload/remoção. Não
+houve mudança de banco: a tabela `attachments` já suporta `entity_type =
+work_order` desde o módulo original de anexos.
+
+### Adicionado
+
+- **Card de anexos na tela da OS:** upload de arquivo (imagem livre; documento
+  exige `attachments.documents`), listagem, download e remoção com diálogo de
+  confirmação, espelhando o card de chamados.
+- **Testes:** `tests/15-workorder-attachments.spec.ts` (5 testes: upload de
+  imagem e documento pelo gestor, imagem liberada/documento bloqueado para o
+  técnico, remoção com auditoria, download exige permissão, gravação no D1).
+
 ## [0.7.2] — 2026-10-23
 
 CI no GitHub Actions: cada push ou PR na `main` roda o pipeline completo de

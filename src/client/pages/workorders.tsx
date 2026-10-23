@@ -12,6 +12,7 @@ import {
 } from "@shared/types";
 import { apiDelete, apiErrorMessage, apiGet, apiPatch, apiPost, apiUpload, ApiError } from "../lib/api";
 import { CameraCaptureDialog } from "../lib/camera";
+import { AttachmentsCard } from "../lib/attachments-card";
 import {
   PRIORITY_TONE,
   entityName,
@@ -696,6 +697,8 @@ export function WorkOrderDetailPage() {
             readOnly={workOrder.status === "cancelled"}
             onChanged={state.reload}
           />
+
+          <AttachmentsCard entityType="work_order" entityId={workOrder.id} />
 
           <Card title="Eventos" description="Linha do tempo da execução registrada pela equipe.">
             <ol className="space-y-3">

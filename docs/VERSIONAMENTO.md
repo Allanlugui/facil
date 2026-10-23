@@ -110,3 +110,8 @@ A nona entrega foi publicada na versão **0.7.2**, em 23/10/2026: workflow de CI
 no GitHub Actions rodando `npm run check` e `npm run build` em cada push/PR na
 `main`. Configuração publicada sem mudança de comportamento do produto: subiu
 o **patch**.
+
+A décima entrega foi publicada na versão **0.7.3**, em 23/10/2026: anexos
+também em ordens de serviço (card de anexos na tela da OS), reutilizando o
+módulo genérico de anexos. Funcionalidade nova para o usuário final (tela da OS
+ganha upload/download/remoção de anexos) sem mudança de banco: subiu o **patch**.
