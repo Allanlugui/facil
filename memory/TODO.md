@@ -1,6 +1,32 @@
 # Tarefas Pendentes: Facil
 
-Atualizado em 22/10/2026. Este é o **backlog oficial** do projeto (plano + pendências em um só lugar).
+Atualizado em 23/10/2026. Este é o **backlog oficial** do projeto (plano + pendências em um só lugar).
+
+## PLANO DE MELHORIAS DE INFRAESTRUTURA (23/10/2026) — FASE 1 CONCLUÍDA
+
+Plano aprovado pelo titular em 23/10/2026 (5 fases, uma release por fase):
+
+- [x] **Fase 1 — R2 para anexos de suporte (release 0.7.1):** bucket
+      `facil-attachments` criado, binding `ATTACHMENTS` habilitado no
+      `wrangler.jsonc`, `worker-configuration.d.ts` regenerado e verificação
+      ponta a ponta em produção (upload e download íntegros no chat de
+      suporte; fim do 503 `R2_UNAVAILABLE`). A mesma release publicou a
+      fundação do Patrimônio (D-56).
+- [ ] **Fase 2 — CI no GitHub Actions:** workflow rodando `npm run check` em
+      push/PR na `main`.
+- [ ] **Fase 3 — Consumidor do `integration_outbox`:** leitura periódica do
+      outbox com envio ao ServiceNow (`TICKET_INTAKE_KEY`), ack e
+      idempotência; eventos de compra testados (request, order, receipt).
+- [ ] **Fase 4 — Captcha (D-15):** camada final no `/suporte` público e no
+      login, com provedor a definir (Turnstile é o candidato natural), após
+      validação do fluxo em uso real.
+- [ ] **Fase 5 — Anexos em ordens de serviço:** card de anexos na tela da OS
+      (backend já suporta `entity_type = 'work_order'`), respeitando
+      `attachments.documents`.
+- [ ] (Futuro) **Patrimônio — rotas e interface:** a migration `0023`
+      (tabelas/categorias/permissões) já está publicada e aplicada no D1
+      remoto desde a 0.7.1; falta o módulo inteiro (API `/api/assets`, telas,
+      aba de categorias no `/controle`, testes).
 
 ## ETAPA 7 — CONCLUÍDA (22/10/2026)
 
@@ -385,15 +411,18 @@ Frontend (React Router 7, SPA com chunks por página):
       considerados aceitos no fechamento da etapa 1; melhorias futuras entram em nova versão.
 - [x] **Instalação inicial (titular):** admin **Allan Lima** criado pelo titular na URL publicada;
       `needsSetup: false`. Sem e-mail pessoal, CPF ou outro dado do autor no sistema.
-- [ ] (Opcional para o titular) Habilitar R2: painel Cloudflare → R2 → criar `facil-attachments`
-      → descomentar o binding em `wrangler.jsonc` → `npm run types` → `npm run deploy`.
+- [x] **(Opcional para o titular) Habilitar R2 — FEITO (23/10/2026, release 0.7.1):**
+      bucket `facil-attachments` criado via wrangler, binding descomentado,
+      `npm run types`, deploy e verificação ponta a ponta em produção
+      (`SUP-2026-000003` com upload/download íntegro). Fase 1 do plano de
+      melhorias.
 - [ ] (Opcional) Domínio próprio na Cloudflare para habilitar Cloudflare Access na frente do login.
 - [x] **P-06 (RESOLVIDO 18/10/2026):** `@types/node` instalado (dev) e `npm run types` regenerou
       `worker-configuration.d.ts` — agora com o binding `ATTACHMENTS: R2Bucket` da F-19; sem
       avisos do wrangler.
-- [ ] (Opcional) Anexos também em ordens de serviço (backend já suporta `entityType: work_order`).
+- [ ] (Opcional) Anexos também em ordens de serviço — **Fase 5 do plano de melhorias** (backend já suporta `entityType: work_order`).
 - [ ] (Opcional, cosmético) remover o registro antigo `facilities-management` no dashboard do Serena.
-- [ ] (Opcional, sem prioridade declarada) CI no GitHub Actions espelhando `npm run check`.
+- [ ] (Opcional, sem prioridade declarada) CI no GitHub Actions espelhando `npm run check` — **Fase 2 do plano de melhorias**.
 
 ## NOVA FASE — CONCLUÍDA: Melhorias de Usabilidade em Compras (21/10/2026)
 

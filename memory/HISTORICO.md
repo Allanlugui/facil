@@ -494,3 +494,30 @@ em produção.
   `8757a04ed013ff3425f69837af402007b1a9c1f27a0c07154dde64dfc85a9c10`, 20/10/2026 23:04:14 −03:00,
   Worker `cf468e3f-7a2f-4b06-96c2-948e6b38243e`.
 - **Pendências:** as mesmas da etapa 2 (R2, domínio/Access, intake, consumidor do outbox e CI).
+
+## 23/10/2026 — R2 em produção, fundação do Patrimônio e release 0.7.1
+
+- **Contexto:** plano de 5 melhorias aprovado pelo titular (R2, CI, consumidor do
+  `integration_outbox`, captcha D-15 e anexos em OS); a Fase 1 (R2) foi executada e
+  publicada neste dia.
+- **R2:** bucket `facil-attachments` criado via wrangler, binding `ATTACHMENTS`
+  descomentado no `wrangler.jsonc`, `worker-configuration.d.ts` regenerado com
+  `npm run types`. Fim do 503 `R2_UNAVAILABLE` nos anexos do chat de suporte.
+- **Verificação em produção:** pedido `SUP-2026-000003` criado pela API pública, anexo
+  `teste-r2.txt` (50 B) enviado por multipart na conversa por token, listado no
+  acompanhamento e baixado com round-trip idêntico. Script temporário
+  `test-r2.mjs` (fora do repo). O pedido ficou na fila como descartável — resolver
+  no `/ajuda` quando quiser.
+- **Fundação do Patrimônio:** WIP órfão de sessão anterior (migration `0023_assets.sql`,
+  `src/shared/assets.ts`, grupo Patrimônio em `permissions.ts`) foi incluído na release
+  em vez de reescrever a 0.7.1 publicada; migration aplicada no D1 remoto; teste de
+  permissões do admin corrigido de 53 para 56. Decisão e alternativas em **D-56**.
+- **Validação:** `npm run check` **187/187 em 21 arquivos**, typecheck, lint, contrato de
+  API (55×140), `npm run build` e `npm run verify` (manifesto de 180 arquivos íntegro).
+- **Release:** 0.7.1, 180 arquivos, tree
+  `355cf2663be6a87595a90dc577fd3c4c87590c10276682b209152fe8d65b16bc`,
+  23/10/2026 01:03:28 −03:00, Worker `aa9c4ca9-202b-4632-8e6d-45df137fd839`, commit
+  `6d6b410`, tag `v0.7.1` enviada ao GitHub.
+- **Pendências do plano:** Fase 2 (CI), Fase 3 (consumidor do outbox), Fase 4 (captcha)
+  e Fase 5 (anexos em OS); domínio próprio e `TICKET_INTAKE_KEY` seguem com o titular.
+  Patrimônio (rotas/UI) registrado como item futuro no TODO.

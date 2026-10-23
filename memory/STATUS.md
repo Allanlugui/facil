@@ -3,6 +3,27 @@
 - **Criado em:** 16/10/2026 22:36:22 pelo bootstrap global (`D:\DEV\criar-projeto.bat`).
 - **Diretório oficial:** `D:\DEV\Opencode\Facil`
 - **Conhecimento global:** `D:\DEV\memory\Facil\`
+- **R2 em produção e fundação do Patrimônio (23/10/2026):** versão **0.7.1**
+  publicada. Bucket R2 `facil-attachments` criado via wrangler, binding
+  `ATTACHMENTS` descomentado no `wrangler.jsonc` e `worker-configuration.d.ts`
+  regenerado — os anexos do chat de suporte deixaram de responder 503
+  `R2_UNAVAILABLE`. Verificado ponta a ponta em produção: pedido
+  `SUP-2026-000003` criado pela API pública, anexo `teste-r2.txt` enviado,
+  listado e baixado com round-trip idêntico. Junto, entrou a **fundação do
+  módulo Patrimônio** que estava órfã na árvore de trabalho (migration
+  `0023_assets.sql` + `src/shared/assets.ts` + grupo Patrimônio em
+  `permissions.ts` — WIP de sessão anterior sem registro em memória): tabelas
+  `asset_categories` (9 categorias padrão), `assets` e `asset_movements` e
+  permissões `assets.view/manage/move` (admin + gerente), aplicadas no D1
+  remoto; **rotas e interface do módulo continuam pendentes** e nada referencia
+  as tabelas ainda. Teste de contagem de permissões do admin corrigido de 53
+  para 56. `npm run check` **187/187 em 21 arquivos**, typecheck, lint, contrato
+  de API (55×140), build; release assinada (Ed25519, **180 arquivos**, tree
+  `355cf2663be6a87595a90dc577fd3c4c87590c10276682b209152fe8d65b16bc`, 23/10/2026
+  01:03:28 −03:00), `npm run verify` OK, commit `6d6b410`, tag `v0.7.1`, Worker
+  `aa9c4ca9-202b-4632-8e6d-45df137fd839`. Resíduo em produção: o pedido de teste
+  `SUP-2026-000003` ("Teste Automatico R2") ficou na fila como descartável —
+  resolver/cancelar pelo `/ajuda` quando quiser.
 - **Controle do sistema e devolução de compras (22/10/2026):** versão **0.7.0**
   publicada. Entrega: **Controle do sistema** em `/controle` (card em Configurações)
   com abas para 12 cadastros mestres, busca, “mostrar excluídos” e prévia de impacto
@@ -342,12 +363,15 @@
 
 ## Honestidade de estado
 
-- **Deploy remoto: EXECUTADO (20/10/2026).** Worker `facil` publicado em
-  `https://facil.cf-pilot-disposable.workers.dev`, D1 remoto com 19 migrations e admin
-  **Allan Lima** (`needsSetup: false`), release **0.3.0** assinada. Limitações reais: URL
-  `workers.dev` (sem domínio próprio nem Cloudflare Access), **R2 desligado** (anexos do suporte
-  em 503 claro; D1 atende chamados/OS) e **sem CI** (deploy por `npm run deploy`; Workers Builds
-  é opcional).
+- **Deploy remoto: EXECUTADO (atualizado 23/10/2026).** Worker `facil` publicado em
+  `https://facil.cf-pilot-disposable.workers.dev`, D1 remoto com 23 migrations
+  (0023 Patrimônio aplicada em 23/10) e admin **Allan Lima** (`needsSetup:
+  false`), release **0.7.1** assinada. Limitações reais: URL `workers.dev`
+  (sem domínio próprio nem Cloudflare Access), **R2 LIGADO** (bucket
+  `facil-attachments` ativo desde 23/10/2026; anexos de suporte funcionam;
+  chamados/OS continuam no D1), **sem CI** (deploy por `npm run deploy`;
+  Workers Builds é opcional), `TICKET_INTAKE_KEY` ausente em produção e
+  **integration_outbox sem consumidor**.
 - **Dados históricos (20/10/2026):** consulta somente leitura ao D1 de produção encontrou
   **0 linhas `settings.update`**, **0 anexos** e chaves `mail.*` vazias — não havia segredo
   histórico exposto em auditoria nem SVG armazenado. A rotação de credenciais de e-mail segue
@@ -369,8 +393,12 @@
 - ✅ **Etapa 1 encerrada (20/10/2026):** release **0.1.2**, commit `062ea85`, tags `v0.1.0`
   (histórica) e `v0.1.2`; política de versionamento em `docs/VERSIONAMENTO.md` e histórico em
   `CHANGELOG.md`. Toda alteração futura sobe a versão.
-- ⬜ **Opcionais do titular:** habilitar R2 para anexos do suporte, domínio próprio/Cloudflare
-  Access, CI no GitHub Actions e aceite visual de melhorias futuras.
+- ✅ **R2 habilitado (23/10/2026, release 0.7.1):** bucket `facil-attachments`
+  criado, binding `ATTACHMENTS` ativo e verificado ponta a ponta em produção
+  (upload + download íntegro no chat de suporte). Ver pendência equivalente em
+  `TODO.md` (Fase 1 do plano de melhorias concluída).
+- ⬜ **Opcionais do titular:** domínio próprio/Cloudflare Access e aceite visual
+  de melhorias futuras.
 - ✅ **P-03, P-07, P-08, P-10, P-11 e P-12 resolvidos** (detalhes em `PROBLEMAS.md`): predecessor
   arquivado; rota do inventário corrigida + guard `npm run check:api`; anexos com interface
   completa; relatório de divergências; UI de estrutura; painel sem vazamento (LGPD).

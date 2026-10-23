@@ -1026,3 +1026,31 @@
   direto à fila do gestor quando a triagem já foi concluída.
 - **Filas:** devolvidas saem de `triage`/`purchasing` e entram em `queues.returned`
   (`stage=returned`), no painel e na tela de compras.
+
+## D-56 — R2 em produção e destino do WIP órfão do Patrimônio (23/10/2026) — VALIDADO
+
+- **Contexto (R2):** a Fase 1 do plano de melhorias pedia o bucket R2 para os anexos do
+  suporte, até então em 503 `R2_UNAVAILABLE` porque o binding estava comentado. O bucket
+  `facil-attachments` foi criado via `wrangler r2 bucket create`, o binding `ATTACHMENTS`
+  foi descomentado no `wrangler.jsonc` e os tipos regenerados.
+- **Contexto (Patrimônio):** a árvore de trabalho continha WIP não commitado e sem
+  registro em memória de uma sessão anterior — `migrations/0023_assets.sql` (tabelas
+  `asset_categories`/`assets`/`asset_movements`, categorias padrão, permissões
+  `assets.view/manage/move`), `src/shared/assets.ts` (constantes compartilhadas) e o grupo
+  Patrimônio em `src/shared/permissions.ts`. O primeiro deploy da 0.7.1 já carregava esse
+  conteúdo (o manifesto assina a árvore de trabalho), enquanto o D1 remoto ainda não tinha a
+  migration — o catálogo de permissões em produção exibia o grupo Patrimônio sem as
+  permissões existirem no banco.
+- **Decisão:** fechar a 0.7.1 **com** a fundação do Patrimônio em vez de reescrever a
+  release publicada: a migration 0023 (aditiva, exercitada pela suíte 187/187 no Miniflare)
+  foi aplicada no D1 remoto, o teste de contagem de permissões do admin foi corrigido de 53
+  para 56 e o CHANGELOG/VERSIONAMENTO documentam a fundação como parte da release. Assim o
+  conteúdo publicado = commit = tag, sem reescrita de número de versão. O restante do
+  módulo (rotas, telas, aba no `/controle`, testes) fica como item futuro do TODO.
+- **Alternativas descartadas:** (a) reescrever a 0.7.1 publicada sem o WIP — viola "release
+  publicada nunca é reescrita" e deixaria conteúdo no ar sem commit; (b) stash do WIP —
+  perderia trabalho legítimo e deixaria a release publicada inconsistente com o commit.
+- **Impacto:** produção com R2 ativo verificado ponta a ponta (`SUP-2026-000003`, anexo
+  com round-trip idêntico); D1 remoto na migration 0023; nenhuma rota/tela referencia as
+  tabelas de Patrimônio (fundação inerte). Resíduo: o pedido de teste ficou na fila do
+  suporte como descartável.
