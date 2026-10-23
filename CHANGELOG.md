@@ -3,6 +3,30 @@
 Todas as alterações relevantes do Facil são registradas aqui. O projeto segue o
 versionamento descrito em `docs/VERSIONAMENTO.md`.
 
+## [0.7.1] — 2026-10-23
+
+Infraestrutura de anexos habilitada em produção e fundação do módulo de
+Patrimônio. Única mudança visível para o usuário final: anexos do chat de
+suporte deixam de responder 503 e passam a gravar/ler do R2.
+
+### Adicionado
+
+- **R2 em produção:** bucket `facil-attachments` criado e binding `ATTACHMENTS`
+  habilitado no `wrangler.jsonc` (tipos regenerados com `npm run types`).
+  Verificado ponta a ponta na URL publicada: criação do pedido de suporte,
+  upload de anexo, listagem e download com conteúdo íntegro.
+- **Fundação do Patrimônio (migration 0023):** categorias de patrimônio com 9
+  padrões, tabela `assets`, histórico `asset_movements` e permissões
+  `assets.view`/`assets.manage`/`assets.move` (admin e gerente de facilities),
+  exibidas no catálogo de permissões. Constantes compartilhadas em
+  `src/shared/assets.ts`. Rotas e interface do módulo ficam para release
+  futura; nenhum código referencia as tabelas ainda.
+
+### Corrigido
+
+- Contagem de permissões do admin no teste de autenticação atualizada de 53
+  para 56, acompanhando o catálogo com o grupo Patrimônio.
+
 ## [0.7.0] — 2026-10-22
 
 Controle do sistema com exclusão segura e devolução da compra para ajuste do

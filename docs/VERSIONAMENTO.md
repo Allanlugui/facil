@@ -98,3 +98,10 @@ administradores e múltiplos administradores com proteção do último; devoluç
 solicitação de compra ao solicitante para ajuste e reenvio direto à fila do
 gestor. Funcionalidades novas com migration 0022 e mudança de comportamento:
 subiu o **minor**.
+
+A oitava entrega foi publicada na versão **0.7.1**, em 23/10/2026:
+infraestrutura de anexos habilitada em produção (bucket R2 `facil-attachments`
+com binding `ATTACHMENTS`, encerrando o 503 dos anexos do suporte) e fundação do
+módulo Patrimônio (migration 0023 com tabelas, categorias padrão e permissões,
+sem rotas/interface ainda). Habilitação de infraestrutura e schema aditivo sem
+mudança de comportamento: subiu o **patch**.

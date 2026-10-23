@@ -6,15 +6,15 @@
   "payload": {
     "schema": "facil.signature.v1",
     "project": "Facil — Plataforma de Gestão de Facilities",
-    "version": "0.7.0",
+    "version": "0.7.1",
     "author": "Allan Luiz Silveira Lima",
     "alias": "Allanlugui",
     "company": "CorpServices Group",
-    "signedAt": "2026-10-22T21:40:17-03:00",
-    "treeHash": "2dd0d06d6af3501c3496f148d55d0885b9b1e23588b6d2f807513f81cf8ef335",
-    "fileCount": 178
+    "signedAt": "2026-10-23T01:03:28-03:00",
+    "treeHash": "355cf2663be6a87595a90dc577fd3c4c87590c10276682b209152fe8d65b16bc",
+    "fileCount": 180
   },
-  "signature": "FmaM4/NWOfYTQUyvIeHMgBhon+lZw/DFm4hIeEKmQC/42qACvCBnmoLKH8GACFnjNiJlHsHjoK8nRufXMfTKAQ==",
+  "signature": "zDoeuaWVoP6tA9ulhc/CUSVBQjFNKEq/UiX/AHLl2Rj6sBpjJbyvXX64Zyk0tsjRbd0pdfIuYCc3G45SKcAQCA==",
   "verify": "node scripts/verify-release.mjs",
   "files": [
     {
@@ -39,8 +39,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "c9192386ae9d857854aa3398d740485ef3304c9921eb9e3cd8cd4afa66ff84ce",
-      "bytes": 20400
+      "sha256": "ecb088102e18e76965f9ee21fee28b604e856523034aac8fe3c9daa4d95a6c18",
+      "bytes": 21544
     },
     {
       "path": "LICENSE",
@@ -49,8 +49,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "76d398f08ef196dd5f97572b928978d8288c1bf679a9c4489b58d6cc32aac459",
-      "bytes": 19599
+      "sha256": "b654455654f53ae69544495eaa66affef42a540dd018712d80d650c097b380f8",
+      "bytes": 19691
     },
     {
       "path": "branding/README.md",
@@ -124,8 +124,8 @@
     },
     {
       "path": "docs/VERSIONAMENTO.md",
-      "sha256": "aa04e90927a6d8075658f10c99234c111331b3396589fcfcc8812bfb2615ea90",
-      "bytes": 4485
+      "sha256": "65beac45ee9fdd67ee027b9f3a0280e74d3490acd61f168f7d0c471be0c0512a",
+      "bytes": 4928
     },
     {
       "path": "docs/anexos-suporte.md",
@@ -258,13 +258,18 @@
       "bytes": 2786
     },
     {
+      "path": "migrations/0023_assets.sql",
+      "sha256": "2e3a8b51568ded99d0c4a0aae74e4cd3797e23c1ce104493f8ab61766ea7c1af",
+      "bytes": 9034
+    },
+    {
       "path": "package-lock.json",
-      "sha256": "6dd4eda501aaffeabb1f6d3a9571efea9b57ed7ee1638c17f016fa696d7702d3",
-      "bytes": 191543
+      "sha256": "3b985abab46c6b32ffeb2aa5ac51ba833650d1f220ccfad2cfb073fe39605ed7",
+      "bytes": 193386
     },
     {
       "path": "package.json",
-      "sha256": "b27fef193c61f04f1b623b54e82c3329092d688559b5335f9d2fa1f8fd633bfe",
+      "sha256": "b47b99dcb2434a0a555ffd9c13985ed1d477f6f71b91977172599a517a051235",
       "bytes": 1861
     },
     {
@@ -548,14 +553,19 @@
       "bytes": 11404
     },
     {
+      "path": "src/shared/assets.ts",
+      "sha256": "2e911d4a5ee67e71d4d6dc13210586e77a9052258aaf96dfb4a0375708fedc1a",
+      "bytes": 2510
+    },
+    {
       "path": "src/shared/locations.ts",
       "sha256": "33bdc81b526266e5cd52076b2d837f3e9bb300b869449dcf5b631326a76cf2f3",
       "bytes": 484
     },
     {
       "path": "src/shared/permissions.ts",
-      "sha256": "971370c9b568764ad1e7b9ae9b149a8b8c673937ef9dcb4803d4898f887ba97a",
-      "bytes": 8476
+      "sha256": "532a4fdba464cee4317235f8ad889f1b4fd8fd1558fe1e62d0f325da51158d18",
+      "bytes": 8908
     },
     {
       "path": "src/shared/themes.ts",
@@ -759,7 +769,7 @@
     },
     {
       "path": "tests/01-auth.spec.ts",
-      "sha256": "0e0f635176da35737ba97f745292271a8dbd779375e50c8de71601ef0af6eb97",
+      "sha256": "167492c5ad1a6ec13786b92e4764a8f8ff22571cfbafa76568fc48c8061e25c7",
       "bytes": 14834
     },
     {
@@ -899,13 +909,13 @@
     },
     {
       "path": "worker-configuration.d.ts",
-      "sha256": "605fb9cec70d109a68f1fbaa62b0e2f48dd88be384d5b8a0378461879cdb6211",
-      "bytes": 626344
+      "sha256": "33029653a28df2d63a10a9972428cdb124b7f9b88f3e5eab125bc89d61cfb27b",
+      "bytes": 626368
     },
     {
       "path": "wrangler.jsonc",
-      "sha256": "9465372f52fefb1063b8728f305e7fc04654545acbe5358bd0f1bf0dc6d904f5",
-      "bytes": 2080
+      "sha256": "41247e4f2fe693d3c76674a64ae88bdec8d8a4458c316a3749343c9e1ef102eb",
+      "bytes": 2062
     }
   ]
 }

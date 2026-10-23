@@ -38,6 +38,10 @@ export const PERMISSIONS = {
   INVENTORY_CLOSE: "inventory.close",
   INVENTORY_REOPEN: "inventory.reopen",
 
+  ASSETS_VIEW: "assets.view",
+  ASSETS_MANAGE: "assets.manage",
+  ASSETS_MOVE: "assets.move",
+
   TICKETS_VIEW: "tickets.view",
   TICKETS_VIEW_ALL: "tickets.view_all",
   TICKETS_CREATE: "tickets.create",
@@ -148,6 +152,15 @@ export const PERMISSION_GROUPS: readonly PermissionGroup[] = [
       { code: "inventory.adjust", label: "Aplicar ajuste de inventário" },
       { code: "inventory.close", label: "Fechar ciclo de inventário" },
       { code: "inventory.reopen", label: "Reabrir inventário encerrado" },
+    ],
+  },
+  {
+    module: "assets",
+    label: "Patrimônio",
+    codes: [
+      { code: "assets.view", label: "Visualizar ativos e histórico" },
+      { code: "assets.manage", label: "Cadastrar, editar, baixar e descartar ativos" },
+      { code: "assets.move", label: "Transferir local, atribuir responsável e mudar situação" },
     ],
   },
   {

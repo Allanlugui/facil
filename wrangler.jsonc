@@ -48,12 +48,12 @@
   //   1) habilite o R2 no painel da Cloudflare (exige dados de cobranca);
   //   2) `npx wrangler r2 bucket create facil-attachments`;
   //   3) descomente o bloco abaixo, rode `npm run types` e `npm run deploy`.
-  // "r2_buckets": [
-  //   {
-  //     "binding": "ATTACHMENTS",
-  //     "bucket_name": "facil-attachments"
-  //   }
-  // ],
+  "r2_buckets": [
+    {
+      "binding": "ATTACHMENTS",
+      "bucket_name": "facil-attachments"
+    }
+  ],
   "observability": {
     "enabled": true
   },
