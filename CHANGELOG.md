@@ -3,6 +3,20 @@
 Todas as alterações relevantes do Facil são registradas aqui. O projeto segue o
 versionamento descrito em `docs/VERSIONAMENTO.md`.
 
+## [0.7.2] — 2026-10-23
+
+CI no GitHub Actions: cada push ou PR na `main` roda o pipeline completo de
+qualidade antes de qualquer deploy manual.
+
+### Adicionado
+
+- **Workflow de CI (`.github/workflows/ci.yml`):** `npm ci`, `npm run check`
+  (typecheck worker+cliente, ESLint, contrato de rotas da API e a suíte de
+  testes com Miniflare) e `npm run build`, em Node 24 com cache de dependências,
+  `permissions: contents: read` e limite de 20 minutos por execução. O deploy
+  permanece manual (`npm run deploy`, com assinatura) — o CI é o gate de
+  qualidade, não o publicador.
+
 ## [0.7.1] — 2026-10-23
 
 Infraestrutura de anexos habilitada em produção e fundação do módulo de

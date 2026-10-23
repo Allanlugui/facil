@@ -6,21 +6,26 @@
   "payload": {
     "schema": "facil.signature.v1",
     "project": "Facil — Plataforma de Gestão de Facilities",
-    "version": "0.7.1",
+    "version": "0.7.2",
     "author": "Allan Luiz Silveira Lima",
     "alias": "Allanlugui",
     "company": "CorpServices Group",
-    "signedAt": "2026-10-23T01:03:28-03:00",
-    "treeHash": "355cf2663be6a87595a90dc577fd3c4c87590c10276682b209152fe8d65b16bc",
-    "fileCount": 180
+    "signedAt": "2026-10-23T01:33:52-03:00",
+    "treeHash": "033d321ab7b35ee85075b6e816db829e5beb63b93889e95856a2ba9ea636e2b6",
+    "fileCount": 181
   },
-  "signature": "zDoeuaWVoP6tA9ulhc/CUSVBQjFNKEq/UiX/AHLl2Rj6sBpjJbyvXX64Zyk0tsjRbd0pdfIuYCc3G45SKcAQCA==",
+  "signature": "8qogTfYCokpphQd9v+5AwoDPuP0pSzt/8ekXk3h/4kgvMAPFlOBODY1cSOBaldINpdn7dqTZSDOcVGOQuhgBBw==",
   "verify": "node scripts/verify-release.mjs",
   "files": [
     {
       "path": ".gitattributes",
       "sha256": "8be047c859085a1e5b8666f2f484b10d62fe19c9673c51debc220b2237ea3de8",
       "bytes": 393
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "sha256": "54a1f3ae72ab82e054d6344f68878f076a72eb09a9827b78c9a3f7fb9b96404a",
+      "bytes": 1045
     },
     {
       "path": ".gitignore",
@@ -39,8 +44,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "ecb088102e18e76965f9ee21fee28b604e856523034aac8fe3c9daa4d95a6c18",
-      "bytes": 21544
+      "sha256": "9b7a43ac4fc8c378b5454d22ed38cbe6acb9a4f42b2ec87f1cefac72c6b670c0",
+      "bytes": 22131
     },
     {
       "path": "LICENSE",
@@ -49,8 +54,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "b654455654f53ae69544495eaa66affef42a540dd018712d80d650c097b380f8",
-      "bytes": 19691
+      "sha256": "262d411af17d748e4b5c72ae059222820425756cfdd89c5f211f6a8f4e941387",
+      "bytes": 19670
     },
     {
       "path": "branding/README.md",
@@ -124,8 +129,8 @@
     },
     {
       "path": "docs/VERSIONAMENTO.md",
-      "sha256": "65beac45ee9fdd67ee027b9f3a0280e74d3490acd61f168f7d0c471be0c0512a",
-      "bytes": 4928
+      "sha256": "89f6a84167703935a2e6ecbbc40237a6405d694180ad3bb4ed89e9b80cf65dfa",
+      "bytes": 5183
     },
     {
       "path": "docs/anexos-suporte.md",
@@ -264,12 +269,12 @@
     },
     {
       "path": "package-lock.json",
-      "sha256": "3b985abab46c6b32ffeb2aa5ac51ba833650d1f220ccfad2cfb073fe39605ed7",
+      "sha256": "933e69b2a7b87c23e519e6a46a7c3d593c1c73cf0108be778bc6865f2d545f7b",
       "bytes": 193386
     },
     {
       "path": "package.json",
-      "sha256": "b47b99dcb2434a0a555ffd9c13985ed1d477f6f71b91977172599a517a051235",
+      "sha256": "7f369fb49acc4f985615d3a292844d52dfa2ef545bdb9bd41edca6c66344f617",
       "bytes": 1861
     },
     {

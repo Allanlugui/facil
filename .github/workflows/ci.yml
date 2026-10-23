@@ -1,0 +1,42 @@
+# CI do Facil: pipeline de qualidade em cada push/PR para a main.
+#
+# Escopo: espelha o `npm run check` local (typecheck worker+cliente, ESLint,
+# contrato de rotas da API e suite de testes no Miniflare) mais o build do
+# cliente. O deploy NAO acontece aqui — a publicacao continua manual via
+# `npm run deploy` (assinatura Ed25519 + `npm run check` + build + wrangler),
+# conforme docs/VERSIONAMENTO.md.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: check (typecheck, lint, API, testes) + build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Node 24
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Dependências (npm ci)
+        run: npm ci
+
+      - name: Qualidade (typecheck + lint + contrato de API + testes)
+        run: npm run check
+
+      - name: Build do cliente
+        run: npm run build

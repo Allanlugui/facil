@@ -7,7 +7,7 @@ e adjudicação, relatórios, usuários/permissões e auditoria.
 **Autor:** Allan Luiz Silveira Lima (Allanlugui)  
 **Licença:** proprietária, todos os direitos reservados (ver `LICENSE`).  
 **Assinatura:** cada release é assinada com Ed25519 (ver `docs/ASSINATURA.md`).  
-**Versão atual:** `0.7.1` (anexos do suporte no R2 em produção e fundação do módulo de Patrimônio; a versão anterior, 0.7.0, trouxe o controle do sistema com exclusão segura e a devolução para ajuste nas compras).
+**Versão atual:** `0.7.2` (CI no GitHub Actions validando qualidade e build a cada push/PR; a 0.7.1 habilitou os anexos do suporte no R2 em produção e publicou a fundação do módulo de Patrimônio).
 
 > A autoria é registrada apenas pelo nome. CPF e e-mail pessoal do autor não são
 > armazenados nem exibidos pelo sistema, pela documentação ou pelo repositório.

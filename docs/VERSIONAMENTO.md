@@ -105,3 +105,8 @@ com binding `ATTACHMENTS`, encerrando o 503 dos anexos do suporte) e fundação 
 módulo Patrimônio (migration 0023 com tabelas, categorias padrão e permissões,
 sem rotas/interface ainda). Habilitação de infraestrutura e schema aditivo sem
 mudança de comportamento: subiu o **patch**.
+
+A nona entrega foi publicada na versão **0.7.2**, em 23/10/2026: workflow de CI
+no GitHub Actions rodando `npm run check` e `npm run build` em cada push/PR na
+`main`. Configuração publicada sem mudança de comportamento do produto: subiu
+o **patch**.
