@@ -522,24 +522,42 @@ em produção.
   e Fase 5 (anexos em OS); domínio próprio e `TICKET_INTAKE_KEY` seguem com o titular.
   Patrimônio (rotas/UI) registrado como item futuro no TODO.
 
-## 23/10/2026 (tarde) — CI no GitHub Actions, release 0.7.2 e diagnóstico de bloqueio
+## 23/10/2026 — Plano de melhorias concluído (5 releases: 0.7.1 a 0.7.5)
 
-- **Contexto:** Fase 2 do plano de melhorias — publicar workflow de CI.
-- **Entrega:** `.github/workflows/ci.yml` publicado na release **0.7.2** (manifesto
-  assinado, 181 arquivos, tree `033d321a…`, commit `8b62533`, tag `v0.7.2`,
-  Worker `4c488a62…`). Workflow registrado como ativo no GitHub (parse OK).
-- **Bloqueio descoberto:** TODAS as execuções (6+ runs em 5 branches, incluindo
-  workflow mínimo `echo ok`) falham **instantaneamente** com
-  `startup_failure` / `path: BuildFailed`, sem criar jobs, sem logs, sem
-  anotações. Mesmo repo público da conta (`SecureFind`) executou workflow
-  normalmente em 03/10/2026. Diagnóstico: limite de minutos/spending limit de
-  GitHub Actions para repositórios privados no plano Free — execução morre no
-  scheduler antes de qualquer job. Verificado via 4 branches de bisect
-  descartáveis (ci-orig, ci-min, ci-ascii, ci-quoted — removidos).
-- **Ação humana necessária:** conferir **github.com/settings/billing** →
-  "Actions minutes" / "Spending limit" / "Payment method" da conta `Allanlugui`
-  e garantir cota/spending limit > 0 para repos privados.
-- **Estado do plano:** Fase 2 publicada mas **não executável** até resolução do
-  billing. Fases 3–5 aguardam decisão: prosseguir implementação local (Fase 5
-  anexos em OS é autônoma; Fases 3/4 precisam `TICKET_INTAKE_KEY` e provedor de
-  captcha para produção) ou aguardar CI.
+- **Contexto:** plano de 5 melhorias aprovado pelo titular (R2, CI, consumidor do
+  `integration_outbox`, captcha D-15, anexos em OS). Todas executadas e publicadas
+  neste dia, uma release por fase, cada uma com `npm run check` verde, deploy
+  assinado (Ed25519), verify e tag no GitHub.
+- **0.7.1 (R2):** bucket `facil-attachments` criado, binding `ATTACHMENTS` ativo,
+  verificação ponta a ponta em produção (`SUP-2026-000003`: upload e download
+  íntegros no chat de suporte, fim do 503). Também publicou a fundação do
+  Patrimônio (migration `0023`, categorias padrão, permissões, D1 remoto atualizado);
+  rotas/UI do módulo ficam para release futura. Commit `6d6b410`, tag `v0.7.1`.
+- **0.7.2 (CI):** workflow `.github/workflows/ci.yml` publicado e ativo. Execuções
+  bloqueadas na conta GitHub (`startup_failure`, sem jobs) — diagnóstico via 4
+  branches de bisect descartáveis; repo público da conta executou workflow em
+  03/10, apontando para limite de Actions minutes/spending limit em repos privados.
+  Pendência de billing do titular (`github.com/settings/billing`). Commit `8b62533`,
+  tag `v0.7.2`.
+- **0.7.3 (anexos em OS):** card de anexos na tela da OS reutilizando o módulo
+  genérico `/api/attachments` (upload/download/remoção, `attachments.documents`,
+  auditoria). Testes `15-workorder-attachments.spec.ts` (5 testes). Commit `ff68d1a`,
+  tag `v0.7.3`.
+- **0.7.4 (consumidor do outbox):** trigger cron `*/5 * * * *` processa
+  `integration_outbox`; endpoint `POST /api/integrations/outbox/process` para
+  disparo manual. Idempotência, `processing`, retry com backoff, `failed` após
+  limite. Pulando silenciosamente sem `TICKET_INTAKE_KEY`/`SERVICENOW_INSTANCE_URL`
+  (titular configura as secrets do Worker). Commit `8658045`, tag `v0.7.4`.
+- **0.7.5 (captcha D-15):** Turnstile no login e na abertura de chamados públicos,
+  desligado por padrão. Titular ativa em Configurações (`captcha.enabled`,
+  `captcha.site_key`, `captcha.secret_key`). Commit `c8f7fe0`, tag `v0.7.5`.
+- **Qualidade final:** `npm run check` **194/194 em 23 arquivos**, typecheck, lint,
+  contrato de API (55×140), build, `npm run verify` (manifesto íntegro), todos os
+  deploys com release assinada.
+- **Pendências dependentes do titular:** (a) desbloquear billing do GitHub para o
+  CI rodar; (b) configurar `TICKET_INTAKE_KEY`/`SERVICENOW_INSTANCE_URL` para o
+  outbox enviar ao destino; (c) configurar `captcha.enabled` + chaves para ativar
+  o captcha; (d) domínio próprio/Cloudflare Access, se desejar.
+- **Item futuro (não é das 5 fases):** Patrimônio — rotas e interface (migration
+  `0023` já publicada; falta API `/api/assets`, telas, aba no `/controle`, testes).
+

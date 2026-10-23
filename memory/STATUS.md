@@ -34,6 +34,23 @@
   Hipótese: cota/spending limit de Actions para repositório privado (plano Free).
   Pendência humana: conferir Billing → Actions minutes / spending limit em
   github.com/settings/billing. Sem mudança de comportamento do produto.
+- **Anexos em ordens de serviço (release 0.7.3, 23/10/2026):** card de anexos na
+  tela da OS reutilizando o módulo genérico `/api/attachments` (upload/download/
+  remoção, controle de entidade, `attachments.documents` para documentos, auditoria
+  de upload/remoção). Sem mudança de banco; `npm run check` **192/192 em 22
+  arquivos**, release assinada (183 arquivos), tag `v0.7.3`.
+- **Consumidor do outbox com cron (release 0.7.4, 23/10/2026):** trigger
+  `*/5 * * * *` processa `integration_outbox` (envio para ServiceNow/NetSuite
+  autenticado por `TICKET_INTAKE_KEY`); endpoint `POST
+  /api/integrations/outbox/process` para disparo manual. Idempotência,
+  marcação `processing`, retry com backoff e `failed` após o limite. Pulando
+  silenciosamente sem as chaves (não trava o Worker); `npm run check` **194/194
+  em 23 arquivos**, release assinada, tag `v0.7.4`.
+- **Captcha como camada final (release 0.7.5, 23/10/2026):** Turnstile no login
+  e na abertura de chamados públicos, desligado por padrão. Ativado pelo titular
+  em Configurações (`captcha.enabled`, `captcha.site_key`, `captcha.secret_key`);
+  sem as chaves nada muda no fluxo; `npm run check` **194/194 em 23 arquivos**,
+  release assinada, tag `v0.7.5`.
 - **Controle do sistema e devolução de compras (22/10/2026):** versão **0.7.0**
   publicada. Entrega: **Controle do sistema** em `/controle` (card em Configurações)
   com abas para 12 cadastros mestres, busca, “mostrar excluídos” e prévia de impacto
@@ -376,12 +393,15 @@
 - **Deploy remoto: EXECUTADO (atualizado 23/10/2026).** Worker `facil` publicado em
   `https://facil.cf-pilot-disposable.workers.dev`, D1 remoto com 23 migrations
   (0023 Patrimônio aplicada em 23/10) e admin **Allan Lima** (`needsSetup:
-  false`), release **0.7.2** assinada. Limitações reais: URL `workers.dev`
+  false`), release **0.7.5** assinada. Limitações reais: URL `workers.dev`
   (sem domínio próprio nem Cloudflare Access), **R2 LIGADO** (bucket
   `facil-attachments` ativo desde 23/10/2026; anexos de suporte funcionam;
-  chamados/OS continuam no D1), **sem CI EXECUTÁVEL** (workflow publicado mas
-  execuções bloqueadas por limite de conta GitHub — ver pendência acima),
-  `TICKET_INTAKE_KEY` ausente em produção e **integration_outbox sem consumidor**.
+  chamados/OS continuam no D1), **CI publicado mas não executável** (workflow
+  ativo, execuções `startup_failure` por limite de conta GitHub — ver pendência
+  de billing), **consumidor do outbox publicado mas sem chaves** (`TICKET_INTAKE_KEY`
+  / `SERVICENOW_INSTANCE_URL` não configuradas — pula silenciosamente),
+  **captcha publicado mas desligado** (precisa de `captcha.enabled` e das chaves
+  em Configurações).
 - **Dados históricos (20/10/2026):** consulta somente leitura ao D1 de produção encontrou
   **0 linhas `settings.update`**, **0 anexos** e chaves `mail.*` vazias — não havia segredo
   histórico exposto em auditoria nem SVG armazenado. A rotação de credenciais de e-mail segue
@@ -407,8 +427,14 @@
   criado, binding `ATTACHMENTS` ativo e verificado ponta a ponta em produção
   (upload + download íntegro no chat de suporte). Ver pendência equivalente em
   `TODO.md` (Fase 1 do plano de melhorias concluída).
-- ⬜ **Opcionais do titular:** domínio próprio/Cloudflare Access e aceite visual
-  de melhorias futuras.
+- ⬜ **Opcionais do titular (dependem de credenciais/configuração):**
+  - **Billing do GitHub:** desbloquear execuções do CI (Actions minutes / spending
+    limit para repos privados) em `github.com/settings/billing`.
+  - **Integração outbox:** configurar secrets do Worker `TICKET_INTAKE_KEY` e
+    `SERVICENOW_INSTANCE_URL` para o consumidor cron enviar eventos ao destino.
+  - **Captcha:** configurar `captcha.enabled`, `captcha.site_key` e
+    `captcha.secret_key` no painel de Configurações do sistema (Turnstile).
+  - Domínio próprio/Cloudflare Access e aceite visual de melhorias futuras.
 - ✅ **P-03, P-07, P-08, P-10, P-11 e P-12 resolvidos** (detalhes em `PROBLEMAS.md`): predecessor
   arquivado; rota do inventário corrigida + guard `npm run check:api`; anexos com interface
   completa; relatório de divergências; UI de estrutura; painel sem vazamento (LGPD).

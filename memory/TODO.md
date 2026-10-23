@@ -2,9 +2,9 @@
 
 Atualizado em 23/10/2026. Este é o **backlog oficial** do projeto (plano + pendências em um só lugar).
 
-## PLANO DE MELHORIAS DE INFRAESTRUTURA (23/10/2026) — FASE 1 CONCLUÍDA
+## PLANO DE MELHORIAS DE INFRAESTRUTURA (23/10/2026) — TODAS AS FASES PUBLICADAS
 
-Plano aprovado pelo titular em 23/10/2026 (5 fases, uma release por fase):
+Plano aprovado pelo titular em 23/10/2026 (5 fases), todas entregas publicadas:
 
 - [x] **Fase 1 — R2 para anexos de suporte (release 0.7.1):** bucket
       `facil-attachments` criado, binding `ATTACHMENTS` habilitado no
@@ -12,28 +12,27 @@ Plano aprovado pelo titular em 23/10/2026 (5 fases, uma release por fase):
       ponta a ponta em produção (upload e download íntegros no chat de
       suporte; fim do 503 `R2_UNAVAILABLE`). A mesma release publicou a
       fundação do Patrimônio (D-56).
-- [~] **Fase 2 — CI no GitHub Actions (0.7.2 publicada; EXECUÇÃO BLOQUEADA NA CONTA):**
+- [~] **Fase 2 — CI no GitHub Actions (release 0.7.2; EXECUÇÃO BLOQUEADA NA CONTA):**
       workflow `.github/workflows/ci.yml` publicado e registrado como ativo
-      (válido — o parse passa), mas TODA execução falha instantaneamente em
-      `startup_failure` (path `BuildFailed`, sem jobs/logs), inclusive um
-      workflow mínimo `echo ok` em 4 branches de diagnóstico. Conta executou
-      workflow normalmente em repo público (SecureFind, 03/10), o que aponta para
-      limite de minutos/spending limit de Actions em repo privado. Ação humana:
-      conferir github.com/settings/billing (Actions minutes / spending limit /
-      payment method). Branches de diagnóstico removidas.
-- [ ] **Fase 3 — Consumidor do `integration_outbox`:** leitura periódica do
-      outbox com envio ao ServiceNow (`TICKET_INTAKE_KEY`), ack e
-      idempotência; eventos de compra testados (request, order, receipt).
-- [ ] **Fase 4 — Captcha (D-15):** camada final no `/suporte` público e no
-      login, com provedor a definir (Turnstile é o candidato natural), após
-      validação do fluxo em uso real.
-- [ ] **Fase 5 — Anexos em ordens de serviço:** card de anexos na tela da OS
-      (backend já suporta `entity_type = 'work_order'`), respeitando
-      `attachments.documents`.
-- [ ] (Futuro) **Patrimônio — rotas e interface:** a migration `0023`
-      (tabelas/categorias/permissões) já está publicada e aplicada no D1
-      remoto desde a 0.7.1; falta o módulo inteiro (API `/api/assets`, telas,
-      aba de categorias no `/controle`, testes).
+      (`npm ci` → `npm run check` → `npm run build`, Node 24). **Execuções
+      bloqueadas na conta GitHub** (`startup_failure`, sem jobs) — pendência de
+      billing do titular (Actions minutes / spending limit para repos privados).
+- [x] **Fase 3 — Consumidor do `integration_outbox` (release 0.7.4):** trigger
+      cron `*/5 * * * *` + endpoint `POST /api/integrations/outbox/process`.
+      Idempotência, marcação `processing`, retry com backoff e `failed` após
+      o limite. Pulando silenciosamente sem `TICKET_INTAKE_KEY`/
+      `SERVICENOW_INSTANCE_URL` — titular configura as secrets do Worker para
+      ativar.
+- [x] **Fase 4 — Captcha (D-15, release 0.7.5):** Turnstile no login e na
+      abertura de chamados públicos, desligado por padrão. Titular ativa em
+      Configurações com `captcha.enabled` / `captcha.site_key` /
+      `captcha.secret_key`.
+- [x] **Fase 5 — Anexos em ordens de serviço (release 0.7.3):** card de anexos
+      na tela da OS (upload/download/remoção), reutilizando o módulo genérico
+      `/api/attachments`, com `attachments.documents` para documentos.
+- [ ] (Futuro) **Patrimônio — rotas e interface:** migration `0023` publicada
+      e aplicada no D1 remoto (0.7.1); falta o módulo inteiro (API `/api/assets`,
+      telas, aba de categorias no `/controle`, testes).
 
 ## ETAPA 7 — CONCLUÍDA (22/10/2026)
 
