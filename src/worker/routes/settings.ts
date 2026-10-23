@@ -130,6 +130,25 @@ export const SETTINGS_CATALOG: SettingDefinition[] = [
     max: 52428800,
     section: "anexos",
   },
+  {
+    key: "captcha.enabled",
+    description: "Habilitar captcha (Turnstile) no login e na abertura de chamados públicos",
+    type: "boolean",
+    section: "suporte",
+  },
+  {
+    key: "captcha.site_key",
+    description: "Chave pública (site key) do provedor de captcha",
+    type: "string",
+    section: "suporte",
+  },
+  {
+    key: "captcha.secret_key",
+    description: "Chave secreta (secret key) do provedor de captcha",
+    type: "string",
+    secret: true,
+    section: "suporte",
+  },
 ];
 
 const CATALOG_BY_KEY = new Map(SETTINGS_CATALOG.map((item) => [item.key, item]));

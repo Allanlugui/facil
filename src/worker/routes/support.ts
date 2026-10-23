@@ -3,7 +3,7 @@ import { z } from "zod";
 import { PERMISSIONS } from "@shared/permissions";
 import type { AppContext, AppEnv, AuthUser } from "../types";
 import { currentUser, requireAuth, requirePermission } from "../auth";
-import { auditStatement, clientInfo } from "../audit";
+import { auditStatement, clientInfo, recordAudit } from "../audit";
 import { allRows, countRows, insertStatement, normalizePage, offsetOf, oneRow, updateStatement } from "../db";
 import { ApiError, badRequest, conflict, forbidden, notFound, parseBody } from "../errors";
 import {
@@ -17,6 +17,7 @@ import {
 import { readMailConfig, mailConfigured, queueEmail, deliverOutbox, type QueuedEmailStatement } from "../mailer";
 import { notificationStatements, usersWithPermission } from "../notify";
 import { getSetting } from "./settings";
+import { readCaptchaConfig, isCaptchaRequired, verifyCaptchaToken } from "../captcha";
 import { buildCode, nextCounter, nowIso, randomToken, sha256Hex, uuid } from "../util";
 
 /**
@@ -660,6 +661,9 @@ const createSchema = z.object({
   sector: z.string().trim().max(120).nullish(),
   registration: z.string().trim().max(60).nullish(),
   reason: z.string().trim().min(10, "Descreva o motivo com pelo menos 10 caracteres.").max(2000),
+  // Captcha (camada final, D-15): exigido somente quando habilitado e o
+  // solicitante nao tem sessao (canal publico).
+  captcha_token: z.string().optional(),
 });
 
 const MAX_OPEN_PER_EMAIL = 3;
@@ -689,6 +693,35 @@ router.post("/requests", async (c) => {
   }
 
   const body = await parseBody(c, createSchema);
+
+  // Captcha (camada final, D-15): canal publico (sem sessao) exige token valido
+  // quando o administrador habilitou. Usuarios logados nao precisam.
+  if (!user && info.ip) {
+    const captchaRows = await allRows<{ key: string; value: string }>(
+      c.env.DB,
+      `SELECT key, value FROM settings WHERE key IN ('captcha.enabled','captcha.site_key','captcha.secret_key')`,
+    );
+    const captchaConfig = readCaptchaConfig(
+      Object.fromEntries(captchaRows.map((row) => [String(row.key), String(row.value)])),
+    );
+    if (isCaptchaRequired(captchaConfig)) {
+      const ok = await verifyCaptchaToken(captchaConfig.secretKey, body.captcha_token ?? "", info.ip);
+      if (!ok) {
+        await recordAudit(c.env.DB, {
+          actor: null,
+          module: "support",
+          action: "support.request.captcha_failed",
+          entityType: "email",
+          entityId: body.email,
+          result: "failure",
+          reason: "Captcha invalido ou ausente.",
+          ...info,
+        });
+        throw new ApiError(400, "CAPTCHA_REQUIRED", "Preencha o captcha e tente novamente.");
+      }
+    }
+  }
+
   const sector = body.sector?.trim() || null;
   const registration = body.registration?.trim() || null;
 

@@ -23,6 +23,7 @@ import {
   parseBody,
   unauthorized,
 } from "../errors";
+import { readCaptchaConfig, isCaptchaRequired, verifyCaptchaToken } from "../captcha";
 import { DEFAULT_PBKDF2_ITERATIONS, hashPassword, nowIso, uuid, verifyPassword } from "../util";
 
 const router = new Hono<AppEnv>();
@@ -49,6 +50,10 @@ const setupSchema = z.object({
 const loginSchema = z.object({
   email: emailSchema,
   password: z.string().min(1, "Informe a senha.").max(200, "Senha muito longa."),
+  // Captcha (camada final, D-15): exigido somente quando o administrador
+  // habilitou `captcha.enabled` e configurou as chaves. Opcional no schema
+  // para nao quebrar instancias sem captcha.
+  captcha_token: z.string().optional(),
 });
 
 const changePasswordSchema = z.object({
@@ -272,6 +277,32 @@ async function loadAppSettings(
 router.post("/login", async (c) => {
   const body = await parseBody(c, loginSchema);
   const info = clientInfo(c);
+
+  // Captcha (camada final, D-15): quando habilitado, exige token valido antes
+  // de qualquer tentativa de autenticacao.
+  const captchaRows = await allRows<{ key: string; value: string }>(
+    c.env.DB,
+    `SELECT key, value FROM settings WHERE key IN ('captcha.enabled','captcha.site_key','captcha.secret_key')`,
+  );
+  const captchaConfig = readCaptchaConfig(
+    Object.fromEntries(captchaRows.map((row) => [String(row.key), String(row.value)])),
+  );
+  if (isCaptchaRequired(captchaConfig)) {
+    const ok = await verifyCaptchaToken(captchaConfig.secretKey, body.captcha_token ?? "", info.ip);
+    if (!ok) {
+      await recordAudit(c.env.DB, {
+        actor: null,
+        module: "auth",
+        action: "login_captcha_failed",
+        entityType: "email",
+        entityId: body.email,
+        result: "failure",
+        reason: "Captcha invalido ou ausente.",
+        ...info,
+      });
+      throw new ApiError(400, "CAPTCHA_REQUIRED", "Preencha o captcha e tente novamente.");
+    }
+  }
 
   const windowStart = new Date(Date.now() - LOGIN_WINDOW_MINUTES * 60_000).toISOString();
   const failures = await c.env.DB.prepare(

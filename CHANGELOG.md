@@ -3,6 +3,33 @@
 Todas as alterações relevantes do Facil são registradas aqui. O projeto segue o
 versionamento descrito em `docs/VERSIONAMENTO.md`.
 
+## [0.7.5] — 2026-10-23
+
+Captcha como camada final (D-15): validação de Turnstile no login e na abertura
+de chamados públicos (`/suporte`), desligado por padrão. O administrador ativa
+em Configurações com `captcha.enabled` e as chaves `captcha.site_key` /
+`captcha.secret_key`; sem elas, nada muda no fluxo atual.
+
+### Adicionado
+
+- **Validação de captcha no login** (`POST /api/auth/login`): quando habilitado,
+  exige token válido antes de qualquer tentativa de autenticação; falha registra
+  auditoria (`login_captcha_failed`).
+- **Validação de captcha na abertura de chamado público** (`POST
+  /api/support/requests`): quando habilitado e o solicitante não tem sessão,
+  exige token válido; falha registra auditoria (`support.request.captcha_failed`).
+- **Configurações**: `captcha.enabled` (boolean), `captcha.site_key` (string),
+  `captcha.secret_key` (string secreta, não exposta na API).
+- **Módulo de validação** (`src/worker/captcha.ts`): verifica o token junto ao
+  provedor (Cloudflare Turnstile por padrão) com fallback seguro em caso de
+  indisponibilidade.
+
+### Configuração pendente (titular)
+
+No painel de Configurações do sistema: `captcha.enabled = true`,
+`captcha.site_key` (site key do Turnstile) e `captcha.secret_key` (secret key,
+não exibida após gravada). Sem essas três, o captcha permanece desligado.
+
 ## [0.7.4] — 2026-10-23
 
 Consumidor do `integration_outbox` (Fase 3 do plano de melhorias): um trigger

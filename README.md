@@ -7,7 +7,7 @@ e adjudicação, relatórios, usuários/permissões e auditoria.
 **Autor:** Allan Luiz Silveira Lima (Allanlugui)  
 **Licença:** proprietária, todos os direitos reservados (ver `LICENSE`).  
 **Assinatura:** cada release é assinada com Ed25519 (ver `docs/ASSINATURA.md`).  
-**Versão atual:** `0.7.4` (consumidor do outbox com cron; a 0.7.3 adicionou anexos em ordens de serviço; a 0.7.2 adicionou o CI no GitHub Actions; a 0.7.1 habilitou os anexos do suporte no R2 em produção e publicou a fundação do módulo de Patrimônio).
+**Versão atual:** `0.7.5` (captcha como camada final no login e chamados públicos; a 0.7.4 adicionou o consumidor do outbox com cron; a 0.7.3 adicionou anexos em ordens de serviço; a 0.7.2 adicionou o CI no GitHub Actions; a 0.7.1 habilitou os anexos do suporte no R2 em produção e publicou a fundação do módulo de Patrimônio).
 
 > A autoria é registrada apenas pelo nome. CPF e e-mail pessoal do autor não são
 > armazenados nem exibidos pelo sistema, pela documentação ou pelo repositório.

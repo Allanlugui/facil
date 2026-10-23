@@ -121,3 +121,8 @@ consumidor do `integration_outbox` com trigger cron a cada 5 minutos e endpoint
 de disparo manual. Integração depende de `TICKET_INTAKE_KEY`/`SERVICENOW_INSTANCE_URL`
 a serem configuradas pelo titular nas secrets do Worker; sem elas, o consumidor
 pula silenciosamente: subiu o **patch**.
+
+A décima segunda entrega foi publicada na versão **0.7.5**, em 23/10/2026:
+captcha como camada final (D-15) no login e na abertura de chamados públicos,
+desligado por padrão e ativado pelo titular via Configurações (`captcha.enabled`,
+`captcha.site_key`, `captcha.secret_key`): subiu o **patch**.
