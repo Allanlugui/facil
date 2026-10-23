@@ -45,6 +45,7 @@ const ReportsPage = lazy(() => import("../pages/reports").then((m) => ({ default
 const AuditPage = lazy(() => import("../pages/audit").then((m) => ({ default: m.AuditPage })));
 const UsersPage = lazy(() => import("../pages/users").then((m) => ({ default: m.UsersPage })));
 const SettingsPage = lazy(() => import("../pages/settings").then((m) => ({ default: m.SettingsPage })));
+const ControlPage = lazy(() => import("../pages/control").then((m) => ({ default: m.ControlPage })));
 const StructurePage = lazy(() => import("../pages/structure"));
 const ProfilePage = lazy(() => import("../pages/profile").then((m) => ({ default: m.ProfilePage })));
 const SupportPublicPage = lazy(() =>
@@ -214,6 +215,23 @@ export const router = createBrowserRouter([
       {
         path: "estrutura",
         element: <PermissionGate code={PERMISSIONS.STRUCTURE_VIEW}>{page(<StructurePage />)}</PermissionGate>,
+      },
+      {
+        // Central de controle: exclusão de cadastros com prévia de impacto.
+        // Cada entidade valida a própria permissão no servidor.
+        path: "controle",
+        element: (
+          <PermissionGate
+            anyOf={[
+              PERMISSIONS.STRUCTURE_VIEW,
+              PERMISSIONS.CATALOG_VIEW,
+              PERMISSIONS.USERS_VIEW,
+              PERMISSIONS.SETTINGS_VIEW,
+            ]}
+          >
+            {page(<ControlPage />)}
+          </PermissionGate>
+        ),
       },
       { path: "perfil", element: page(<ProfilePage />) },
       { path: "ajuda", element: page(<HelpPage />) },

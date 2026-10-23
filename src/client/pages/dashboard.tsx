@@ -290,6 +290,7 @@ function PurchaseQueueStrip() {
           award: number;
           buyer: number;
           receipt: number;
+          returned: number;
         };
       }>("/api/purchases/overview"),
     [user?.id],
@@ -303,6 +304,7 @@ function PurchaseQueueStrip() {
     { key: "award", label: "Adjudicação", count: state.data.queues.award, show: can(PERMISSIONS.PURCHASES_AWARD) },
     { key: "buyer", label: "Preparar pedido", count: state.data.queues.buyer, show: can(PERMISSIONS.PURCHASES_ORDER) },
     { key: "receipt", label: "Receber", count: state.data.queues.receipt, show: can(PERMISSIONS.PURCHASES_RECEIVE) },
+    { key: "returned", label: "Devolvidas para ajuste", count: state.data.queues.returned, show: can(PERMISSIONS.PURCHASES_CREATE) },
   ].filter((queue) => queue.show && queue.count > 0);
   if (queues.length === 0) return null;
   return (

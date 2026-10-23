@@ -7,7 +7,7 @@ e adjudicação, relatórios, usuários/permissões e auditoria.
 **Autor:** Allan Luiz Silveira Lima (Allanlugui)  
 **Licença:** proprietária, todos os direitos reservados (ver `LICENSE`).  
 **Assinatura:** cada release é assinada com Ed25519 (ver `docs/ASSINATURA.md`).  
-**Versão atual:** `0.6.0` (fluxo de compras v3 com triagem, aprovação de Compras, comprador e recebimento).
+**Versão atual:** `0.7.0` (controle do sistema com exclusão segura e fluxo de compras com devolução para ajuste do solicitante).
 
 > A autoria é registrada apenas pelo nome. CPF e e-mail pessoal do autor não são
 > armazenados nem exibidos pelo sistema, pela documentação ou pelo repositório.
@@ -24,7 +24,8 @@ e adjudicação, relatórios, usuários/permissões e auditoria.
 | Ordens de serviço | Checklist, materiais, responsável, execução e conclusão |
 | Compras v1 | Fluxo legado: aprovação única, cotação, pedido e recebimento |
 | Compras v2 | Gestor → direção → compras, envio direto, compra direta, adjudicação por item, pedidos por fornecedor e itens fora do catálogo |
-| Compras v3 | Por setor: gestor → Compras (autoriza) → comprador cota/aprova → pedido → estoque recebe com nota fiscal |
+| Compras v3 | Por setor: triagem do comprador → gestor de Compras → comprador → pedido → estoque recebe, com devolução para ajuste do solicitante |
+| Controle do sistema | Exclusão/arquivamento de cadastros com prévia de impacto, preservação do histórico e aviso aos administradores |
 | Suporte | Chat em tempo real (WebSocket + fallback de polling), digitação, presença e acompanhamento público por token |
 | Relatórios | Estoque, movimentos, consumo, chamados, ordens, compras e exportação |
 | Administração | Usuários, perfis, permissões, configurações, auditoria e notificações |
@@ -35,7 +36,7 @@ e adjudicação, relatórios, usuários/permissões e auditoria.
 - **Cloudflare Workers** (runtime) + **Hono 4** (API)
 - **D1** (banco SQLite gerenciado, plano gratuito) + **R2** (anexos do suporte, opcional)
 - **React 19 + Vite 7 + Tailwind v4 + React Router 7** (interface)
-- **Zod 4** (validação) + **Vitest 5** (175 testes em 20 arquivos)
+- **Zod 4** (validação) + **Vitest 5** (187 testes em 21 arquivos)
 - **Durable Objects** (`SupportRoom`) para chat de suporte em tempo real, com
   D1 como fonte da verdade e polling de 60s como fallback
 - **Wrangler 4** (desenvolvimento, migrations e deploy)
@@ -60,7 +61,7 @@ No Windows, use a interface pela porta **5173** (o watcher de assets do
 ## Verificações
 
 ```bash
-npm run check           # typecheck + lint + contrato de API + 175 testes
+npm run check           # typecheck + lint + contrato de API + 187 testes
 npm run build           # build da interface + Worker
 npm run verify          # confere a assinatura da release atual
 ```
@@ -102,17 +103,22 @@ continuam disponíveis para solicitações antigas e integrações que declarem
 
 ```text
 Solicitante
-  └─ cria e envia (setor, modo e forma de pagamento)
-       └─ Gestor do setor aprova a necessidade
-            └─ Responsável de Compras autoriza (cotação, orçamento ou compra direta)
-                 └─ Comprador registra propostas e devolve para aprovação
-                      └─ Responsável de Compras aprova a proposta e adjudica os itens
-                           └─ Comprador emite pedido por fornecedor
-                                └─ Responsável pelo estoque confere e lança a nota fiscal
+  └─ cria e envia (setor vem do login; local, prioridade e itens)
+       └─ Triagem de Compras (comprador/analista) ajusta itens e encaminha
+            └─ Gestor de Compras aprova/refina (modo, pagamento, centro de custo)
+                 ├─ devolve ao solicitante para ajuste → solicitante corrige e reenvia
+                 └─ autoriza (cotação, orçamento ou compra direta)
+                      └─ Comprador registra propostas e emite pedido por fornecedor
+                           └─ Estoque confere e lança a nota fiscal
 ```
 
 Caminhos alternativos do v3:
 
+- **Devolução para ajuste:** o gestor de Compras devolve a solicitação ao
+  solicitante com um motivo (mínimo 5 caracteres). O status continua
+  `pending_approval`, a solicitação sai das filas e o solicitante recebe um
+  aviso; ao corrigir itens/cabeçalho e reenviar, ela volta direto à fila do
+  gestor de Compras (a triagem já foi concluída).
 - **Cotação:** exige pelo menos 2 propostas registradas antes de devolver para
   aprovação.
 - **Orçamento:** fornecedor único, fluxo separado, mesma aprovação da cotação.
@@ -143,10 +149,37 @@ Regras que o backend garante:
 - compra direta respeita a forma de pagamento (sem cotação quando proibido);
 - o pedido inclui todos os itens aprovados e respeita o fornecedor adjudicado;
 - o recebimento exige nota fiscal, atualiza solicitação, pedido e linha do pedido;
+- excluir um cadastro com histórico **arquiva** o registro (não apaga), mantém o
+  nome original com a marca `(excluído)` e bloqueia a exclusão quando há saldo de
+  estoque ou registros filhos;
 - cada operação grava auditoria, notificação interna, e-mail em outbox e evento
   de integração.
 
 Detalhes de estados, permissões, payloads e erros: **`docs/COMPRAS.md`**.
+
+## Controle do sistema
+
+Administradores acessam **Configurações → Controle do sistema** (ou `/controle`).
+A tela concentra a exclusão dos cadastros mestres — locais, unidades, tipos de
+local, setores, categorias de produto, unidades de medida, fornecedores,
+produtos, centros de custo, formas de pagamento, categorias de chamado e
+usuários. Criação e edição continuam nas telas de cada módulo.
+
+Antes de executar, o servidor recalcula o impacto (nunca confia no cliente) e a
+confirmação mostra exatamente o que será afetado:
+
+- **Sem histórico:** exclusão física definitiva.
+- **Com histórico:** arquivamento (`deleted_at` + `deleted_by`); o registro sai
+  das listas e seletores, mas chamados, OS, compras e movimentações continuam
+  exibindo o nome original com a marca `(excluído)`.
+- **Com bloqueio:** saldo de estoque ou registros filhos ativos impedem a ação
+  até que sejam resolvidos.
+- **Aviso:** cada exclusão/arquivamento grava auditoria e notifica os demais
+  administradores ativos (o autor não recebe o próprio aviso).
+
+Outros administradores são criados em **Usuários**, atribuindo o perfil
+**Administrador do sistema**. O sistema impede remover ou rebaixar o último
+administrador e impede que alguém exclua a própria conta.
 
 ## NetSuite e ServiceNow
 
@@ -171,6 +204,7 @@ src/worker/                 API Hono e regras de negócio
   index.ts                 montagem das rotas, segurança e estáticos
   auth.ts                  sessão, permissões e escopo
   audit.ts                 trilha de auditoria
+  control.ts               motor de impacto, exclusão segura e arquivamento
   db.ts                    helpers D1 e statements
   errors.ts                formato único de erro
   notify.ts                notificações internas
@@ -188,6 +222,7 @@ src/worker/                 API Hono e regras de negócio
     tickets.ts             chamados
     workorders.ts          ordens de serviço
     purchases.ts           compras v1/v2/v3, cotação, orçamento, compra direta, adjudicação, pedidos e recebimentos
+    control.ts             controle do sistema: impacto, exclusão/arquivamento e notificações
     dashboard.ts           resumo e alertas
     reports.ts             relatórios e exportação
     settings.ts            configurações e credenciais
@@ -206,7 +241,7 @@ src/client/                 interface React
   public/branding/         logo, capas, favicon e wallpaper
 
 src/shared/                 tipos, permissões e contratos usados nos dois lados
-migrations/                 migrations D1 (0001..0020)
+migrations/                 migrations D1 (0001..0022)
 seeds/                      dados demo e reset local
 tests/                      testes de integração (Worker + D1)
 scripts/                    contrato de API, assinatura e release
@@ -216,8 +251,8 @@ memory/                     decisões, status, histórico, problemas e TODO
 
 ## Dados e migrations
 
-- 20 migrations aplicadas em sequência; a última é
-  `0020_organization_purchases.sql`.
+- 22 migrations aplicadas em sequência; a última é
+  `0022_control_and_return.sql`.
 - Tabelas centrais do fluxo novo: `cost_centers`, `purchase_awards`,
   `purchase_orders`, `purchase_order_items`, `integration_outbox`,
   `ticket_intake_events`, `departments`, `department_managers` e
@@ -228,6 +263,13 @@ memory/                     decisões, status, histórico, problemas e TODO
   formas de pagamento e as colunas do fluxo v3 (`workflow_version`,
   `flow_revision`, `purchase_mode`, `payment_method_id`, `payment_terms`,
   nota fiscal no recebimento e permissões do setor de Compras).
+- A migration 0021 é **aditiva**: adiciona `triage_completed_at` e
+  `triage_completed_by` para separar a triagem do comprador da aprovação do
+  gestor de Compras.
+- A migration 0022 é **aditiva**: adiciona `returned_at`, `returned_by` e
+  `returned_reason` (devolução para ajuste) e `deleted_at`/`deleted_by` nos
+  cadastros mestres (arquivamento com histórico preservado). `deleted_by` é
+  `TEXT` sem FK para não travar reset/recriação de usuário.
 - A migration não cria o usuário `user_intake` em banco novo antes da
   instalação inicial; ele é criado no primeiro intake.
 - Centros de custo iniciais: `CC-ADM`, `CC-OPE`, `CC-MAN`, `CC-LIM`.
@@ -244,6 +286,10 @@ memory/                     decisões, status, histórico, problemas e TODO
 6. **Idempotência do intake.** `(source, external_ref)` é único.
 7. **Valores em centavos.** Não usar float para dinheiro.
 8. **Segredo fora do repositório.** Chaves só por `wrangler secret put`.
+9. **Exclusão com histórico é arquivamento.** Cadastros referenciados por
+   chamados, OS, compras ou movimentações nunca são apagados fisicamente;
+   `deleted_at` esconde das listas e o nome original continua resolvendo no
+   histórico com a marca `(excluído)`.
 
 ## Segurança e privacidade
 
@@ -268,7 +314,7 @@ memory/                     decisões, status, histórico, problemas e TODO
 | Sem CI | Deploy é local e assinado | Rodar `npm run check` e `npm run deploy` |
 | Força bruta | Limitação localizada no login/suporte, não WAF global | Ativar Cloudflare Access/WAF se exposto |
 | NetSuite | Outbox pronto, consumidor não | Construir integrador e homologar mapeamento fiscal |
-| Centros de custo | Seed fixo na migration; sem CRUD na UI | Editar por SQL/API ou criar tela administrativa |
+| Centros de custo | Seed fixo na migration; a UI só exclui pelo Controle do sistema | Criar tela administrativa de centros de custo |
 | Alçada por valor | Não há aprovação automática por faixa de valor | Definir regra antes de produção ampla |
 
 ## Operação e recuperação
@@ -282,7 +328,7 @@ memory/                     decisões, status, histórico, problemas e TODO
 - **Assinatura:** `npm run sign` gera `SIGNATURE.json`; `npm run verify` confere
   versão, árvore e autor.
 - **Produção atual:** `https://facil.cf-pilot-disposable.workers.dev`
-  (release 0.4.0; `/api/health` informa o hash da árvore em execução).
+  (release 0.7.0; `/api/health` informa o hash da árvore em execução).
 
 ## Memória e continuidade
 

@@ -1002,3 +1002,27 @@
   Notificações internas e e-mails são direcionados apenas a quem precisa agir.
 - **Erros de permissão:** mensagem nomeia o responsável (“Solicite a [nome], responsável por
   [ação]”), em vez de 403 genérico.
+
+## D-54 — Exclusão controlada com arquivamento para histórico (22/10/2026) — VALIDADO
+
+- **Decisão:** a exclusão de cadastros mestres passa por um motor único no servidor
+  (`src/worker/control.ts`). Sem referências históricas → `DELETE` físico; com
+  referências → **arquivamento** (`deleted_at`, `deleted_by`, `is_active = 0`). O
+  histórico nunca sofre cascata e continua exibindo o nome original com `(excluído)`.
+- **Impacto:** recalculado no servidor a cada confirmação (nunca aceito do cliente).
+  Saldo de estoque e registros filhos ativos bloqueiam a ação; o motivo é opcional e
+  fica na auditoria. Administradores ativos são notificados, exceto o autor.
+- **`deleted_by` sem FK:** `TEXT` puro para não impedir reset/recriação de usuário.
+- **Administradores:** o perfil Administrador é atribuível pela UI; o servidor impede
+  remover/rebaixar o último admin e excluir a própria conta.
+
+## D-55 — Devolução ao solicitante sem novo status de compra (22/10/2026) — VALIDADO
+
+- **Decisão:** a devolução usa `returned_at`/`returned_by`/`returned_reason` e mantém
+  `status = pending_approval` e `approval_stage = purchasing`; a API deriva
+  `returned: true` e `displayStatus: "returned"`. Evita rebuild do CHECK de `status`.
+- **Reenvio:** o solicitante ajusta cabeçalho e itens (`PUT /:id/items`, restrito a
+  rascunho ou devolvida), os campos `returned_*` são limpos e a solicitação volta
+  direto à fila do gestor quando a triagem já foi concluída.
+- **Filas:** devolvidas saem de `triage`/`purchasing` e entram em `queues.returned`
+  (`stage=returned`), no painel e na tela de compras.

@@ -17,11 +17,12 @@ import {
   type PurchaseItemStatus,
   type PurchaseStatus,
 } from "@shared/types";
-import { apiErrorMessage, apiGet, apiPost } from "../lib/api";
+import { apiErrorMessage, apiGet, apiPatch, apiPost, apiPut } from "../lib/api";
 import {
   PRIORITY_TONE,
   PURCHASE_STATUS_TONE,
   addDaysIsoDate,
+  entityName,
   formatCurrencyFromCents,
   formatDate,
   formatDateTime,
@@ -67,6 +68,7 @@ interface PurchaseRow {
   locationId: string | null;
   locationName: string | null;
   locationPath: string | null;
+  locationDeleted: boolean;
   justification: string | null;
   priority: Priority;
   status: PurchaseStatus;
@@ -108,6 +110,16 @@ interface PurchaseRow {
   directAuthorizedBy: string | null;
   directAuthorizedByName: string | null;
   directAuthorizedAt: string | null;
+  triageCompletedAt: string | null;
+  triageCompletedBy: string | null;
+  triageCompletedByName: string | null;
+  /** Devolução ao solicitante (ajuste fino do fluxo v3). */
+  returnedAt: string | null;
+  returnedBy: string | null;
+  returnedByName: string | null;
+  returnedReason: string | null;
+  returned: boolean;
+  displayStatus: string;
   cancelReason: string | null;
   notes: string | null;
   createdAt: string;
@@ -262,6 +274,7 @@ interface PurchaseOverview {
     award: number;
     receipt: number;
     quoting: number;
+    returned: number;
   };
   openCount: number;
   totalCount: number;
@@ -377,6 +390,7 @@ export function PurchasesPage() {
         { key: "award", label: "Adjudicar cotação", count: overview.data.queues.award, show: can(PERMISSIONS.PURCHASES_AWARD) },
         { key: "buyer", label: "Preparar pedido", count: overview.data.queues.buyer, show: can(PERMISSIONS.PURCHASES_ORDER) },
         { key: "receipt", label: "Receber material", count: overview.data.queues.receipt, show: can(PERMISSIONS.PURCHASES_RECEIVE) },
+        { key: "returned", label: "Devolvidas para ajuste", count: overview.data.queues.returned, show: can(PERMISSIONS.PURCHASES_CREATE) },
       ].filter((item) => item.show && item.count > 0)
     : [];
 
@@ -388,8 +402,10 @@ export function PurchasesPage() {
         <div className="min-w-0">
           <p className="font-medium text-slate-800">{row.code}</p>
           <p className="truncate text-xs text-slate-500">
-            {row.locationPath ?? row.locationName ?? "Sem local"} ·{" "}
-            {row.justification ? row.justification : "sem justificativa"}
+            {row.locationDeleted
+              ? entityName(row.locationName, true)
+              : row.locationPath ?? row.locationName ?? "Sem local"}{" "}
+            · {row.justification ? row.justification : "sem justificativa"}
           </p>
         </div>
       ),
@@ -421,8 +437,12 @@ export function PurchasesPage() {
       header: "Situação",
       cell: (row) => (
         <div className="space-y-1">
-          <Badge tone={PURCHASE_STATUS_TONE[row.status]}>{PURCHASE_STATUS_LABEL[row.status]}</Badge>
-          {row.status === "pending_approval" ? (
+          {row.returned ? (
+            <Badge tone="amber">Devolvida ao solicitante</Badge>
+          ) : (
+            <Badge tone={PURCHASE_STATUS_TONE[row.status]}>{PURCHASE_STATUS_LABEL[row.status]}</Badge>
+          )}
+          {row.status === "pending_approval" && !row.returned ? (
             <p className="text-[11px] text-slate-500">
               {PURCHASE_APPROVAL_STAGE_LABEL[row.approvalStage as keyof typeof PURCHASE_APPROVAL_STAGE_LABEL] ??
                 row.approvalStage}
@@ -522,11 +542,13 @@ export function PurchasesPage() {
             aria-label="Filtrar por etapa"
           >
             <option value="">Todas as etapas</option>
+            <option value="triage">Fazer triagem</option>
             {PURCHASE_APPROVAL_STAGE.map((code) => (
               <option key={code} value={code}>
                 {PURCHASE_APPROVAL_STAGE_LABEL[code]}
               </option>
             ))}
+            <option value="returned">Devolvidas para ajuste</option>
           </Select>
           <Select
             value={priority}
@@ -1283,6 +1305,7 @@ export function PurchaseDetailPage() {
   const [receiving, setReceiving] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [triaging, setTriaging] = useState(false);
+  const [adjusting, setAdjusting] = useState(false);
   const [quoting, setQuoting] = useState(false);
   const [returningQuote, setReturningQuote] = useState(false);
   const [quoteDecision, setQuoteDecision] = useState<{ quote: QuoteSummary; action: "approve" | "reject" } | null>(
@@ -1302,7 +1325,10 @@ export function PurchaseDetailPage() {
   const isV2 = request.workflowVersion === 2 && !isV3;
   const managesRequestDepartment =
     !!request.departmentId && (user?.managedDepartmentIds.includes(request.departmentId) ?? false);
-  const canSubmit = request.status === "draft" && can(PERMISSIONS.PURCHASES_CREATE);
+  const canSubmit =
+    (request.status === "draft" || request.returned) &&
+    request.requesterId === user?.id &&
+    can(PERMISSIONS.PURCHASES_CREATE);
   const stageAllowed =
     request.approvalStage === "triage"
       ? isV3 && (can(PERMISSIONS.PURCHASES_ORDER) || can(PERMISSIONS.PURCHASES_AUTHORIZE))
@@ -1326,6 +1352,7 @@ export function PurchaseDetailPage() {
     user?.id !== request.requesterId;
   const canDecide =
     request.status === "pending_approval" &&
+    !request.returned &&
     stageAllowed &&
     user?.id !== request.requesterId &&
     (isV3 ? ["manager", "purchasing"].includes(request.approvalStage) : true);
@@ -1588,7 +1615,11 @@ export function PurchaseDetailPage() {
             </p>
             {/* Badges de status principais - linha 1 */}
             <div className="flex flex-wrap items-center gap-2">
-              <Badge tone={PURCHASE_STATUS_TONE[request.status]}>{PURCHASE_STATUS_LABEL[request.status]}</Badge>
+              {request.returned ? (
+                <Badge tone="amber">Devolvida ao solicitante</Badge>
+              ) : (
+                <Badge tone={PURCHASE_STATUS_TONE[request.status]}>{PURCHASE_STATUS_LABEL[request.status]}</Badge>
+              )}
               {request.departmentName ? <Badge tone="brand">{request.departmentName}</Badge> : null}
               {isV3 ? (
                 <Badge tone="violet">
@@ -1640,7 +1671,7 @@ export function PurchaseDetailPage() {
             <Link to="/compras">
               <Button variant="secondary">Voltar</Button>
             </Link>
-            {canSubmit ? (
+            {canSubmit && !request.returned ? (
               <Button onClick={() => void submitForApproval()}>Enviar para Compras</Button>
             ) : null}
             {canTriage ? (
@@ -1685,7 +1716,26 @@ export function PurchaseDetailPage() {
         }
       />
 
-      {nextStep ? (
+      {request.returned ? (
+        <Alert tone="amber" title="Devolvida para ajuste">
+          <p>
+            {request.returnedByName ?? "Compras"} devolveu esta solicitação em{" "}
+            {request.returnedAt ? formatDateTime(request.returnedAt) : "—"} para que você ajuste os dados e reenvie.
+          </p>
+          {request.returnedReason ? (
+            <p className="mt-1 whitespace-pre-line font-medium text-amber-900">{request.returnedReason}</p>
+          ) : null}
+          {request.requesterId === user?.id && can(PERMISSIONS.PURCHASES_CREATE) ? (
+            <div className="mt-2">
+              <Button size="sm" onClick={() => setAdjusting(true)}>
+                Ajustar e reenviar
+              </Button>
+            </div>
+          ) : null}
+        </Alert>
+      ) : null}
+
+      {nextStep && !request.returned ? (
         <div className="mb-5 rounded-xl border border-brand-100 bg-brand-50/70 px-4 py-3">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-brand-700">Próxima etapa</p>
           <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-1">
@@ -1962,7 +2012,7 @@ export function PurchaseDetailPage() {
           <Card title="Ficha da solicitação">
             <dl className="space-y-3 text-sm">
               <InfoRow label="Solicitante" value={request.requesterName} />
-              <InfoRow label="Local" value={request.locationPath ?? request.locationName ?? "-"} />
+              <InfoRow label="Local" value={request.locationDeleted ? entityName(request.locationName, true) : request.locationPath ?? request.locationName ?? "-"} />
               {isV3 ? (
                 <>
                   <InfoRow label="Setor" value={request.departmentName ?? "-"} />
@@ -2084,6 +2134,18 @@ export function PurchaseDetailPage() {
           onClose={() => setTriaging(false)}
           onSaved={() => {
             setTriaging(false);
+            state.reload();
+          }}
+        />
+      ) : null}
+
+      {adjusting ? (
+        <AdjustReturnedDialog
+          request={request}
+          items={items}
+          onClose={() => setAdjusting(false)}
+          onSaved={() => {
+            setAdjusting(false);
             state.reload();
           }}
         />
@@ -2672,6 +2734,245 @@ function TriageDialog({
   );
 }
 
+/**
+ * Ajuste de uma solicitação devolvida pelo gestor de Compras.
+ *
+ * O solicitante corrige o cabeçalho e os itens; ao salvar, a solicitação é
+ * reenviada automaticamente e volta para a fila do gestor (se a triagem já
+ * tinha sido concluída) — exatamente o ajuste fino pedido no fluxo.
+ */
+function AdjustReturnedDialog({
+  request,
+  items,
+  onClose,
+  onSaved,
+}: {
+  request: PurchaseRow;
+  items: PurchaseItem[];
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const toast = useToast();
+  const locations = useLocations();
+  const uoms = useUoms();
+  const [locationId, setLocationId] = useState(request.locationId ?? "");
+  const [justification, setJustification] = useState(request.justification ?? "");
+  const [priority, setPriority] = useState<Priority>(request.priority);
+  const [desiredDate, setDesiredDate] = useState(request.desiredDate ?? "");
+  const [notes, setNotes] = useState(request.notes ?? "");
+  const [drafts, setDrafts] = useState(() =>
+    items.map((item) => ({
+      key: item.id,
+      productId: item.productId ?? "",
+      description: item.description ?? item.productName ?? "",
+      qty: String(item.qtyMilli / 1000).replace(".", ","),
+      uomId: item.uomId ?? "",
+      notes: item.notes ?? "",
+    })),
+  );
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const patch = (index: number, values: Partial<(typeof drafts)[number]>) =>
+    setDrafts((current) => current.map((item, i) => (i === index ? { ...item, ...values } : item)));
+
+  const save = async () => {
+    setError(null);
+    if (justification.trim().length === 0) {
+      setError("A justificativa é obrigatória para reenviar a solicitação.");
+      return;
+    }
+    const parsed = drafts.map((item) => ({
+      productId: item.productId || null,
+      description: item.description.trim() || null,
+      qty: Number(item.qty.replace(",", ".")),
+      uomId: item.uomId || null,
+      notes: item.notes.trim() || null,
+    }));
+    if (parsed.length === 0) {
+      setError("Inclua ao menos um item.");
+      return;
+    }
+    if (parsed.some((item) => !Number.isFinite(item.qty) || item.qty <= 0)) {
+      setError("Informe uma quantidade maior que zero em todos os itens.");
+      return;
+    }
+    if (parsed.some((item) => !item.productId && !item.description)) {
+      setError("Cada item precisa de um produto do catálogo ou de uma descrição.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await apiPut(`/api/purchases/${request.id}/items`, { items: parsed });
+      await apiPatch(`/api/purchases/${request.id}`, {
+        locationId: locationId || null,
+        justification: justification.trim(),
+        priority,
+        desiredDate: desiredDate || null,
+        notes: notes.trim() || null,
+      });
+      await apiPost(`/api/purchases/${request.id}/submit`, {});
+      toast.success("Solicitação ajustada e reenviada para o gestor de Compras.");
+      onSaved();
+    } catch (caught) {
+      setError(apiErrorMessage(caught));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog
+      open
+      title={`Ajustar solicitação ${request.code}`}
+      description="Corrija o que foi apontado e reenvie. O histórico da devolução permanece na auditoria."
+      onClose={onClose}
+      wide
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose} disabled={saving}>
+            Cancelar
+          </Button>
+          <Button onClick={() => void save()} loading={saving}>
+            Salvar e reenviar
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        {error ? <Alert tone="red">{error}</Alert> : null}
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Local de destino" htmlFor="adjLocation">
+            <Select id="adjLocation" value={locationId} onChange={(event) => setLocationId(event.target.value)}>
+              <option value="">Sem local específico</option>
+              {(locations.data ?? []).map((location) => (
+                <option key={location.id} value={location.id}>
+                  {locationLabel(location)}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Data desejada" htmlFor="adjDesired">
+            <Input
+              id="adjDesired"
+              type="date"
+              value={desiredDate}
+              onChange={(event) => setDesiredDate(event.target.value)}
+            />
+          </Field>
+          <Field label="Prioridade" htmlFor="adjPriority">
+            <Select
+              id="adjPriority"
+              value={priority}
+              onChange={(event) => setPriority(event.target.value as Priority)}
+            >
+              {Object.entries(PRIORITY_LABEL).map(([code, label]) => (
+                <option key={code} value={code}>
+                  {label}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Justificativa *" htmlFor="adjJustification" className="sm:col-span-2">
+            <Textarea
+              id="adjJustification"
+              rows={2}
+              value={justification}
+              onChange={(event) => setJustification(event.target.value)}
+              maxLength={1000}
+            />
+          </Field>
+        </div>
+
+        <div>
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-sm font-semibold text-slate-800">Itens</p>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() =>
+                setDrafts((current) => [
+                  ...current,
+                  {
+                    key: `new-${Date.now()}-${current.length}`,
+                    productId: "",
+                    description: "",
+                    qty: "1",
+                    uomId: "",
+                    notes: "",
+                  },
+                ])
+              }
+            >
+              Adicionar item
+            </Button>
+          </div>
+          <div className="space-y-2">
+            {drafts.map((item, index) => (
+              <div key={item.key} className="rounded-lg border border-slate-200 p-3">
+                <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_90px_110px_auto]">
+                  <ProductPicker
+                    value={item.productId}
+                    onChange={(productId, product) =>
+                      patch(index, {
+                        productId,
+                        description: product?.name ?? drafts[index]?.description ?? "",
+                        uomId: drafts[index]?.uomId || product?.uomId || "",
+                      })
+                    }
+                    ariaLabel={`Produto do item ${index + 1}`}
+                  />
+                  <Input
+                    value={item.qty}
+                    onChange={(event) => patch(index, { qty: event.target.value })}
+                    inputMode="decimal"
+                    aria-label={`Quantidade do item ${index + 1}`}
+                  />
+                  <Select
+                    value={item.uomId}
+                    onChange={(event) => patch(index, { uomId: event.target.value })}
+                    aria-label={`Unidade do item ${index + 1}`}
+                  >
+                    <option value="">Unidade</option>
+                    {(uoms.data ?? []).map((uom) => (
+                      <option key={uom.id} value={uom.id}>
+                        {uom.code}
+                      </option>
+                    ))}
+                  </Select>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setDrafts((current) => current.filter((_, i) => i !== index))}
+                    disabled={drafts.length === 1}
+                  >
+                    Remover
+                  </Button>
+                </div>
+                {!item.productId ? (
+                  <Input
+                    className="mt-2"
+                    value={item.description}
+                    onChange={(event) => patch(index, { description: event.target.value })}
+                    placeholder="Descrição do item fora do catálogo"
+                    aria-label={`Descrição do item ${index + 1}`}
+                  />
+                ) : null}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <Field label="Observações" htmlFor="adjNotes">
+          <Textarea id="adjNotes" rows={2} value={notes} onChange={(event) => setNotes(event.target.value)} maxLength={1000} />
+        </Field>
+      </div>
+    </Dialog>
+  );
+}
+
 function WorkflowDecisionDialog({
   request,
   items,
@@ -2695,6 +2996,7 @@ function WorkflowDecisionDialog({
       : [
           { value: "approved", label: "Autorizar a compra e liberar o comprador" },
           { value: "request_alignment", label: "Solicitar alinhamento ao solicitante" },
+          { value: "return_to_requester", label: "Devolver ao solicitante para ajuste" },
           { value: "rejected", label: "Recusar solicitação" },
         ]
     : stage === "manager"
@@ -2776,6 +3078,11 @@ function WorkflowDecisionDialog({
       }
       if (isV3 && stage === "purchasing" && decision === "request_alignment" && notes.trim().length < 5) {
         setError("Descreva o que precisa ser alinhado com o solicitante (mínimo 5 caracteres).");
+        setSaving(false);
+        return;
+      }
+      if (isV3 && decision === "return_to_requester" && notes.trim().length < 5) {
+        setError("Explique o que o solicitante precisa ajustar (mínimo 5 caracteres).");
         setSaving(false);
         return;
       }

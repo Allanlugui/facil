@@ -3,6 +3,39 @@
 - **Criado em:** 16/10/2026 22:36:22 pelo bootstrap global (`D:\DEV\criar-projeto.bat`).
 - **Diretório oficial:** `D:\DEV\Opencode\Facil`
 - **Conhecimento global:** `D:\DEV\memory\Facil\`
+- **Controle do sistema e devolução de compras (22/10/2026):** versão **0.7.0**
+  publicada. Entrega: **Controle do sistema** em `/controle` (card em Configurações)
+  com abas para 12 cadastros mestres, busca, “mostrar excluídos” e prévia de impacto
+  recalculada no servidor. Exclusão sem histórico é física; com histórico vira
+  **arquivamento** (`deleted_at`/`deleted_by`), sai das listas/seletores e o nome
+  original continua no histórico com `(excluído)`. Bloqueios: saldo de estoque e
+  registros filhos ativos; cada ação grava auditoria, motivo opcional e notifica os
+  demais admins ativos. Múltiplos administradores com proteção do último admin e
+  bloqueio de autoexclusão. **Devolução para ajuste:** gestor de Compras usa
+  `return_to_requester` (motivo ≥5) e grava `returned_at/by/reason` sem mudar o CHECK
+  de `status`; a API deriva `returned`/`displayStatus`; o solicitante ajusta
+  cabeçalho e itens (`PUT /:id/items`, só rascunho ou devolvida) e reenvia, voltando
+  direto à fila do gestor (triagem já concluída). Fila `stage=returned` e chips
+  “Devolvidas para ajuste” no painel/compras. Itens sem `uom_id` herdam a unidade do
+  produto (`COALESCE`), corrigindo o ajuste. Migration `0022_control_and_return.sql`
+  aplicada no D1 local e remoto. `npm run check` **187/187 em 21 arquivos**,
+  typecheck, lint, contrato de API (140 rotas), build e deploy assinado. Verificação
+  Playwright desktop/mobile: abas do controle, diálogo de impacto (excluir x
+  arquivar), arquivamento do Auditório, marcador `(excluído)` em chamado, banner de
+  devolução, diálogo de ajuste, alteração de quantidade e reenvio de volta ao gestor.
+  Evidências em `ux-shots/0.7.0-*.png`.
+- **Publicado em 22/10/2026 (0.7.0):** Worker `facil` em
+  https://facil.cf-pilot-disposable.workers.dev, versão **0.7.0** confirmada em
+  `/build-info.json` e `/api/health`, migration `0022` aplicada no D1 remoto,
+  release assinada (Ed25519, **178 arquivos**, tree
+  `2dd0d06d6af3501c3496f148d55d0885b9b1e23588b6d2f807513f81cf8ef335`, 22/10/2026
+  21:40:17 −03:00), version id `fdf4ec85-8e4c-4f07-a9a4-0410820b7dba`.
+- **Artefatos de validação no D1 local (22/10/2026):** o banco local (não produção)
+  ficou com o local `Auditório` arquivado, chamado `TCK-2026-000001` apontando para
+  ele, solicitações `SC-2026-000001` (devolvida, sem setor) e `SC-2026-000002`
+  (devolvida → ajustada para 5 kg → reenviada), e o usuário
+  `solicitante.e2e@facil.local` (senha de desenvolvimento). Limpar com
+  `npm run db:reset`/seed quando não forem mais úteis.
 - **Fluxo de compras v3 completo (21/10/2026):** versão **0.6.0**. Ordem nova:
   **solicitação → triagem do comprador → aprovação/refinamento do gestor de Compras →
   comprador → recebimento**. Triagem (`approval_stage = purchasing` com

@@ -65,8 +65,9 @@ router.get("/units", requirePermission(PERMISSIONS.STRUCTURE_VIEW), async (c) =>
   const items = await allRows<Record<string, unknown>>(
     c.env.DB,
     `SELECT u.id, u.name, u.code, u.address, u.notes, u.is_active,
-            (SELECT COUNT(*) FROM locations l WHERE l.unit_id = u.id) AS location_count
+            (SELECT COUNT(*) FROM locations l WHERE l.unit_id = u.id AND l.deleted_at IS NULL) AS location_count
        FROM units u
+      WHERE u.deleted_at IS NULL
       ORDER BY u.is_active DESC, u.name`,
   );
   return c.json({ items: items.map(mapUnit) });
@@ -164,6 +165,7 @@ router.get("/location-types", requirePermission(PERMISSIONS.STRUCTURE_VIEW), asy
   const items = await allRows<Record<string, unknown>>(
     c.env.DB,
     `SELECT id, name, code, description, sort_order, is_active FROM location_types
+      WHERE deleted_at IS NULL
       ORDER BY is_active DESC, sort_order, name`,
   );
   return c.json({ items: items.map(mapLocationType) });
@@ -265,7 +267,7 @@ router.get("/locations", requirePermission(PERMISSIONS.STRUCTURE_VIEW), async (c
   const user = currentUser(c);
   const q = parseQuery(c);
 
-  const clauses: string[] = [];
+  const clauses: string[] = ["l.deleted_at IS NULL"];
   const params: (string | number)[] = [];
 
   if (q.unitId) {
@@ -331,7 +333,7 @@ router.get("/locations/tree", requirePermission(PERMISSIONS.STRUCTURE_VIEW), asy
   const user = currentUser(c);
   const rows = await allRows<Record<string, unknown>>(
     c.env.DB,
-    `${LOCATION_SELECT} WHERE l.is_active = 1 ORDER BY u.name, t.sort_order, l.name`,
+    `${LOCATION_SELECT} WHERE l.is_active = 1 AND l.deleted_at IS NULL ORDER BY u.name, t.sort_order, l.name`,
   );
   const allowed = user.locationScope;
   const visible = allowed.length === 0 ? rows : rows.filter((r) => allowed.includes(String(r.id)));

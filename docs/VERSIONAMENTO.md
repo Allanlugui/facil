@@ -90,3 +90,11 @@ recebimento com normalização de itens fora do catálogo para produtos existent
 ou cadastrados na hora. A ordem do fluxo v3 mudou (triagem antes da aprovação) e
 há nova migration; por ser funcionalidade nova com mudança relevante de
 comportamento, subiu o **minor**.
+
+A sétima etapa foi entregue na versão **0.7.0**, em 22/10/2026: Controle do
+sistema com exclusão segura (física sem histórico, arquivamento com histórico e
+marca `(excluído)`), prévia de impacto, bloqueios, notificação aos
+administradores e múltiplos administradores com proteção do último; devolução da
+solicitação de compra ao solicitante para ajuste e reenvio direto à fila do
+gestor. Funcionalidades novas com migration 0022 e mudança de comportamento:
+subiu o **minor**.

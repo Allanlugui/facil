@@ -98,6 +98,7 @@ router.get("/categories", requirePermission(PERMISSIONS.CATALOG_VIEW), async (c)
             (SELECT COUNT(*) FROM products pr WHERE pr.category_id = c.id) AS product_count
        FROM product_categories c
        LEFT JOIN product_categories p ON p.id = c.parent_id
+      WHERE c.deleted_at IS NULL
       ORDER BY c.sort_order, c.name`,
   );
   return c.json({
@@ -207,7 +208,7 @@ router.get("/uoms", requirePermission(PERMISSIONS.CATALOG_VIEW), async (c) => {
     c.env.DB,
     `SELECT u.id, u.code, u.name, u.allows_decimal, u.is_active,
             (SELECT COUNT(*) FROM products p WHERE p.uom_id = u.id) AS product_count
-       FROM uoms u ORDER BY u.is_active DESC, u.name`,
+       FROM uoms u WHERE u.deleted_at IS NULL ORDER BY u.is_active DESC, u.name`,
   );
   return c.json({
     items: rows.map((r) => ({
@@ -300,7 +301,7 @@ router.get("/suppliers", requirePermission(PERMISSIONS.CATALOG_VIEW), async (c) 
   const url = new URL(c.req.url);
   const search = url.searchParams.get("search")?.trim();
   const isActive = url.searchParams.get("isActive");
-  const clauses: string[] = [];
+  const clauses: string[] = ["s.deleted_at IS NULL"];
   const params: (string | number)[] = [];
   if (search) {
     clauses.push(`(s.name LIKE ? OR COALESCE(s.doc,'') LIKE ?)`);
@@ -446,7 +447,7 @@ router.get("/products", requirePermission(PERMISSIONS.CATALOG_VIEW), async (c) =
   const incompleteOnly = url.searchParams.get("incomplete") === "true";
   const sort = url.searchParams.get("sort") ?? "name";
 
-  const clauses: string[] = [];
+  const clauses: string[] = ["p.deleted_at IS NULL"];
   const params: (string | number)[] = [];
   // Busca aproximada: cada termo digitado precisa aparecer no nome, SKU ou
   // descrição — "agua sanit" acha "Água Sanitária" e a ordem das palavras

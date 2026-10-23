@@ -131,6 +131,8 @@ const decideBody = z.object({
     "forward",
     /** v3: gestor de Compras pede alinhamento externo antes de decidir. */
     "request_alignment",
+    /** v3: devolve ao solicitante para ajustar e reenviar. */
+    "return_to_requester",
   ]),
   notes: z.string().trim().max(1000).nullish(),
   /** Fluxo v3: modo escolhido pelo responsável de Compras na autorização. */
@@ -311,7 +313,8 @@ const REQUEST_SELECT = `
          r.payment_method_id, r.payment_terms,
          r.purchasing_authorized_by, r.purchasing_authorized_at,
          r.triage_completed_at, r.triage_completed_by,
-         l.name AS location_name, l.path AS location_path,
+         r.returned_at, r.returned_by, r.returned_reason,
+         l.name AS location_name, l.path AS location_path, l.deleted_at AS location_deleted_at,
          rq.name AS requester_name,
          ap.name AS approved_by_name,
          cc.code AS cost_center_code, cc.name AS cost_center_name,
@@ -324,6 +327,7 @@ const REQUEST_SELECT = `
          pm.requires_quote AS payment_requires_quote,
          pa.name AS purchasing_authorized_by_name,
          tr.name AS triage_completed_by_name,
+         rb.name AS returned_by_name,
          (SELECT COUNT(*) FROM purchase_request_items i WHERE i.request_id = r.id) AS item_count,
          (SELECT COUNT(*) FROM purchase_request_items i WHERE i.request_id = r.id AND i.status = 'pending') AS pending_item_count,
          (SELECT COUNT(*) FROM purchase_request_items i WHERE i.request_id = r.id AND i.purchase_mode = 'quote'
@@ -348,7 +352,8 @@ const REQUEST_SELECT = `
     LEFT JOIN departments dep ON dep.id = r.department_id
     LEFT JOIN payment_methods pm ON pm.id = r.payment_method_id
     LEFT JOIN users pa ON pa.id = r.purchasing_authorized_by
-    LEFT JOIN users tr ON tr.id = r.triage_completed_by`;
+    LEFT JOIN users tr ON tr.id = r.triage_completed_by
+    LEFT JOIN users rb ON rb.id = r.returned_by`;
 
 router.get("/", requirePermission(PERMISSIONS.PURCHASES_VIEW), async (c) => {
   const user = currentUser(c);
@@ -382,9 +387,15 @@ router.get("/", requirePermission(PERMISSIONS.PURCHASES_VIEW), async (c) => {
     // A triagem v3 compartilha a etapa armazenada `purchasing`; o marco
     // `triage_completed_at` separa a fila do comprador da fila do gestor.
     if (stage === "triage") {
-      clauses.push("r.flow_revision = 3 AND r.approval_stage = 'purchasing' AND r.triage_completed_at IS NULL");
+      clauses.push(
+        "r.flow_revision = 3 AND r.approval_stage = 'purchasing' AND r.triage_completed_at IS NULL AND r.returned_at IS NULL",
+      );
     } else if (stage === "purchasing") {
-      clauses.push("r.approval_stage = 'purchasing' AND (r.flow_revision <> 3 OR r.triage_completed_at IS NOT NULL)");
+      clauses.push(
+        "r.approval_stage = 'purchasing' AND (r.flow_revision <> 3 OR r.triage_completed_at IS NOT NULL) AND r.returned_at IS NULL",
+      );
+    } else if (stage === "returned") {
+      clauses.push("r.returned_at IS NOT NULL AND r.status = 'pending_approval'");
     } else {
       clauses.push("r.approval_stage = ?");
       params.push(stage);
@@ -395,7 +406,7 @@ router.get("/", requirePermission(PERMISSIONS.PURCHASES_VIEW), async (c) => {
     params.push(user.id);
   }
   if (pendingApproval) {
-    clauses.push("r.status = 'pending_approval'");
+    clauses.push("r.status = 'pending_approval' AND r.returned_at IS NULL");
     if (!stage) {
       // Cada perfil vê a fila da etapa que pode decidir. A triagem v3 é feita
       // por quem tem `purchases.order` ou `purchases.authorize`; o gestor de
@@ -462,11 +473,14 @@ router.get("/overview", requirePermission(PERMISSIONS.PURCHASES_VIEW), async (c)
     c.env.DB,
     `SELECT
        SUM(CASE WHEN r.status = 'pending_approval' AND r.flow_revision = 3
-                 AND r.approval_stage = 'purchasing' AND r.triage_completed_at IS NULL THEN 1 ELSE 0 END) AS triage_queue,
+                 AND r.approval_stage = 'purchasing' AND r.triage_completed_at IS NULL
+                 AND r.returned_at IS NULL THEN 1 ELSE 0 END) AS triage_queue,
        SUM(CASE WHEN r.status = 'pending_approval' AND r.approval_stage = 'manager' THEN 1 ELSE 0 END) AS manager_queue,
        SUM(CASE WHEN r.status = 'pending_approval' AND r.approval_stage = 'direction' THEN 1 ELSE 0 END) AS direction_queue,
        SUM(CASE WHEN r.status = 'pending_approval' AND r.approval_stage = 'purchasing'
-                 AND (r.flow_revision <> 3 OR r.triage_completed_at IS NOT NULL) THEN 1 ELSE 0 END) AS purchasing_queue,
+                 AND (r.flow_revision <> 3 OR r.triage_completed_at IS NOT NULL)
+                 AND r.returned_at IS NULL THEN 1 ELSE 0 END) AS purchasing_queue,
+       SUM(CASE WHEN r.returned_at IS NOT NULL AND r.status = 'pending_approval' THEN 1 ELSE 0 END) AS returned_queue,
        SUM(CASE WHEN r.status IN ('approved','quoting','quote_approved') AND r.approval_stage = 'buyer' THEN 1 ELSE 0 END) AS buyer_queue,
        SUM(CASE WHEN r.status = 'quote_returned' THEN 1 ELSE 0 END) AS award_queue,
        SUM(CASE WHEN r.status IN ('ordered','partially_received') THEN 1 ELSE 0 END) AS receipt_queue,
@@ -512,6 +526,7 @@ router.get("/overview", requirePermission(PERMISSIONS.PURCHASES_VIEW), async (c)
       award: Number(counts?.award_queue ?? 0),
       receipt: Number(counts?.receipt_queue ?? 0),
       quoting: Number(counts?.quoting_count ?? 0),
+      returned: Number(counts?.returned_queue ?? 0),
     },
     openCount: Number(counts?.open_count ?? 0),
     totalCount: Number(counts?.total_count ?? 0),
@@ -579,7 +594,8 @@ router.get("/options", requirePermission(PERMISSIONS.PURCHASES_VIEW), async (c) 
 });
 
 const REQUEST_ITEM_SELECT = `
-  SELECT i.id, i.request_id, i.product_id, i.description, i.qty_milli, i.uom_id,
+  SELECT i.id, i.request_id, i.product_id, i.description, i.qty_milli,
+         COALESCE(i.uom_id, p2.uom_id) AS uom_id,
          i.qty_approved_milli, i.qty_ordered_milli, i.qty_received_milli,
          i.supplier_id, i.order_ref, i.unit_price_cents, i.purchase_mode, i.status, i.notes,
          p.name AS product_name, p.sku,
@@ -1296,12 +1312,80 @@ router.patch("/:id", requirePermission(PERMISSIONS.PURCHASES_CREATE), async (c) 
   return c.json({ ok: true });
 });
 
+const itemsBody = z.object({
+  items: z
+    .array(requestItemSchema)
+    .min(1, "Inclua ao menos um item.")
+    .max(100, "Limite de 100 itens por solicitação."),
+});
+
+/**
+ * Substitui os itens de uma solicitação editável (rascunho ou devolvida).
+ * A devolução existe justamente para o solicitante corrigir quantidades,
+ * unidades e itens; sem esta rota ele teria que recriar a solicitação e perder
+ * o histórico da tratativa.
+ */
+router.put("/:id/items", requirePermission(PERMISSIONS.PURCHASES_CREATE), async (c) => {
+  const user = currentUser(c);
+  const id = c.req.param("id");
+  const body = await parseBody(c, itemsBody);
+
+  const request = await requireRequest(c.env.DB, id);
+  assertPurchaseVisible(user, request);
+  if (request.status !== "draft" && !request.returned_at) {
+    throw conflict("Os itens só podem ser alterados em rascunho ou depois de uma devolução.");
+  }
+  if (request.requester_id !== user.id && !user.permissions.has(PERMISSIONS.PURCHASES_APPROVE)) {
+    throw conflict("Somente o solicitante pode ajustar os itens desta solicitação.");
+  }
+
+  await assertItemsReference(c.env.DB, body.items);
+  const ts = nowIso();
+  const info = clientInfo(c);
+
+  await c.env.DB.batch([
+    c.env.DB.prepare(`DELETE FROM purchase_request_items WHERE request_id = ?`).bind(id),
+    updateStatement(c.env.DB, "purchase_requests", id, { updated_at: ts }),
+    ...body.items.map((item) =>
+      insertStatement(c.env.DB, "purchase_request_items", {
+        id: uuid(),
+        request_id: id,
+        product_id: item.productId ?? null,
+        description: item.description ?? null,
+        qty_milli: Math.round(item.qty * 1000),
+        uom_id: item.uomId ?? null,
+        qty_received_milli: 0,
+        status: "pending",
+        qty_approved_milli: null,
+        purchase_mode: null,
+        notes: item.notes ?? null,
+        created_at: ts,
+        updated_at: ts,
+      }),
+    ),
+    auditStatement(c.env.DB, {
+      actor: { id: user.id, name: user.name },
+      module: "purchases",
+      action: "purchase_request.items_update",
+      entityType: "purchase_request",
+      entityId: id,
+      after: { itemCount: body.items.length, returned: Boolean(request.returned_at) },
+      ...info,
+    }),
+  ]);
+
+  return c.json({ ok: true, itemCount: body.items.length });
+});
+
 router.post("/:id/submit", requirePermission(PERMISSIONS.PURCHASES_CREATE), async (c) => {
   const user = currentUser(c);
   const id = c.req.param("id");
   const request = await requireRequest(c.env.DB, id);
   assertPurchaseVisible(user, request);
-  if (request.status !== "draft") throw conflict(`Somente rascunhos podem ser enviados para aprovação.`);
+  const isReturned = Boolean(request.returned_at);
+  if (request.status !== "draft" && !isReturned) {
+    throw conflict(`Somente rascunhos ou devoluções podem ser enviados para aprovação.`);
+  }
   if (request.requester_id !== user.id && !user.permissions.has(PERMISSIONS.PURCHASES_APPROVE)) {
     throw conflict("Somente o solicitante pode enviar esta solicitação.");
   }
@@ -1328,12 +1412,20 @@ router.post("/:id/submit", requirePermission(PERMISSIONS.PURCHASES_CREATE), asyn
   const autoApprovedLegacy = autoApproved && !isV3;
   const nextStatus = autoApprovedLegacy ? "approved" : "pending_approval";
   const nextStage = autoApprovedLegacy ? "buyer" : isV3 ? "purchasing" : "manager";
-  const displayStage = isV3 && nextStage === "purchasing" ? "triage" : nextStage;
+  // v3: sem triagem concluída a solicitação entra na fila do comprador; quando
+  // volta de uma devolução já triada, retorna direto ao gestor de Compras.
+  const displayStage =
+    isV3 && nextStage === "purchasing"
+      ? isReturned && request.triage_completed_at
+        ? "purchasing"
+        : "triage"
+      : nextStage;
 
   const statements: D1PreparedStatement[] = [
     updateStatement(c.env.DB, "purchase_requests", id, {
       status: nextStatus,
       approval_stage: nextStage,
+      ...(isReturned ? { returned_at: null, returned_by: null, returned_reason: null } : {}),
       budget_status: isV3 ? "not_required" : autoApproved ? "not_required" : "pending",
       ...(autoApproved
         ? {
@@ -1363,7 +1455,7 @@ router.post("/:id/submit", requirePermission(PERMISSIONS.PURCHASES_CREATE), asyn
       action: autoApproved ? "purchase_request.auto_approved" : "purchase_request.submit",
       entityType: "purchase_request",
       entityId: id,
-      before: { status: "draft" },
+      before: { status: request.status, returned: isReturned },
       after: { status: nextStatus, approvalStage: displayStage, autoApproved },
       reason: autoApproved ? AUTO_APPROVAL_NOTE : null,
       ...info,
@@ -2457,8 +2549,25 @@ async function handleDepartmentWorkflowDecision(
       requestPatch.triage_completed_at = ts;
       mailTitle = `Solicitação ${request.code} recusada na triagem de Compras`;
       if (request.requester_id !== user.id) notificationTargets.add(request.requester_id);
+    } else if (body.decision === "return_to_requester") {
+      // Devolve ao solicitante para ajustar o pedido. A solicitação sai da fila
+      // da etapa e só volta quando o solicitante reenviar.
+      const reason = body.notes?.trim();
+      if (!reason || reason.length < 5) {
+        throw badRequest("Explique o que o solicitante precisa ajustar (mínimo 5 caracteres).");
+      }
+      nextStatus = "pending_approval";
+      nextStage = "purchasing";
+      requestPatch.returned_at = ts;
+      requestPatch.returned_by = user.id;
+      requestPatch.returned_reason = reason;
+      auditAction = "purchase_request.returned";
+      eventType = "purchase_request.returned";
+      mailTitle = `Solicitação ${request.code} devolvida para ajuste`;
+      mailBody = reason;
+      if (request.requester_id !== user.id) notificationTargets.add(request.requester_id);
     } else {
-      throw conflict("A triagem só pode encaminhar a solicitação ao gestor de Compras ou recusá-la.");
+      throw conflict("A triagem só pode encaminhar, devolver ao solicitante ou recusar a solicitação.");
     }
   } else if (stage === "purchasing") {
     if (!user.permissions.has(PERMISSIONS.PURCHASES_AUTHORIZE)) {
@@ -2498,6 +2607,24 @@ async function handleDepartmentWorkflowDecision(
       requestPatch.budget_status = "rejected";
       requestPatch.finance_status = "not_required";
       mailTitle = `Solicitação ${request.code} recusada pelo setor de Compras`;
+      if (request.requester_id !== user.id) notificationTargets.add(request.requester_id);
+    } else if (body.decision === "return_to_requester") {
+      // Ajuste fino: o gestor identificou inconsistência, tratou com o
+      // solicitante e devolve a solicitação para edição. O histórico fica na
+      // trilha e o reenvio volta direto para a fila do gestor.
+      const reason = body.notes?.trim();
+      if (!reason || reason.length < 5) {
+        throw badRequest("Explique o que o solicitante precisa ajustar (mínimo 5 caracteres).");
+      }
+      nextStatus = "pending_approval";
+      nextStage = "purchasing";
+      requestPatch.returned_at = ts;
+      requestPatch.returned_by = user.id;
+      requestPatch.returned_reason = reason;
+      auditAction = "purchase_request.returned";
+      eventType = "purchase_request.returned";
+      mailTitle = `Solicitação ${request.code} devolvida para ajuste`;
+      mailBody = reason;
       if (request.requester_id !== user.id) notificationTargets.add(request.requester_id);
     } else if (body.decision === "request_alignment") {
       // O gestor de Compras pode pedir um alinhamento externo (com o
@@ -4467,6 +4594,9 @@ interface RequestRow {
   purchasing_authorized_by: string | null;
   triage_completed_at: string | null;
   triage_completed_by: string | null;
+  returned_at: string | null;
+  returned_by: string | null;
+  returned_reason: string | null;
 }
 
 async function requireRequest(db: D1Database, id: string | undefined): Promise<RequestRow> {
@@ -4476,7 +4606,8 @@ async function requireRequest(db: D1Database, id: string | undefined): Promise<R
     `SELECT id, code, status, priority, requester_id, location_id, justification,
             workflow_version, flow_revision, approval_stage, routing, manager_approved_by,
             department_id, purchase_mode, payment_method_id, purchasing_authorized_by,
-            triage_completed_at, triage_completed_by
+            triage_completed_at, triage_completed_by,
+            returned_at, returned_by, returned_reason
        FROM purchase_requests WHERE id = ?`,
     [id],
   );
@@ -4568,6 +4699,7 @@ function mapRequest(row: Record<string, unknown>) {
     locationId: row.location_id ? String(row.location_id) : null,
     locationName: row.location_name ? String(row.location_name) : null,
     locationPath: row.location_path ? String(row.location_path) : null,
+    locationDeleted: Boolean(row.location_deleted_at),
     justification: row.justification ? String(row.justification) : null,
     priority: String(row.priority),
     status: String(row.status),
@@ -4577,6 +4709,14 @@ function mapRequest(row: Record<string, unknown>) {
     triageCompletedAt,
     triageCompletedBy: row.triage_completed_by ? String(row.triage_completed_by) : null,
     triageCompletedByName: row.triage_completed_by_name ? String(row.triage_completed_by_name) : null,
+    returnedAt: row.returned_at ? String(row.returned_at) : null,
+    returnedBy: row.returned_by ? String(row.returned_by) : null,
+    returnedByName: row.returned_by_name ? String(row.returned_by_name) : null,
+    returnedReason: row.returned_reason ? String(row.returned_reason) : null,
+    /** Devolução pendente de ajuste: a tela usa este campo para o selo e o banner. */
+    returned: Boolean(row.returned_at) && String(row.status) === "pending_approval",
+    displayStatus:
+      Boolean(row.returned_at) && String(row.status) === "pending_approval" ? "returned" : String(row.status),
     departmentId: row.department_id ? String(row.department_id) : null,
     departmentName: row.department_name ? String(row.department_name) : null,
     purchaseMode: row.purchase_mode ? String(row.purchase_mode) : null,

@@ -28,6 +28,7 @@ import notificationRoutes from "./routes/notifications";
 import supportRoutes from "./routes/support";
 import intakeRoutes from "./routes/intake";
 import integrationRoutes from "./routes/integrations";
+import controlRoutes from "./routes/control";
 
 const app = new Hono<AppEnv>();
 
@@ -145,6 +146,7 @@ app.route("/api/notifications", notificationRoutes);
 app.route("/api/support", supportRoutes);
 app.route("/api/intake", intakeRoutes);
 app.route("/api/integrations", integrationRoutes);
+app.route("/api/control", controlRoutes);
 
 app.notFound((c) => {
   if (c.req.path.startsWith("/api/")) {

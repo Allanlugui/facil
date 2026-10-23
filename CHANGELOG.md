@@ -3,6 +3,73 @@
 Todas as alterações relevantes do Facil são registradas aqui. O projeto segue o
 versionamento descrito em `docs/VERSIONAMENTO.md`.
 
+## [0.7.0] — 2026-10-22
+
+Controle do sistema com exclusão segura e devolução da compra para ajuste do
+solicitante. Administradores ganham uma tela única para excluir cadastros com
+prévia de impacto; o histórico nunca é apagado. O gestor de Compras pode
+devolver a solicitação ao solicitante, que corrige os dados e reenvia para a
+mesma fila de aprovação.
+
+### Adicionado
+
+- **Controle do sistema (`/controle`):** tela administrativa com abas para
+  locais, unidades, tipos de local, setores, categorias de produto, unidades de
+  medida, fornecedores, produtos, centros de custo, formas de pagamento,
+  categorias de chamado e usuários. Busca, filtro de excluídos e prévia de
+  impacto antes de confirmar.
+- **Exclusão segura:** o servidor recalcula o impacto e decide entre exclusão
+  física (sem referências) e arquivamento (`deleted_at`/`deleted_by`) quando há
+  histórico. Registros arquivados saem das listas e seletores, mas chamados, OS,
+  compras e movimentações continuam exibindo o nome original com `(excluído)`.
+- **Bloqueios e avisos:** saldo de estoque e registros filhos ativos impedem a
+  exclusão; cada ação grava auditoria, motivo opcional e notifica os demais
+  administradores ativos.
+- **Múltiplos administradores:** o perfil Administrador do sistema pode ser
+  atribuído pela tela de usuários; o sistema impede remover/rebaixar o último
+  administrador e impede a autoexclusão.
+- **Devolução para ajuste:** o gestor de Compras devolve a solicitação ao
+  solicitante com motivo (mínimo 5 caracteres). A solicitação sai das filas, o
+  solicitante vê o aviso, corrige cabeçalho/itens e reenvia; ela volta direto à
+  fila do gestor, sem repetir a triagem.
+- **Fila “Devolvidas para ajuste”** no painel e na tela de compras, com filtro
+  `stage=returned` na API.
+- **Ajuste do solicitante:** diálogo para editar local, data, prioridade,
+  justificativa, observações e itens (produto, quantidade e unidade), com
+  `PUT /api/purchases/:id/items` restrito a rascunho ou devolvida.
+- **Migration 0022:** colunas de devolução e de arquivamento nos cadastros
+  mestres, com índices para listas e impacto.
+
+### Alterado
+
+- Listas de estrutura, catálogo, usuários e setores ignoram registros
+  arquivados; o histórico resolve o nome original e sinaliza a exclusão.
+- Itens de compra sem `uom_id` explícito herdam a unidade do produto, inclusive
+  no ajuste pós-devolução.
+- O diálogo de decisão do gestor ganhou a opção **Devolver ao solicitante para
+  ajuste**; o envio simples fica oculto enquanto a solicitação está devolvida.
+- Contadores de fila excluem devolvidas; o painel do gestor mostra apenas o que
+  realmente aguarda decisão.
+
+### Corrigido
+
+- Cabeçalho da solicitação devolvida agora exibe o selo **Devolvida ao
+  solicitante** em vez de “Pendente de aprovação”, e a “Próxima etapa” não
+  aponta para o gestor enquanto o solicitante precisa agir.
+- Rótulos e acentuação do controle do sistema; contagem de referências exibida
+  sem concordância incorreta (“1 chamados”).
+- Botão de arquivamento usa a ação primária; vermelho fica reservado à exclusão
+  definitiva.
+
+### Testes
+
+- `tests/21-control.spec.ts`: 7 cenários cobrindo múltiplos administradores e
+  proteção do último admin, exclusão física versus arquivamento, preservação do
+  histórico com `locationDeleted`, bloqueio por estoque, notificação aos
+  administradores, devolução → ajuste → reenvio → fila do gestor, motivo
+  obrigatório, filtro `stage=returned` e unidade resolvida no item.
+- Suíte completa: **187 testes em 21 arquivos**.
+
 ## [0.6.0] — 2026-10-21
 
 Fluxo de compras v3 completo: triagem do comprador, aprovação/refinamento do

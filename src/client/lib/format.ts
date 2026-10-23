@@ -240,6 +240,15 @@ export function plural(count: number, singular: string, pluralForm: string): str
   return count === 1 ? singular : pluralForm;
 }
 
+/**
+ * Nome de cadastro histórico. Quando o registro foi excluído, o nome original
+ * continua aparecendo com a marca — a auditoria nunca perde o contexto.
+ */
+export function entityName(name: string | null | undefined, deleted?: boolean | null): string {
+  if (!name) return "—";
+  return deleted ? `${name} (excluído)` : name;
+}
+
 export function formatCurrencyFromCents(cents: number | null | undefined): string {
   if (cents === null || cents === undefined) return "-";
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(cents / 100);

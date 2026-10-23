@@ -10,7 +10,7 @@ import {
   type TicketStatus,
 } from "@shared/types";
 import { apiDelete, apiErrorMessage, apiGet, apiPost, apiUpload } from "../lib/api";
-import { PRIORITY_TONE, formatBytes, formatDateTime, formatQuantity, plural } from "../lib/format";
+import { PRIORITY_TONE, entityName, formatBytes, formatDateTime, formatQuantity, plural } from "../lib/format";
 import { useAsync, useDebounced } from "../lib/hooks";
 import {
   useActiveUsers,
@@ -56,6 +56,7 @@ export interface TicketRow {
   locationId: string | null;
   locationName: string | null;
   locationPath: string | null;
+  locationDeleted: boolean;
   priority: Priority;
   status: TicketStatus;
   requesterId: string;
@@ -171,7 +172,8 @@ export function TicketsPage() {
             {row.code} · {row.title}
           </p>
           <p className="truncate text-xs text-slate-500">
-            {row.categoryName ?? "Sem categoria"} · {row.locationPath ?? row.locationName ?? "Sem local"}
+            {row.categoryName ?? "Sem categoria"} ·{" "}
+            {row.locationDeleted ? entityName(row.locationName, true) : row.locationPath ?? row.locationName ?? "Sem local"}
           </p>
         </div>
       ),
@@ -633,7 +635,7 @@ export function TicketDetailPage() {
             <dl className="space-y-3 text-sm">
               <InfoRow label="Solicitante" value={ticket.requesterName} />
               <InfoRow label="Responsável" value={ticket.assigneeName ?? "Sem responsável"} />
-              <InfoRow label="Local" value={ticket.locationPath ?? ticket.locationName ?? "-"} />
+              <InfoRow label="Local" value={ticket.locationDeleted ? entityName(ticket.locationName, true) : ticket.locationPath ?? ticket.locationName ?? "-"} />
               <InfoRow label="Aberto em" value={formatDateTime(ticket.createdAt)} />
               <InfoRow label="Atualizado em" value={formatDateTime(ticket.updatedAt)} />
             </dl>

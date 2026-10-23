@@ -103,7 +103,7 @@ router.get("/departments", requirePermission(PERMISSIONS.USERS_VIEW), async (c) 
   const rows = await allRows<Record<string, unknown>>(
     c.env.DB,
     `SELECT id, code, name, is_purchasing, is_active, notes, created_at, updated_at
-       FROM departments ORDER BY is_purchasing DESC, name`,
+       FROM departments WHERE deleted_at IS NULL ORDER BY is_purchasing DESC, name`,
   );
   const managers = await allRows<{ department_id: string; user_id: string; name: string; email: string }>(
     c.env.DB,
@@ -460,7 +460,7 @@ router.get("/users", requirePermission(PERMISSIONS.USERS_VIEW), async (c) => {
   const roleId = url.searchParams.get("roleId")?.trim();
   const isActive = url.searchParams.get("isActive");
 
-  const clauses: string[] = [];
+  const clauses: string[] = ["u.deleted_at IS NULL"];
   const params: (string | number)[] = [];
   if (search) {
     clauses.push(`(u.name LIKE ? OR u.email LIKE ? OR COALESCE(u.employee_code,'') LIKE ?)`);
@@ -857,7 +857,7 @@ async function assertNotLastAdmin(db: D1Database, userId: string, reason: "role"
 
   const remaining = await countRows(
     db,
-    `SELECT COUNT(*) FROM users WHERE role_id = ? AND is_active = 1 AND id <> ?`,
+    `SELECT COUNT(*) FROM users WHERE role_id = ? AND is_active = 1 AND deleted_at IS NULL AND id <> ?`,
     [adminRole.id, userId],
   );
   if (remaining === 0) {

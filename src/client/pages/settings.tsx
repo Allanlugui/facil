@@ -176,6 +176,18 @@ const ADMIN_LINKS = [
     icon: <UsersIcon />,
   },
   {
+    to: "/controle",
+    label: "Controle do sistema",
+    description: "Exclusão de cadastros com prévia de impacto e histórico preservado",
+    anyOf: [
+      PERMISSIONS.STRUCTURE_MANAGE,
+      PERMISSIONS.CATALOG_MANAGE,
+      PERMISSIONS.USERS_MANAGE,
+      PERMISSIONS.SETTINGS_MANAGE,
+    ],
+    icon: <ShieldIcon />,
+  },
+  {
     to: "/relatorios",
     label: "Relatórios",
     description: "Visões consolidadas com exportação em CSV",
@@ -197,11 +209,13 @@ const ADMIN_LINKS = [
 
 export function SettingsPage() {
   const { section } = useParams();
-  const { can } = useSession();
+  const { can, canAny } = useSession();
 
   const canViewSettings = can(PERMISSIONS.SETTINGS_VIEW);
   const settingsSection = SETTINGS_SECTIONS.find((entry) => entry.id === section);
-  const canSeeAdministration = ADMIN_LINKS.some((entry) => can(entry.permission));
+  const canSeeAdministration = ADMIN_LINKS.some((entry) =>
+    "anyOf" in entry ? canAny(entry.anyOf) : can(entry.permission),
+  );
 
   const navItems = [
     { id: "inicio", label: "Visão geral", href: "/configuracoes" },
@@ -282,9 +296,11 @@ export function SettingsPage() {
 /* -------------------------------------------------------------------------- */
 
 function OverviewSection() {
-  const { can } = useSession();
+  const { can, canAny } = useSession();
   const canViewSettings = can(PERMISSIONS.SETTINGS_VIEW);
-  const canAnyAdmin = ADMIN_LINKS.some((entry) => can(entry.permission));
+  const canAnyAdmin = ADMIN_LINKS.some((entry) =>
+    "anyOf" in entry ? canAny(entry.anyOf) : can(entry.permission),
+  );
 
   return (
     <div className="space-y-6">
@@ -316,7 +332,9 @@ function OverviewSection() {
             Estas áreas continuam com permissões próprias: cada pessoa vê apenas o que a função dela permite.
           </p>
           <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {ADMIN_LINKS.filter((entry) => can(entry.permission)).map((entry) => (
+            {ADMIN_LINKS.filter((entry) =>
+              "anyOf" in entry ? canAny(entry.anyOf) : can(entry.permission),
+            ).map((entry) => (
               <SectionCard
                 key={entry.to}
                 to={entry.to}

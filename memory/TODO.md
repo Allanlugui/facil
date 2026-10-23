@@ -2,6 +2,37 @@
 
 Atualizado em 22/10/2026. Este é o **backlog oficial** do projeto (plano + pendências em um só lugar).
 
+## ETAPA 7 — CONCLUÍDA (22/10/2026)
+
+- [x] **Controle do sistema (`/controle`):** tela administrativa com 12 cadastros
+      mestres (locais, unidades, tipos de local, setores, categorias, unidades de
+      medida, fornecedores, produtos, centros de custo, formas de pagamento,
+      categorias de chamado e usuários), busca, “mostrar excluídos” e prévia de
+      impacto recalculada no servidor.
+- [x] **Exclusão segura:** sem referências → exclusão física; com histórico →
+      arquivamento (`deleted_at`/`deleted_by`), some das listas/seletores e o nome
+      original continua no histórico com `(excluído)`. Bloqueios para saldo de
+      estoque e registros filhos ativos; auditoria, motivo e aviso aos demais
+      administradores.
+- [x] **Múltiplos administradores:** perfil Administrador atribuível pela tela de
+      usuários, com proteção do último admin e bloqueio de autoexclusão.
+- [x] **Devolução para ajuste:** gestor de Compras devolve com motivo ≥5
+      (`return_to_requester`), sem mudar o CHECK de `status`; solicitante ajusta
+      cabeçalho e itens (`PUT /:id/items`) e reenvia direto à fila do gestor.
+- [x] **Filas e painel:** `queues.returned`, `stage=returned`, chips “Devolvidas
+      para ajuste” no painel e em compras; unidade do item herdada do produto.
+- [x] **Qualidade:** `npm run check` **187/187 em 21 arquivos**, typecheck, lint,
+      contrato de API (140 rotas); `npm run build`; verificação Playwright
+      desktop/mobile (controle, impacto, arquivamento, tombstone, devolução,
+      ajuste e reenvio).
+- [x] **Documentação:** `CHANGELOG.md`, `README.md`, `docs/COMPRAS.md`,
+      `docs/VERSIONAMENTO.md` e memória atualizados para **0.7.0**.
+- [x] **Release 0.7.0:** assinatura Ed25519 (tree
+      `2dd0d06d6af3501c3496f148d55d0885b9b1e23588b6d2f807513f81cf8ef335`, 178
+      arquivos, 22/10/2026 21:40:17 −03:00), migration `0022` aplicada no D1 remoto,
+      Worker `fdf4ec85-8e4c-4f07-a9a4-0410820b7dba`, publicada em
+      `https://facil.cf-pilot-disposable.workers.dev` (tag `v0.7.0`).
+
 ## ETAPA 4 — CONCLUÍDA (21/10/2026)
 
 - [x] **Compras v3 por setor:** gestor do setor cria/envia → responsável de Compras

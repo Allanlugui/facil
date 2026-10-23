@@ -143,7 +143,8 @@ router.get("/summary", requirePermission(PERMISSIONS.DASHBOARD_VIEW), async (c) 
         ? oneRow<Record<string, number>>(
             c.env.DB,
             `SELECT
-               SUM(CASE WHEN status = 'pending_approval' THEN 1 ELSE 0 END) AS pending_approval,
+               SUM(CASE WHEN status = 'pending_approval' AND returned_at IS NULL THEN 1 ELSE 0 END) AS pending_approval,
+               SUM(CASE WHEN returned_at IS NOT NULL AND status = 'pending_approval' THEN 1 ELSE 0 END) AS returned,
                SUM(CASE WHEN status = 'ordered' THEN 1 ELSE 0 END) AS ordered,
                SUM(CASE WHEN status = 'partially_received' THEN 1 ELSE 0 END) AS partially_received,
                COUNT(*) AS total_open
@@ -269,7 +270,7 @@ router.get("/summary", requirePermission(PERMISSIONS.DASHBOARD_VIEW), async (c) 
                     ru.name AS requester_name
                FROM purchase_requests pr
                JOIN users ru ON ru.id = pr.requester_id
-              WHERE pr.status = 'pending_approval'
+              WHERE pr.status = 'pending_approval' AND pr.returned_at IS NULL
               ORDER BY CASE pr.priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1
                                         WHEN 'normal' THEN 2 ELSE 3 END,
                        pr.created_at
@@ -500,7 +501,10 @@ router.get("/alerts", requirePermission(PERMISSIONS.DASHBOARD_VIEW), async (c) =
         )
       : Promise.resolve(0),
     can(PERMISSIONS.PURCHASES_APPROVE)
-      ? countRows(c.env.DB, `SELECT COUNT(*) FROM purchase_requests WHERE status = 'pending_approval'`)
+      ? countRows(
+          c.env.DB,
+          `SELECT COUNT(*) FROM purchase_requests WHERE status = 'pending_approval' AND returned_at IS NULL`,
+        )
       : Promise.resolve(0),
     // Cadastro rápido (recebimento): o alerta fica com quem pode corrigir o
     // catálogo e só desaparece quando o cadastro for completado.

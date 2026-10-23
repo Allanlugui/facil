@@ -1,10 +1,12 @@
 # Fluxo corporativo de compras (v3)
 
 Este documento descreve o fluxo de compras **v3** (por setor), introduzido na
-versão **0.4.0** e refinado na **0.6.0** com triagem, aprovação/refinamento do
-gestor de Compras e normalização de itens no recebimento. Mantém o detalhamento
-dos fluxos v2 (0.2.0/0.3.0) e v1 (legado), que continuam disponíveis para
-solicitações antigas e para integrações que declarem `workflowVersion: 1` ou `2`.
+versão **0.4.0**, refinado na **0.6.0** com triagem, aprovação/refinamento do
+gestor de Compras e normalização de itens no recebimento, e na **0.7.0** com a
+devolução da solicitação ao solicitante para ajuste e reenvio. Mantém o
+detalhamento dos fluxos v2 (0.2.0/0.3.0) e v1 (legado), que continuam disponíveis
+para solicitações antigas e para integrações que declarem `workflowVersion: 1`
+ou `2`.
 
 ## Fluxo v3 — por setor
 
@@ -21,6 +23,7 @@ Solicitante
             ├─ recusa → encerra
             └─ encaminha ao gestor de Compras
                  └─ Aprovação/refinamento do gestor de Compras
+                      ├─ devolve ao solicitante → ajusta e reenvia → volta ao gestor
                       ├─ solicita alinhamento → solicitante responde, etapa continua
                       ├─ recusa → encerra
                       └─ autoriza (cotação, orçamento ou compra direta)
@@ -58,21 +61,44 @@ O gestor ou diretor de Compras revisa a necessidade e pode:
 - informar forma de pagamento, condições, centro de custo e conta contábil (GL);
 - **solicitar alinhamento** ao solicitante, com observação de pelo menos 5
   caracteres, sem sair da etapa e sem perder a fila de aprovação;
+- **devolver ao solicitante para ajuste** (ver abaixo);
 - autorizar a compra ou recusar.
+
+#### Devolução para ajuste
+
+A devolução para ajuste é diferente de “solicitar alinhamento”: ela tira a
+solicitação da fila do gestor até o solicitante agir. O gestor escolhe
+`return_to_requester` e informa um motivo (mínimo 5 caracteres). No banco:
+
+- `purchase_requests.status` continua `pending_approval` (o CHECK existente não
+  muda) e `approval_stage` continua `purchasing`;
+- `returned_at`, `returned_by` e `returned_reason` são preenchidos;
+- a API deriva `returned: true` e `displayStatus: "returned"`;
+- a solicitação sai das filas `triage`/`purchasing` e entra em
+  `queues.returned` (`stage=returned`).
+
+O solicitante vê o aviso na tela e no painel, abre **Ajustar e reenviar** e pode
+alterar local, data desejada, prioridade, justificativa, observações e itens
+(produto, quantidade e unidade). O ajuste usa `PUT /api/purchases/:id/items`,
+permitido apenas em rascunho ou devolvida, e depois `PATCH /:id` para o
+cabeçalho. Ao reenviar (`POST /:id/submit`), os campos `returned_*` são limpos e,
+como a triagem já foi concluída (`triage_completed_at` preenchido), a solicitação
+volta **direto para a fila do gestor de Compras** — sem repetir a triagem.
+
+```text
+Etapa derivada    Status típico                          Quem age                 Ação
+triage            pending_approval                       comprador/analista       forward, rejected
+purchasing        pending_approval                       gestor/diretor Compras   approved, request_alignment, return_to_requester, rejected
+returned          pending_approval (returned_at != null) solicitante              ajustar itens/cabeçalho e reenviar
+buyer             approved/quoting/quote_returned/...    comprador                cotação, pedido
+receipt           ordered/partially_received             estoque/comprador        recebimento + NF
+completed         received/rejected/cancelled            —                        fim
+```
 
 Ao trocar o modo da solicitação, o destino dos itens acompanha a escolha
 (cotação/orçamento → `quote`; compra direta → `direct`); o gestor ainda pode
 ajustar item a item depois. A autorização preserva modos já definidos por item
 (`COALESCE(purchase_mode, ...)`).
-
-```text
-Etapa derivada    Status típico                          Quem age                 Ação
-triage            pending_approval                       comprador/analista       forward, rejected
-purchasing        pending_approval                       gestor/diretor Compras   approved, request_alignment, rejected
-buyer             approved/quoting/quote_returned/...    comprador                cotação, pedido
-receipt           ordered/partially_received             estoque/comprador        recebimento + NF
-completed         received/rejected/cancelled            —                        fim
-```
 
 
 ### Solicitação simplificada e entrada em lote
@@ -374,8 +400,9 @@ O recebimento parcial mantém a etapa em `receipt`.
 | GET | `/api/purchases/overview` | `purchases.view` | Fila, contadores, centros de custo |
 | GET | `/api/purchases/cost-centers` | `purchases.view` | Centros ativos |
 | POST | `/api/purchases` | `purchases.create` | Cria rascunho ou envia |
-| PATCH | `/api/purchases/:id` | `purchases.create` | Edita rascunho |
-| POST | `/api/purchases/:id/submit` | `purchases.create` | Envia rascunho |
+| PATCH | `/api/purchases/:id` | `purchases.create` | Edita rascunho ou cabeçalho devolvido |
+| PUT | `/api/purchases/:id/items` | `purchases.create` | Substitui itens de rascunho ou devolvida |
+| POST | `/api/purchases/:id/submit` | `purchases.create` | Envia rascunho ou reenvia devolvida |
 | POST | `/api/purchases/:id/decide` | `purchases.approve` / `purchases.authorize` / `purchases.direct` | Decide a etapa atual |
 | POST | `/api/purchases/:id/quotes` | `purchases.order` | Registra proposta |
 | POST | `/api/purchases/:id/quotes/return` | `purchases.order` | Devolve cotação |
@@ -448,6 +475,9 @@ O recebimento parcial mantém a etapa em `receipt`.
 - `tests/19-purchases-v3.spec.ts` — triagem, aprovação/refinamento do gestor de
   Compras, pedido de alinhamento, compra direta, cotação/orçamento, pedido e
   recebimento com normalização de item fora do catálogo.
+- `tests/21-control.spec.ts` — devolução para ajuste, reenvio direto ao gestor,
+  fila `stage=returned`, unidade herdada do produto, exclusão segura com
+  preservação de histórico e múltiplos administradores.
 - `tests/09-reports.spec.ts` — relatórios e painel com solicitações legadas.
 
 ## O que ainda não está implementado

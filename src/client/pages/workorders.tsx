@@ -14,6 +14,7 @@ import { apiDelete, apiErrorMessage, apiGet, apiPatch, apiPost, apiUpload, ApiEr
 import { CameraCaptureDialog } from "../lib/camera";
 import {
   PRIORITY_TONE,
+  entityName,
   formatBytes,
   formatDate,
   formatDateTime,
@@ -66,6 +67,7 @@ interface WorkOrderRow {
   locationId: string | null;
   locationName: string | null;
   locationPath: string | null;
+  locationDeleted: boolean;
   assigneeId: string | null;
   assigneeName: string | null;
   priority: Priority;
@@ -187,7 +189,7 @@ export function WorkOrdersPage() {
             {row.code} · {row.title}
           </p>
           <p className="truncate text-xs text-slate-500">
-            {row.locationPath ?? row.locationName ?? "Sem local"}
+            {row.locationDeleted ? entityName(row.locationName, true) : row.locationPath ?? row.locationName ?? "Sem local"}
             {row.ticketCode ? ` · chamado ${row.ticketCode}` : ""}
           </p>
         </div>
@@ -717,7 +719,7 @@ export function WorkOrderDetailPage() {
           <Card title="Ficha da ordem">
             <dl className="space-y-3 text-sm">
               <InfoRow label="Responsável" value={workOrder.assigneeName ?? "Sem responsável"} />
-              <InfoRow label="Local" value={workOrder.locationPath ?? workOrder.locationName ?? "-"} />
+              <InfoRow label="Local" value={workOrder.locationDeleted ? entityName(workOrder.locationName, true) : workOrder.locationPath ?? workOrder.locationName ?? "-"} />
               <InfoRow label="Criada por" value={`${workOrder.createdByName ?? "-"} em ${formatDateTime(workOrder.createdAt)}`} />
               <InfoRow label="Planejada para" value={workOrder.plannedAt ? formatDate(workOrder.plannedAt) : "-"} />
               <InfoRow label="Iniciada em" value={workOrder.startedAt ? formatDateTime(workOrder.startedAt) : "-"} />

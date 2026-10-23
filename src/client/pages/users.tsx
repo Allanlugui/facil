@@ -506,7 +506,17 @@ function UserDialog({
               onChange={(event) => setEmail(event.target.value)}
             />
           </Field>
-          <Field label="Perfil de acesso" required error={errors.roleId} htmlFor="userRole">
+          <Field
+            label="Perfil de acesso"
+            required
+            error={errors.roleId}
+            htmlFor="userRole"
+            hint={
+              roles.find((role) => role.id === roleId)?.code === "admin"
+                ? "Administrador do sistema: acesso total, inclusive à Central de Controle e à criação de outros administradores."
+                : undefined
+            }
+          >
             <Select id="userRole" value={roleId} onChange={(event) => setRoleId(event.target.value)}>
               <option value="">Selecione...</option>
               {roles
