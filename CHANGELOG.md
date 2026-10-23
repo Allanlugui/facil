@@ -3,6 +3,36 @@
 Todas as alterações relevantes do Facil são registradas aqui. O projeto segue o
 versionamento descrito em `docs/VERSIONAMENTO.md`.
 
+## [0.7.4] — 2026-10-23
+
+Consumidor do `integration_outbox` (Fase 3 do plano de melhorias): um trigger
+cron a cada 5 minutos processa os eventos pendentes (`pending`) e os envia para
+o sistema de integração externo (ServiceNow/NetSuite/middleware), autenticado
+por `TICKET_INTAKE_KEY` (secret do Worker). Endpoint `POST
+/api/integrations/outbox/process` permite disparo manual pelo administrador.
+Inclui idempotência (`idempotency_key`), marcação `processing` para evitar
+execução duplicada, retry com backoff exponencial e `failed` após o limite de
+tentativas. Como as chaves de integração ainda não foram informadas pelo
+titular, o consumidor pula silenciosamente sem elas (não trava o Worker).
+
+### Adicionado
+
+- **Consumidor do outbox** (`src/worker/outbox-consumer.ts`, cron `*/5 * * * *`):
+  lê eventos pendentes, envia com a chave de integração, confirma (`sent`) ou
+  reagenda/falha (`failed`) com backoff.
+- **Endpoint de disparo manual** (`POST /api/integrations/outbox/process`):
+  admin pode forçar o processamento fora do ciclo do cron.
+- **Testes:** `tests/16-outbox-consumer.spec.ts` (2 testes: sem chave pula sem
+  processar; não altera o banco quando pula).
+
+### Configuração pendente (titular)
+
+Configurar no Cloudflare (Worker → Settings → Secrets/variáveis de ambiente):
+`TICKET_INTAKE_KEY` (chave de autenticação do destino) e
+`SERVICENOW_INSTANCE_URL` (URL base da instância). Sem elas, o outbox segue
+gravando eventos mas ninguém os consome — mesmo comportamento de antes, sem
+quebra.
+
 ## [0.7.3] — 2026-10-23
 
 Anexos também em ordens de serviço (Fase 5 do plano de melhorias): a tela da OS

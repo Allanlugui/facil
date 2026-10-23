@@ -6,6 +6,7 @@ import { requireAuth, requirePermission } from "../auth";
 import { allRows, oneRow } from "../db";
 import { conflict, notFound, parseBody } from "../errors";
 import { nowIso } from "../util";
+import { runOutboxConsumer } from "../outbox-consumer";
 
 /**
  * Interface operacional do outbox de integração.
@@ -118,5 +119,14 @@ router.post("/outbox/:id/ack", requirePermission(PERMISSIONS.SETTINGS_MANAGE), a
   ]);
   return c.json({ ok: true, status: body.status });
 });
+
+router.post(
+  "/outbox/process",
+  requirePermission(PERMISSIONS.SETTINGS_MANAGE),
+  async (c) => {
+    const result = await runOutboxConsumer(c.env as { DB: D1Database; TICKET_INTAKE_KEY?: string | null; SERVICENOW_INSTANCE_URL?: string | null });
+    return c.json({ ok: true, ...result }, result.skipped > 0 ? 202 : 200);
+  },
+);
 
 export default router;

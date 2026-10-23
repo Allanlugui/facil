@@ -29,6 +29,7 @@ import supportRoutes from "./routes/support";
 import intakeRoutes from "./routes/intake";
 import integrationRoutes from "./routes/integrations";
 import controlRoutes from "./routes/control";
+import { runOutboxConsumer } from "./outbox-consumer";
 
 const app = new Hono<AppEnv>();
 
@@ -175,4 +176,15 @@ app.onError((err, c) => {
   return c.json(errorBody("INTERNAL_ERROR", "Erro interno ao processar a requisição."), 500);
 });
 
-export default app;
+export default {
+  fetch: app.fetch,
+  async scheduled(event, env, _ctx) {
+    if (event.cron === "outbox-consumer") {
+      await runOutboxConsumer(env as {
+        DB: D1Database;
+        TICKET_INTAKE_KEY?: string | null;
+        SERVICENOW_INSTANCE_URL?: string | null;
+      });
+    }
+  },
+} satisfies ExportedHandler<Env>;

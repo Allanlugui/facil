@@ -115,3 +115,9 @@ A décima entrega foi publicada na versão **0.7.3**, em 23/10/2026: anexos
 também em ordens de serviço (card de anexos na tela da OS), reutilizando o
 módulo genérico de anexos. Funcionalidade nova para o usuário final (tela da OS
 ganha upload/download/remoção de anexos) sem mudança de banco: subiu o **patch**.
+
+A décima primeira entrega foi publicada na versão **0.7.4**, em 23/10/2026:
+consumidor do `integration_outbox` com trigger cron a cada 5 minutos e endpoint
+de disparo manual. Integração depende de `TICKET_INTAKE_KEY`/`SERVICENOW_INSTANCE_URL`
+a serem configuradas pelo titular nas secrets do Worker; sem elas, o consumidor
+pula silenciosamente: subiu o **patch**.
