@@ -24,6 +24,16 @@
   `aa9c4ca9-202b-4632-8e6d-45df137fd839`. Resíduo em produção: o pedido de teste
   `SUP-2026-000003` ("Teste Automatico R2") ficou na fila como descartável —
   resolver/cancelar pelo `/ajuda` quando quiser.
+- **CI no GitHub Actions + release 0.7.2 (23/10/2026):** versão **0.7.2**
+  publicada — workflow de CI (`.github/workflows/ci.yml`: `npm ci`, `npm run check`,
+  `npm run build`, Node 24, cache npm, `permissions: contents: read`) no manifesto
+  assinado (181 arquivos, tree `033d321a…`, commit `8b62533`, tag `v0.7.2`). O
+  workflow foi aceito e está ativo, mas as EXECUÇÕES falham na conta GitHub com
+  `startup_failure` instantâneo (sem jobs) — inclusive workflow mínimo de teste em
+  branches descartáveis; repo público da mesma conta executou workflow em 03/10.
+  Hipótese: cota/spending limit de Actions para repositório privado (plano Free).
+  Pendência humana: conferir Billing → Actions minutes / spending limit em
+  github.com/settings/billing. Sem mudança de comportamento do produto.
 - **Controle do sistema e devolução de compras (22/10/2026):** versão **0.7.0**
   publicada. Entrega: **Controle do sistema** em `/controle` (card em Configurações)
   com abas para 12 cadastros mestres, busca, “mostrar excluídos” e prévia de impacto
@@ -366,12 +376,12 @@
 - **Deploy remoto: EXECUTADO (atualizado 23/10/2026).** Worker `facil` publicado em
   `https://facil.cf-pilot-disposable.workers.dev`, D1 remoto com 23 migrations
   (0023 Patrimônio aplicada em 23/10) e admin **Allan Lima** (`needsSetup:
-  false`), release **0.7.1** assinada. Limitações reais: URL `workers.dev`
+  false`), release **0.7.2** assinada. Limitações reais: URL `workers.dev`
   (sem domínio próprio nem Cloudflare Access), **R2 LIGADO** (bucket
   `facil-attachments` ativo desde 23/10/2026; anexos de suporte funcionam;
-  chamados/OS continuam no D1), **sem CI** (deploy por `npm run deploy`;
-  Workers Builds é opcional), `TICKET_INTAKE_KEY` ausente em produção e
-  **integration_outbox sem consumidor**.
+  chamados/OS continuam no D1), **sem CI EXECUTÁVEL** (workflow publicado mas
+  execuções bloqueadas por limite de conta GitHub — ver pendência acima),
+  `TICKET_INTAKE_KEY` ausente em produção e **integration_outbox sem consumidor**.
 - **Dados históricos (20/10/2026):** consulta somente leitura ao D1 de produção encontrou
   **0 linhas `settings.update`**, **0 anexos** e chaves `mail.*` vazias — não havia segredo
   histórico exposto em auditoria nem SVG armazenado. A rotação de credenciais de e-mail segue

@@ -12,8 +12,15 @@ Plano aprovado pelo titular em 23/10/2026 (5 fases, uma release por fase):
       ponta a ponta em produção (upload e download íntegros no chat de
       suporte; fim do 503 `R2_UNAVAILABLE`). A mesma release publicou a
       fundação do Patrimônio (D-56).
-- [ ] **Fase 2 — CI no GitHub Actions:** workflow rodando `npm run check` em
-      push/PR na `main`.
+- [~] **Fase 2 — CI no GitHub Actions (0.7.2 publicada; EXECUÇÃO BLOQUEADA NA CONTA):**
+      workflow `.github/workflows/ci.yml` publicado e registrado como ativo
+      (válido — o parse passa), mas TODA execução falha instantaneamente em
+      `startup_failure` (path `BuildFailed`, sem jobs/logs), inclusive um
+      workflow mínimo `echo ok` em 4 branches de diagnóstico. Conta executou
+      workflow normalmente em repo público (SecureFind, 03/10), o que aponta para
+      limite de minutos/spending limit de Actions em repo privado. Ação humana:
+      conferir github.com/settings/billing (Actions minutes / spending limit /
+      payment method). Branches de diagnóstico removidas.
 - [ ] **Fase 3 — Consumidor do `integration_outbox`:** leitura periódica do
       outbox com envio ao ServiceNow (`TICKET_INTAKE_KEY`), ack e
       idempotência; eventos de compra testados (request, order, receipt).

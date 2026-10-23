@@ -521,3 +521,25 @@ em produção.
 - **Pendências do plano:** Fase 2 (CI), Fase 3 (consumidor do outbox), Fase 4 (captcha)
   e Fase 5 (anexos em OS); domínio próprio e `TICKET_INTAKE_KEY` seguem com o titular.
   Patrimônio (rotas/UI) registrado como item futuro no TODO.
+
+## 23/10/2026 (tarde) — CI no GitHub Actions, release 0.7.2 e diagnóstico de bloqueio
+
+- **Contexto:** Fase 2 do plano de melhorias — publicar workflow de CI.
+- **Entrega:** `.github/workflows/ci.yml` publicado na release **0.7.2** (manifesto
+  assinado, 181 arquivos, tree `033d321a…`, commit `8b62533`, tag `v0.7.2`,
+  Worker `4c488a62…`). Workflow registrado como ativo no GitHub (parse OK).
+- **Bloqueio descoberto:** TODAS as execuções (6+ runs em 5 branches, incluindo
+  workflow mínimo `echo ok`) falham **instantaneamente** com
+  `startup_failure` / `path: BuildFailed`, sem criar jobs, sem logs, sem
+  anotações. Mesmo repo público da conta (`SecureFind`) executou workflow
+  normalmente em 03/10/2026. Diagnóstico: limite de minutos/spending limit de
+  GitHub Actions para repositórios privados no plano Free — execução morre no
+  scheduler antes de qualquer job. Verificado via 4 branches de bisect
+  descartáveis (ci-orig, ci-min, ci-ascii, ci-quoted — removidos).
+- **Ação humana necessária:** conferir **github.com/settings/billing** →
+  "Actions minutes" / "Spending limit" / "Payment method" da conta `Allanlugui`
+  e garantir cota/spending limit > 0 para repos privados.
+- **Estado do plano:** Fase 2 publicada mas **não executável** até resolução do
+  billing. Fases 3–5 aguardam decisão: prosseguir implementação local (Fase 5
+  anexos em OS é autônoma; Fases 3/4 precisam `TICKET_INTAKE_KEY` e provedor de
+  captcha para produção) ou aguardar CI.
