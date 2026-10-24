@@ -3,6 +3,48 @@
 Todas as alterações relevantes do Facil são registradas aqui. O projeto segue o
 versionamento descrito em `docs/VERSIONAMENTO.md`.
 
+## [0.8.0] — 2026-10-24
+
+Módulo **Patrimônio** completo (a fundação com migration `0023` entrou na 0.7.1):
+API `/api/assets`, telas `/patrimonio` e `/patrimonio/:id`, integração com a
+Central de Controle e testes de integração. Ativos têm código sequencial
+(`PAT-2026-000001`), etiqueta, categoria, local, responsável, aquisição, garantia,
+fornecedor e dados técnicos; toda operação vira uma movimentação no histórico
+com auditoria. Ativos **nunca são excluídos**: `baixado`/`descartado` são
+terminais, exigem `assets.manage` e preservam o histórico. Categorias são criadas
+e editadas em `/patrimonio`; a exclusão com prévia de impacto fica na aba
+**Categorias de patrimônio** da Central de Controle (`asset_category`).
+
+### Adicionado
+
+- **API de patrimônio** (`src/worker/routes/assets.ts`): listagem com busca,
+  filtros (categoria, situação, condição, criticidade, local, responsável),
+  paginação e resumo; detalhe; criação/edição; opções para seletores; CRUD de
+  categorias; transferência de local, atribuição de responsável, mudança de
+  situação/condição, manutenção e conferência de inventário.
+- **Escopo e permissões**: `assets.view`, `assets.manage` e `assets.move`, com
+  restrição por local quando o usuário tem escopo; movimentações exigem
+  `assets.move`, cadastro/edição e baixa exigem `assets.manage`.
+- **Histórico auditável**: cada operação grava `asset_movements` e auditoria na
+  mesma transação, com autor, motivo e resumo da mudança.
+- **Interface** (`src/client/pages/assets.tsx`): lista com indicadores e
+  filtros, detalhe com identificação, aquisição/garantia, histórico e anexos,
+  formulário de ativo, diálogos de movimentação, gestão de categorias e card
+  **Ações do ativo**.
+- **Anexos de ativo**: entidade `asset` no módulo genérico
+  `/api/attachments` (nota fiscal, termo, fotos e laudos).
+- **Central de Controle**: entidade `asset_category` com prévia de impacto;
+  categoria com ativos é arquivada, sem apagar o histórico.
+- **Testes**: `tests/22-assets.spec.ts` (10 testes), total **204 testes em 24
+  arquivos**.
+
+### Corrigido
+
+- Datas sem hora em movimentações são normalizadas para meio-dia UTC, evitando
+  exibir o dia anterior no fuso do Brasil (UTC-3).
+- Histórico e tabela de categorias ajustados para telas pequenas, sem rolagem
+  horizontal nem ações cortadas no celular.
+
 ## [0.7.5] — 2026-10-23
 
 Captcha como camada final (D-15): validação de Turnstile no login e na abertura

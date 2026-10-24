@@ -1054,3 +1054,29 @@
   com round-trip idêntico); D1 remoto na migration 0023; nenhuma rota/tela referencia as
   tabelas de Patrimônio (fundação inerte). Resíduo: o pedido de teste ficou na fila do
   suporte como descartável.
+
+## D-57 — Patrimônio sem exclusão de ativos e categorias no fluxo diário (24/10/2026) — VALIDADO
+
+- **Contexto:** a fundação do Patrimônio (migration 0023) existia desde a 0.7.1, mas
+  sem API, telas, integração com o `/controle` ou testes. O módulo precisava decidir
+  o que acontece com um ativo que sai de operação e onde as categorias são mantidas.
+- **Decisão (ativos):** ativos **nunca são excluídos**. `retired` (baixado) e
+  `disposed` (descartado) são estados terminais, exigem `assets.manage`, bloqueiam
+  novas movimentações e preservam o histórico; a tela mostra um aviso e mantém a
+  consulta disponível. A alternativa de exclusão física foi descartada porque
+  apagaria a rastreabilidade de aquisição, responsável e movimentações.
+- **Decisão (categorias):** criação e edição ficam em `/patrimonio` (uso diário,
+  junto do cadastro de ativos); a exclusão com prévia de impacto fica na aba
+  **Categorias de patrimônio** da Central de Controle (`asset_category`). Categoria
+  com ativos é arquivada, não apagada. A alternativa de manter todo o CRUD apenas
+  no `/controle` foi descartada por afastar o cadastro do fluxo de patrimônio.
+- **Decisão (atomicidade):** toda operação (transferência, atribuição, situação,
+  condição, manutenção, inventário) grava `asset_movements` e auditoria no mesmo
+  lote D1, com autor, motivo e resumo; não existe movimentação sem rastro.
+- **Decisão (datas):** datas sem hora são gravadas ao meio-dia UTC. `new
+  Date("2026-10-01")` é meia-noite UTC e, exibido em UTC-3, mostrava o dia
+  anterior no histórico. O meio-dia mantém o dia correto na maior parte dos fusos.
+- **Impacto:** release 0.8.0 com API `/api/assets`, telas, anexos de ativo, aba no
+  `/controle`, 10 testes novos (204/204 em 24 arquivos) e sem migration nova. A
+  verificação Playwright local cobriu desktop e mobile; em produção a versão 0.8.0
+  foi confirmada e `/api/assets` responde 401 sem sessão.

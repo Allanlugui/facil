@@ -6,21 +6,26 @@
   "payload": {
     "schema": "facil.signature.v1",
     "project": "Facil — Plataforma de Gestão de Facilities",
-    "version": "0.7.5",
+    "version": "0.8.0",
     "author": "Allan Luiz Silveira Lima",
     "alias": "Allanlugui",
     "company": "CorpServices Group",
-    "signedAt": "2026-10-23T03:55:46-03:00",
-    "treeHash": "976bb6d5e4c08d371514dd4bb990359144f8700d99856153548d838ce0970fa1",
-    "fileCount": 186
+    "signedAt": "2026-10-24T01:09:22-03:00",
+    "treeHash": "4f0b0b727cabb39f18360b4c6134541d6b05e33b8904f54952702930c7c467c2",
+    "fileCount": 190
   },
-  "signature": "KZs6KbPJaWe6RfUKz5Rm2PIWmBgg835+jXv+cIvoE36eTOEV/4T+Egy1CmsZH+OInyZ+8OJMWTRo40WHo2NHDg==",
+  "signature": "aG0vRwN1Jw+43c2L9/pQu2xPYZAQj0OX23Z+ArLPvjTujooMbW/9i7ioE7p/1SARoIjw0J6FAotX2TtXsOZ8Bw==",
   "verify": "node scripts/verify-release.mjs",
   "files": [
     {
       "path": ".gitattributes",
       "sha256": "8be047c859085a1e5b8666f2f484b10d62fe19c9673c51debc220b2237ea3de8",
       "bytes": 393
+    },
+    {
+      "path": ".githooks/pre-push",
+      "sha256": "e00ae1bd3c4b59c730d43d902c0b385edeab9b5aeddd106f91b3ae76bc2b1d62",
+      "bytes": 394
     },
     {
       "path": ".github/workflows/ci.yml",
@@ -44,8 +49,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "5904337d3216484dd354f8e496d06d85f888cbcc57e04bdbbb4fd3e1ef634a92",
-      "bytes": 26029
+      "sha256": "91c1c91d03fe5458387f4cacd79fe76b814f9c5b882556a78974885c346ae708",
+      "bytes": 28447
     },
     {
       "path": "LICENSE",
@@ -54,8 +59,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "b633dd35c24cf36ce7dcbc9ac9f2289c1fb8d6fbd87ddc04cd6b5b18339759b4",
-      "bytes": 19803
+      "sha256": "4bac21f793b51f69db09c726cc1010462826ae45d7022e23a41096c3ef1546f8",
+      "bytes": 20004
     },
     {
       "path": "branding/README.md",
@@ -129,8 +134,8 @@
     },
     {
       "path": "docs/VERSIONAMENTO.md",
-      "sha256": "7d7e55dcae2ca5e1de2b523910060094743541aa1c91663237529816c9890419",
-      "bytes": 6178
+      "sha256": "c115a9d775f7b109661cddfc5775c7f34ac4627b7ee61c5643f5d4eb99921700",
+      "bytes": 6792
     },
     {
       "path": "docs/anexos-suporte.md",
@@ -269,12 +274,12 @@
     },
     {
       "path": "package-lock.json",
-      "sha256": "9e1a63ab53a41d3e0336d857f79a657bd3e610abc2b59b82e436f620fba2c3fe",
+      "sha256": "55ce8271545fe14b9ee0a312c86698a4a294b0ef454ff0791123023073a3c1ba",
       "bytes": 193386
     },
     {
       "path": "package.json",
-      "sha256": "13835153b5d81533b60f2aeb8a6abe4c96926ad12c08c366e6261ab8b0742682",
+      "sha256": "e28e5199fe2bc2697f0245693b46e648334c3a3c4e23fff80fc60aae5e30f296",
       "bytes": 1861
     },
     {
@@ -319,13 +324,13 @@
     },
     {
       "path": "src/client/app/layout.tsx",
-      "sha256": "4dc5241cdac2b7931b4723b692212a32261622d17d2b307e8ac4d4f122d4da25",
-      "bytes": 21319
+      "sha256": "a17e574ca43d7f0572a1f7cbda47f5c620d2ed16b6beb7caa5a0fc77b8c520a2",
+      "bytes": 21845
     },
     {
       "path": "src/client/app/router.tsx",
-      "sha256": "6095276458516133338dc397cb70c07dc8e6df2a949230fa79cfd8251695cfbd",
-      "bytes": 9207
+      "sha256": "427461834fb39be09658063b7ae983452068cabeb9e2ca4bbbaf91fa50632a45",
+      "bytes": 9785
     },
     {
       "path": "src/client/index.html",
@@ -339,8 +344,8 @@
     },
     {
       "path": "src/client/lib/attachments-card.tsx",
-      "sha256": "9bf6d6607d050e5ac9bb40991f4ac917f88ef0ff25f71501333c701bb74748f5",
-      "bytes": 5971
+      "sha256": "354ce2845fe4524503c19add351b2d870d20ad1d799e1c73578643a8c6263a87",
+      "bytes": 5974
     },
     {
       "path": "src/client/lib/brand.tsx",
@@ -399,13 +404,18 @@
     },
     {
       "path": "src/client/lib/ui.tsx",
-      "sha256": "1be51f2d5529ce2054225e182688b57c524350edda063cff547b2b507cbdb003",
-      "bytes": 29367
+      "sha256": "9340d27f263f4ecc94b8610cd48d671994017c5fe035758762e0e42de06ee6ad",
+      "bytes": 29558
     },
     {
       "path": "src/client/main.tsx",
       "sha256": "8685ef8369d61a17dc4dfa6e438bceb0fabe1ae717fb1d4aff627693aa56f359",
       "bytes": 754
+    },
+    {
+      "path": "src/client/pages/assets.tsx",
+      "sha256": "14b4877e0fa18697bd4c19c6361bf34088703c3cdca4a87b74bf94ad4bbc1101",
+      "bytes": 58785
     },
     {
       "path": "src/client/pages/audit.tsx",
@@ -604,8 +614,8 @@
     },
     {
       "path": "src/worker/control.ts",
-      "sha256": "e1c3b75e74afaec0c198b19a6b1da3d5efc4e9c150af002df5ca0ba314c99203",
-      "bytes": 17091
+      "sha256": "0a0127b83528e8bbf305f359cb8345237d8c6033f9cb19ac8cb501c090184478",
+      "bytes": 17430
     },
     {
       "path": "src/worker/db.ts",
@@ -624,8 +634,8 @@
     },
     {
       "path": "src/worker/index.ts",
-      "sha256": "693a95b9dcbe8aee18f510ab4f55d0feaa3c4326e24bf0cf540213d4d69487da",
-      "bytes": 6937
+      "sha256": "d8bf8c5adb981b74400cc54beb20f95f6a8e4eecbc24c874659d14165416ea20",
+      "bytes": 7019
     },
     {
       "path": "src/worker/mailer.ts",
@@ -658,9 +668,14 @@
       "bytes": 3047
     },
     {
+      "path": "src/worker/routes/assets.ts",
+      "sha256": "8e644e24e8dbe2cbe00be68c4dc4f30ba6a9c0d391ad62b88f613c699a543f82",
+      "bytes": 42802
+    },
+    {
       "path": "src/worker/routes/attachments.ts",
-      "sha256": "3d25d1d3b34ec779f6a0ea35475dfbeef17172a035ab9ec9a2d5138ca69f936c",
-      "bytes": 15170
+      "sha256": "a104f3c0f51324ae7e4a64fdfcbb3eb267603120dc9e6eb1f1b77aa8ba1f2515",
+      "bytes": 15413
     },
     {
       "path": "src/worker/routes/audit.ts",
@@ -903,9 +918,14 @@
       "bytes": 10947
     },
     {
+      "path": "tests/22-assets.spec.ts",
+      "sha256": "dc456a4ef84ba07479212f3cb72939703ab59b2c44632fd856c82e144e56dd54",
+      "bytes": 17944
+    },
+    {
       "path": "tests/helpers.ts",
-      "sha256": "15573d5e731733a319a63bbdbf14d6d84f101af6033447f3e1fb4f48f9c329ee",
-      "bytes": 14991
+      "sha256": "6a6f9b2cca9aa23dea04c715771f74c425a5e7b714d2892a1c8732fd55080fe6",
+      "bytes": 15236
     },
     {
       "path": "tests/setup.ts",

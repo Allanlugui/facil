@@ -159,6 +159,17 @@ export const CONTROL_ENTITIES: ControlEntity[] = [
     ],
   },
   {
+    key: "asset_category",
+    table: "asset_categories",
+    label: "Categoria de patrimônio",
+    plural: "Categorias de patrimônio",
+    permission: PERMISSIONS.ASSETS_MANAGE,
+    nameColumn: "name",
+    codeColumn: "code",
+    updatedAtColumn: "updated_at",
+    references: [R("assets", "ativos", "assets", "category_id")],
+  },
+  {
     key: "uom",
     table: "uoms",
     label: "Unidade de medida",

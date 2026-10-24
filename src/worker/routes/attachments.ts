@@ -41,6 +41,7 @@ const ENTITY_PERMISSIONS: Record<string, string> = {
   consumption_record: PERMISSIONS.CONSUMPTION_VIEW,
   product: PERMISSIONS.CATALOG_VIEW,
   location: PERMISSIONS.STRUCTURE_VIEW,
+  asset: PERMISSIONS.ASSETS_VIEW,
 };
 
 function entityPermission(entityType: string): string {
@@ -398,6 +399,14 @@ async function assertEntityAccess(
     case "product": {
       const row = await oneRow<{ id: string }>(db, `SELECT id FROM products WHERE id = ?`, [entityId]);
       if (!row) throw notFound("Produto não encontrado.");
+      return;
+    }
+    case "asset": {
+      await location(
+        await oneRow<{ location_id: string | null }>(db, `SELECT location_id FROM assets WHERE id = ?`, [
+          entityId,
+        ]),
+      );
       return;
     }
     default:

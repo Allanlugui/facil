@@ -7,7 +7,7 @@ e adjudicação, relatórios, usuários/permissões e auditoria.
 **Autor:** Allan Luiz Silveira Lima (Allanlugui)  
 **Licença:** proprietária, todos os direitos reservados (ver `LICENSE`).  
 **Assinatura:** cada release é assinada com Ed25519 (ver `docs/ASSINATURA.md`).  
-**Versão atual:** `0.7.5` (captcha como camada final no login e chamados públicos; a 0.7.4 adicionou o consumidor do outbox com cron; a 0.7.3 adicionou anexos em ordens de serviço; a 0.7.2 adicionou o CI no GitHub Actions; a 0.7.1 habilitou os anexos do suporte no R2 em produção e publicou a fundação do módulo de Patrimônio).
+**Versão atual:** `0.8.0` (módulo Patrimônio completo: cadastro, movimentações auditadas, histórico e categorias; a 0.7.5 adicionou captcha no login e chamados públicos; a 0.7.4 adicionou o consumidor do outbox com cron; a 0.7.3 adicionou anexos em ordens de serviço; a 0.7.2 adicionou o CI no GitHub Actions).
 
 > A autoria é registrada apenas pelo nome. CPF e e-mail pessoal do autor não são
 > armazenados nem exibidos pelo sistema, pela documentação ou pelo repositório.
@@ -19,6 +19,7 @@ e adjudicação, relatórios, usuários/permissões e auditoria.
 | Estrutura | Unidades, almoxarifados, salas, tipos de local e escopo por usuário |
 | Catálogo | Produtos, SKUs, unidades, fornecedores, categorias e preços |
 | Estoque | Saldos por local, entradas, saídas, transferências, ajustes e inventário |
+| Patrimônio | Ativos com código/etiqueta, local, responsável, aquisição, garantia, movimentações auditadas, histórico e categorias |
 | Consumo | Consumo por equipe, centro de custo e período |
 | Chamados | Abertura, triagem, atribuição, prioridade, categoria, SLA e anexos |
 | Ordens de serviço | Checklist, materiais, responsável, execução e conclusão |
@@ -36,7 +37,7 @@ e adjudicação, relatórios, usuários/permissões e auditoria.
 - **Cloudflare Workers** (runtime) + **Hono 4** (API)
 - **D1** (banco SQLite gerenciado, plano gratuito) + **R2** (anexos do suporte, opcional)
 - **React 19 + Vite 7 + Tailwind v4 + React Router 7** (interface)
-- **Zod 4** (validação) + **Vitest 5** (187 testes em 21 arquivos)
+- **Zod 4** (validação) + **Vitest 5** (204 testes em 24 arquivos)
 - **Durable Objects** (`SupportRoom`) para chat de suporte em tempo real, com
   D1 como fonte da verdade e polling de 60s como fallback
 - **Wrangler 4** (desenvolvimento, migrations e deploy)
@@ -61,7 +62,7 @@ No Windows, use a interface pela porta **5173** (o watcher de assets do
 ## Verificações
 
 ```bash
-npm run check           # typecheck + lint + contrato de API + 187 testes
+npm run check           # typecheck + lint + contrato de API + 204 testes
 npm run build           # build da interface + Worker
 npm run verify          # confere a assinatura da release atual
 ```
@@ -85,11 +86,12 @@ npm run deploy                           # assina a release + checks + build + d
 
 Ordem recomendada para esta versão:
 
-1. Aplicar a migration `0020_organization_purchases.sql` no D1 remoto
-   (depois da `0019_purchase_workflow.sql`).
+1. Confirmar as migrations no D1 remoto com `npm run db:migrate:remote` (a
+   `0023_assets.sql` já foi aplicada na 0.7.1; o comando é idempotente).
 2. Configurar `TICKET_INTAKE_KEY` com `wrangler secret put` (sem colocar no repo).
 3. Rodar `npm run deploy`.
-4. Abrir a URL e concluir a **Instalação inicial** (empresa, administrador e senha).
+4. Abrir a URL e validar o login; em instalação nova, concluir a **Instalação
+   inicial** (empresa, administrador e senha).
 5. Validar `/api/health`, `/build-info.json` e os cabeçalhos `X-Facil-*`.
 
 Guia completo para a equipe de TI: **`docs/IMPLANTACAO.md`**.

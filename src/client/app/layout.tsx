@@ -20,6 +20,7 @@ import {
   LogoutIcon,
   MenuIcon,
   Spinner,
+  TagIcon,
   TicketIcon,
   WrenchIcon,
 } from "../lib/ui";
@@ -39,6 +40,7 @@ const OPERATION_NAV: NavItem[] = [
   { to: "/estoque", label: "Estoque", permission: PERMISSIONS.STOCK_VIEW, icon: <BoxIcon /> },
   { to: "/consumo", label: "Consumo", permission: PERMISSIONS.CONSUMPTION_VIEW, icon: <ClipboardIcon /> },
   { to: "/inventario", label: "Inventário", permission: PERMISSIONS.INVENTORY_VIEW, icon: <BoxesIcon /> },
+  { to: "/patrimonio", label: "Patrimônio", permission: PERMISSIONS.ASSETS_VIEW, icon: <TagIcon /> },
   { to: "/chamados", label: "Chamados", permission: PERMISSIONS.TICKETS_VIEW, icon: <TicketIcon /> },
   { to: "/ordens", label: "Ordens de serviço", permission: PERMISSIONS.WORKORDERS_VIEW, icon: <WrenchIcon /> },
   { to: "/compras", label: "Compras", permission: PERMISSIONS.PURCHASES_VIEW, icon: <CartIcon /> },
@@ -55,6 +57,7 @@ const TECH_NAV: NavItem[] = [
   { to: "/ordens", label: "Ordens de serviço", permission: PERMISSIONS.WORKORDERS_VIEW, icon: <WrenchIcon /> },
   { to: "/estoque", label: "Estoque", permission: PERMISSIONS.STOCK_VIEW, icon: <BoxIcon /> },
   { to: "/consumo", label: "Consumo", permission: PERMISSIONS.CONSUMPTION_VIEW, icon: <ClipboardIcon /> },
+  { to: "/patrimonio", label: "Patrimônio", permission: PERMISSIONS.ASSETS_VIEW, icon: <TagIcon /> },
   { to: "/ajuda", label: "Suporte", icon: <HelpIcon /> },
 ];
 
@@ -78,6 +81,7 @@ const STOCK_NAV: NavItem[] = [
   { to: "/estoque", label: "Estoque", permission: PERMISSIONS.STOCK_VIEW, icon: <BoxIcon /> },
   { to: "/consumo", label: "Consumo", permission: PERMISSIONS.CONSUMPTION_VIEW, icon: <ClipboardIcon /> },
   { to: "/inventario", label: "Inventário", permission: PERMISSIONS.INVENTORY_VIEW, icon: <BoxesIcon /> },
+  { to: "/patrimonio", label: "Patrimônio", permission: PERMISSIONS.ASSETS_VIEW, icon: <TagIcon /> },
   { to: "/chamados", label: "Chamados", permission: PERMISSIONS.TICKETS_VIEW, icon: <TicketIcon /> },
   { to: "/compras", label: "Compras", permission: PERMISSIONS.PURCHASES_VIEW, icon: <CartIcon /> },
   { to: "/ajuda", label: "Suporte", icon: <HelpIcon /> },
@@ -88,6 +92,7 @@ const CLEANING_NAV: NavItem[] = [
   { to: "/", label: "Meu painel", permission: PERMISSIONS.DASHBOARD_VIEW, icon: <DashboardIcon />, end: true },
   { to: "/consumo", label: "Consumo", permission: PERMISSIONS.CONSUMPTION_VIEW, icon: <ClipboardIcon /> },
   { to: "/inventario", label: "Inventário", permission: PERMISSIONS.INVENTORY_VIEW, icon: <BoxesIcon /> },
+  { to: "/patrimonio", label: "Patrimônio", permission: PERMISSIONS.ASSETS_VIEW, icon: <TagIcon /> },
   { to: "/chamados", label: "Chamados", permission: PERMISSIONS.TICKETS_VIEW, icon: <TicketIcon /> },
   { to: "/ajuda", label: "Suporte", icon: <HelpIcon /> },
 ];
@@ -96,6 +101,7 @@ const CLEANING_NAV: NavItem[] = [
 const RECEPTION_NAV: NavItem[] = [
   { to: "/", label: "Início", permission: PERMISSIONS.DASHBOARD_VIEW, icon: <DashboardIcon />, end: true },
   { to: "/consumo", label: "Consumo", permission: PERMISSIONS.CONSUMPTION_VIEW, icon: <ClipboardIcon /> },
+  { to: "/patrimonio", label: "Patrimônio", permission: PERMISSIONS.ASSETS_VIEW, icon: <TagIcon /> },
   { to: "/chamados", label: "Chamados", permission: PERMISSIONS.TICKETS_VIEW, icon: <TicketIcon /> },
   { to: "/ajuda", label: "Suporte", icon: <HelpIcon /> },
 ];

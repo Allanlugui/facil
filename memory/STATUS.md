@@ -3,6 +3,25 @@
 - **Criado em:** 16/10/2026 22:36:22 pelo bootstrap global (`D:\DEV\criar-projeto.bat`).
 - **Diretório oficial:** `D:\DEV\Opencode\Facil`
 - **Conhecimento global:** `D:\DEV\memory\Facil\`
+- **Módulo Patrimônio completo (release 0.8.0, 24/10/2026):** API `/api/assets`
+  (lista/detalhe/criação/edição, resumo, opções, categorias e movimentações de
+  transferência, atribuição, situação, condição, manutenção e inventário), telas
+  `/patrimonio` e `/patrimonio/:id`, entidade `asset` nos anexos e aba
+  **Categorias de patrimônio** no `/controle` (`asset_category`). Ativos não são
+  excluídos: `baixado`/`descartado` são terminais, exigem `assets.manage` e
+  preservam o histórico; cada operação grava `asset_movements` + auditoria no
+  mesmo lote. Categorias são criadas/editadas em `/patrimonio`; a exclusão com
+  prévia de impacto fica no `/controle`. Datas sem hora são normalizadas para
+  meio-dia UTC (corrige o dia anterior em UTC-3). `npm run check` **204/204 em
+  24 arquivos**, typecheck, lint, contrato (59 caminhos × 154 rotas), build;
+  release assinada (Ed25519, **190 arquivos**, tree
+  `4f0b0b727cabb39f18360b4c6134541d6b05e33b8904f54952702930c7c467c2`, 24/10/2026
+  01:09:22 -03:00), `npm run verify` OK, tag `v0.8.0`, Worker
+  `716df136-b8fa-4594-bc28-9566c6fa947f`. Produção em 0.8.0
+  (`/build-info.json`), `/api/assets` responde 401 sem sessão (rota protegida) e
+  o chunk do módulo é servido. Verificação Playwright local desktop/mobile:
+  cadastro completo, lista/resumo, detalhe, histórico, anexos, todas as
+  movimentações, categorias, `/controle` e diálogos, sem overflow horizontal.
 - **R2 em produção e fundação do Patrimônio (23/10/2026):** versão **0.7.1**
   publicada. Bucket R2 `facil-attachments` criado via wrangler, binding
   `ATTACHMENTS` descomentado no `wrangler.jsonc` e `worker-configuration.d.ts`

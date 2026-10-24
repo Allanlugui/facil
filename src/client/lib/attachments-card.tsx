@@ -136,7 +136,7 @@ export function AttachmentsCard({
       {state.loading && !state.data ? <LoadingBlock label="Carregando anexos..." /> : null}
       {state.error ? <ErrorBlock message={state.error} onRetry={state.reload} /> : null}
       {state.data && items.length === 0 ? (
-        <p className="text-sm text-slate-500">Nenhum anexo nesta ordem.</p>
+        <p className="text-sm text-slate-500">Nenhum anexo neste registro.</p>
       ) : null}
       {items.length > 0 ? (
         <ul className="divide-y divide-slate-100">

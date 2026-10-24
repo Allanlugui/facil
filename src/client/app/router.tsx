@@ -41,6 +41,8 @@ const PurchaseDetailPage = lazy(() =>
   import("../pages/purchases").then((m) => ({ default: m.PurchaseDetailPage })),
 );
 const CatalogPage = lazy(() => import("../pages/catalog").then((m) => ({ default: m.CatalogPage })));
+const AssetsPage = lazy(() => import("../pages/assets").then((m) => ({ default: m.AssetsPage })));
+const AssetDetailPage = lazy(() => import("../pages/assets").then((m) => ({ default: m.AssetDetailPage })));
 const ReportsPage = lazy(() => import("../pages/reports").then((m) => ({ default: m.ReportsPage })));
 const AuditPage = lazy(() => import("../pages/audit").then((m) => ({ default: m.AuditPage })));
 const UsersPage = lazy(() => import("../pages/users").then((m) => ({ default: m.UsersPage })));
@@ -180,6 +182,16 @@ export const router = createBrowserRouter([
         element: <PermissionGate code={PERMISSIONS.CATALOG_VIEW}>{page(<CatalogPage />)}</PermissionGate>,
       },
       {
+        path: "patrimonio",
+        element: <PermissionGate code={PERMISSIONS.ASSETS_VIEW}>{page(<AssetsPage />)}</PermissionGate>,
+      },
+      {
+        path: "patrimonio/:id",
+        element: (
+          <PermissionGate code={PERMISSIONS.ASSETS_VIEW}>{page(<AssetDetailPage />)}</PermissionGate>
+        ),
+      },
+      {
         path: "relatorios",
         element: <PermissionGate code={PERMISSIONS.REPORTS_VIEW}>{page(<ReportsPage />)}</PermissionGate>,
       },
@@ -227,6 +239,7 @@ export const router = createBrowserRouter([
               PERMISSIONS.CATALOG_VIEW,
               PERMISSIONS.USERS_VIEW,
               PERMISSIONS.SETTINGS_VIEW,
+              PERMISSIONS.ASSETS_VIEW,
             ]}
           >
             {page(<ControlPage />)}

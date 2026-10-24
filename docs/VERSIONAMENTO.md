@@ -126,3 +126,12 @@ A décima segunda entrega foi publicada na versão **0.7.5**, em 23/10/2026:
 captcha como camada final (D-15) no login e na abertura de chamados públicos,
 desligado por padrão e ativado pelo titular via Configurações (`captcha.enabled`,
 `captcha.site_key`, `captcha.secret_key`): subiu o **patch**.
+
+A décima terceira entrega foi publicada na versão **0.8.0**, em 24/10/2026:
+módulo **Patrimônio** completo sobre a fundação da 0.7.1 — API `/api/assets`,
+telas `/patrimonio` e `/patrimonio/:id`, movimentações auditadas (transferência,
+atribuição, situação, condição, manutenção e inventário), histórico, anexos,
+categorias e aba **Categorias de patrimônio** na Central de Controle. Ativos não
+são excluídos: baixa/descarte são terminais e preservam o histórico. Sem migration
+nova (a `0023_assets.sql` já estava aplicada). Funcionalidade nova para o usuário
+final: subiu o **minor**.

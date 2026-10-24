@@ -1,6 +1,6 @@
 # Tarefas Pendentes: Facil
 
-Atualizado em 23/10/2026. Este é o **backlog oficial** do projeto (plano + pendências em um só lugar).
+Atualizado em 24/10/2026. Este é o **backlog oficial** do projeto (plano + pendências em um só lugar).
 
 ## PLANO DE MELHORIAS DE INFRAESTRUTURA (23/10/2026) — TODAS AS FASES PUBLICADAS
 
@@ -21,7 +21,7 @@ Plano aprovado pelo titular em 23/10/2026 (5 fases), todas entregas publicadas:
       com workflow mínimo. **Fallback ativo (24/10/2026):** hook local
       `.githooks/pre-push` + `git config core.hooksPath .githooks` roda
       `typecheck + lint + check:api` antes de todo push (rápido, sem a suite;
-      bypass `git push --no-verify`). A suite completa (194 testes) fica no
+      bypass `git push --no-verify`). A suite completa (204 testes) fica no
       `npm run check` manual. Sem cartão/suporte por decisão do titular; o CI
       no Actions continua bloqueado, sem custo.
 - [x] **Fase 3 — Consumidor do `integration_outbox` (release 0.7.4):** trigger
@@ -37,9 +37,14 @@ Plano aprovado pelo titular em 23/10/2026 (5 fases), todas entregas publicadas:
 - [x] **Fase 5 — Anexos em ordens de serviço (release 0.7.3):** card de anexos
       na tela da OS (upload/download/remoção), reutilizando o módulo genérico
       `/api/attachments`, com `attachments.documents` para documentos.
-- [ ] (Futuro) **Patrimônio — rotas e interface:** migration `0023` publicada
-      e aplicada no D1 remoto (0.7.1); falta o módulo inteiro (API `/api/assets`,
-      telas, aba de categorias no `/controle`, testes).
+- [x] **Patrimônio — módulo completo (release 0.8.0, 24/10/2026):** API
+      `/api/assets` (lista/detalhe/criação/edição, resumo, opções, categorias e
+      movimentações), telas `/patrimonio` e `/patrimonio/:id`, anexos de ativo,
+      aba **Categorias de patrimônio** no `/controle` e testes
+      (`tests/22-assets.spec.ts`, 10 testes). Ativos não são excluídos:
+      `baixado`/`descartado` são terminais e preservam o histórico; cada
+      operação grava `asset_movements` + auditoria. `npm run check`
+      **204/204 em 24 arquivos**, release assinada e tag `v0.8.0`.
 
 ## ETAPA 7 — CONCLUÍDA (22/10/2026)
 
