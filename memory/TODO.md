@@ -44,7 +44,8 @@ Plano aprovado pelo titular em 23/10/2026 (5 fases), todas entregas publicadas:
       (`tests/22-assets.spec.ts`, 10 testes). Ativos não são excluídos:
       `baixado`/`descartado` são terminais e preservam o histórico; cada
       operação grava `asset_movements` + auditoria. `npm run check`
-      **204/204 em 24 arquivos**, release assinada e tag `v0.8.0`.
+      **204/204 em 24 arquivos**, release assinada, commit `0414554` e tag
+      `v0.8.0`.
 
 ## ETAPA 7 — CONCLUÍDA (22/10/2026)
 

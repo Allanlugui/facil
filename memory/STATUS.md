@@ -16,7 +16,7 @@
   24 arquivos**, typecheck, lint, contrato (59 caminhos × 154 rotas), build;
   release assinada (Ed25519, **190 arquivos**, tree
   `4f0b0b727cabb39f18360b4c6134541d6b05e33b8904f54952702930c7c467c2`, 24/10/2026
-  01:09:22 -03:00), `npm run verify` OK, tag `v0.8.0`, Worker
+  01:09:22 -03:00), `npm run verify` OK, commit `0414554`, tag `v0.8.0`, Worker
   `716df136-b8fa-4594-bc28-9566c6fa947f`. Produção em 0.8.0
   (`/build-info.json`), `/api/assets` responde 401 sem sessão (rota protegida) e
   o chunk do módulo é servido. Verificação Playwright local desktop/mobile:
