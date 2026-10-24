@@ -81,8 +81,11 @@
 
 ## Hook local de qualidade (24/10/2026)
 
-- `.githooks/pre-push` roda `npm run check` antes de todo push; ativado por
+- `.githooks/pre-push` roda `typecheck + lint + check:api` antes de todo push
+  (rápido, sem a suite de testes); ativado por
   `git config core.hooksPath .githooks` (configuração local, não versionada).
+- A suite completa continua em `npm run check` (194 testes) para rodar manual
+  antes de release/deploy.
 - Bypass consciente: `git push --no-verify`.
 - Motivo: CI do GitHub Actions bloqueado por lock de billing da conta; o hook
   garante o gate local sem depender do Actions.

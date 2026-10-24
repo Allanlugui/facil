@@ -1,8 +1,11 @@
 #!/bin/sh
-# Hook local do Facil: roda o check completo antes de todo push.
+# Hook local do Facil: roda typecheck + lint + contrato de API antes de todo push.
+# A suite completa de testes fica para `npm run check` manual (ou CI).
 # Ativado com: git config core.hooksPath .githooks
 # Bypass consciente: git push --no-verify
 set -e
-printf '\n[pre-push] npm run check...\n'
-npm run check
+printf '\n[pre-push] typecheck + lint + check:api...\n'
+npm run typecheck
+npm run lint
+npm run check:api
 printf '[pre-push] OK\n'

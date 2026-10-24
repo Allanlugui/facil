@@ -20,8 +20,9 @@ Plano aprovado pelo titular em 23/10/2026 (5 fases), todas entregas publicadas:
       (run público `SecureFind`, 03/10/2026); reproduzido em repo privado novo e
       com workflow mínimo. **Fallback ativo (24/10/2026):** hook local
       `.githooks/pre-push` + `git config core.hooksPath .githooks` roda
-      `npm run check` antes de todo push (194/194 verdes; bypass
-      `git push --no-verify`). Sem cartão/suporte por decisão do titular; o CI
+      `typecheck + lint + check:api` antes de todo push (rápido, sem a suite;
+      bypass `git push --no-verify`). A suite completa (194 testes) fica no
+      `npm run check` manual. Sem cartão/suporte por decisão do titular; o CI
       no Actions continua bloqueado, sem custo.
 - [x] **Fase 3 — Consumidor do `integration_outbox` (release 0.7.4):** trigger
       cron `*/5 * * * *` + endpoint `POST /api/integrations/outbox/process`.
