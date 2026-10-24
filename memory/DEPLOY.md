@@ -78,3 +78,11 @@
 4. Produção somente após preview validado **e** autorização explícita do usuário.
 5. Segredos conferidos nos mecanismos da plataforma, nunca no repositório.
 6. Registro do resultado real (aprovado / reprovado / não executado) na memória do projeto.
+
+## Hook local de qualidade (24/10/2026)
+
+- `.githooks/pre-push` roda `npm run check` antes de todo push; ativado por
+  `git config core.hooksPath .githooks` (configuração local, não versionada).
+- Bypass consciente: `git push --no-verify`.
+- Motivo: CI do GitHub Actions bloqueado por lock de billing da conta; o hook
+  garante o gate local sem depender do Actions.

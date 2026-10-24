@@ -1,0 +1,8 @@
+#!/bin/sh
+# Hook local do Facil: roda o check completo antes de todo push.
+# Ativado com: git config core.hooksPath .githooks
+# Bypass consciente: git push --no-verify
+set -e
+printf '\n[pre-push] npm run check...\n'
+npm run check
+printf '[pre-push] OK\n'
