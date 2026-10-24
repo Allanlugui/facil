@@ -14,9 +14,13 @@ Plano aprovado pelo titular em 23/10/2026 (5 fases), todas entregas publicadas:
       fundação do Patrimônio (D-56).
 - [~] **Fase 2 — CI no GitHub Actions (release 0.7.2; EXECUÇÃO BLOQUEADA NA CONTA):**
       workflow `.github/workflows/ci.yml` publicado e registrado como ativo
-      (`npm ci` → `npm run check` → `npm run build`, Node 24). **Execuções
-      bloqueadas na conta GitHub** (`startup_failure`, sem jobs) — pendência de
-      billing do titular (Actions minutes / spending limit para repos privados).
+      (`npm ci` → `npm run check` → `npm run build`, Node 24). **Causa confirmada
+      em 24/10/2026: lock de billing da conta GitHub** — anotação oficial "The job
+      was not started because your account is locked due to a billing issue"
+      (run público `SecureFind`, 03/10/2026); reproduzido em repo privado novo e
+      com workflow mínimo. Ação humana: adicionar/atualizar cartão em
+      `github.com/settings/billing` → Payment information; se persistir, suporte
+      GitHub (billing).
 - [x] **Fase 3 — Consumidor do `integration_outbox` (release 0.7.4):** trigger
       cron `*/5 * * * *` + endpoint `POST /api/integrations/outbox/process`.
       Idempotência, marcação `processing`, retry com backoff e `failed` após

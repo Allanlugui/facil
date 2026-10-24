@@ -29,11 +29,15 @@
   `npm run build`, Node 24, cache npm, `permissions: contents: read`) no manifesto
   assinado (181 arquivos, tree `033d321a…`, commit `8b62533`, tag `v0.7.2`). O
   workflow foi aceito e está ativo, mas as EXECUÇÕES falham na conta GitHub com
-  `startup_failure` instantâneo (sem jobs) — inclusive workflow mínimo de teste em
-  branches descartáveis; repo público da mesma conta executou workflow em 03/10.
-  Hipótese: cota/spending limit de Actions para repositório privado (plano Free).
-  Pendência humana: conferir Billing → Actions minutes / spending limit em
-  github.com/settings/billing. Sem mudança de comportamento do produto.
+  `startup_failure` instantâneo (sem jobs). **Causa confirmada em 24/10/2026:**
+  lock de billing da conta, não cota/YAML/registro — a anotação oficial do GitHub
+  no run público `Allanlugui/SecureFind` (03/10/2026) é "The job was not started
+  because your account is locked due to a billing issue." Reproduzido em repo
+  privado novo (`Sislip`, branch descartável) e com workflow mínimo de 1 step no
+  `facil`; o billing mostra `usageItems: []` (ago/set/out) e plano Free com
+  2.000 min/mês. Ação humana: adicionar/atualizar cartão em Billing & Licensing →
+  Payment information (força nova autorização) e, se persistir, abrir suporte
+  GitHub (billing). Sem mudança de comportamento do produto.
 - **Anexos em ordens de serviço (release 0.7.3, 23/10/2026):** card de anexos na
   tela da OS reutilizando o módulo genérico `/api/attachments` (upload/download/
   remoção, controle de entidade, `attachments.documents` para documentos, auditoria
@@ -397,8 +401,8 @@
   (sem domínio próprio nem Cloudflare Access), **R2 LIGADO** (bucket
   `facil-attachments` ativo desde 23/10/2026; anexos de suporte funcionam;
   chamados/OS continuam no D1), **CI publicado mas não executável** (workflow
-  ativo, execuções `startup_failure` por limite de conta GitHub — ver pendência
-  de billing), **consumidor do outbox publicado mas sem chaves** (`TICKET_INTAKE_KEY`
+  ativo, execuções `startup_failure` por lock de billing da conta GitHub — ver
+  pendência de billing), **consumidor do outbox publicado mas sem chaves** (`TICKET_INTAKE_KEY`
   / `SERVICENOW_INSTANCE_URL` não configuradas — pula silenciosamente),
   **captcha publicado mas desligado** (precisa de `captcha.enabled` e das chaves
   em Configurações).
@@ -428,8 +432,11 @@
   (upload + download íntegro no chat de suporte). Ver pendência equivalente em
   `TODO.md` (Fase 1 do plano de melhorias concluída).
 - ⬜ **Opcionais do titular (dependem de credenciais/configuração):**
-  - **Billing do GitHub:** desbloquear execuções do CI (Actions minutes / spending
-    limit para repos privados) em `github.com/settings/billing`.
+  - **Billing do GitHub:** desbloquear execuções do CI — a conta está com lock de
+    billing ("account is locked due to a billing issue"), mesmo com 0 minutos
+    usados no plano Free. Adicionar/atualizar cartão em
+    `github.com/settings/billing` → **Payment information** (força nova
+    autorização); se persistir, abrir suporte GitHub (billing).
   - **Integração outbox:** configurar secrets do Worker `TICKET_INTAKE_KEY` e
     `SERVICENOW_INSTANCE_URL` para o consumidor cron enviar eventos ao destino.
   - **Captcha:** configurar `captcha.enabled`, `captcha.site_key` e
