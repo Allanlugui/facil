@@ -37,7 +37,10 @@
   `facil`; o billing mostra `usageItems: []` (ago/set/out) e plano Free com
   2.000 min/mês. Ação humana: adicionar/atualizar cartão em Billing & Licensing →
   Payment information (força nova autorização) e, se persistir, abrir suporte
-  GitHub (billing). Sem mudança de comportamento do produto.
+  GitHub (billing). **Fallback adotado em 24/10/2026:** hook local
+  `.githooks/pre-push` roda `npm run check` antes de todo push (194/194 verdes;
+  bypass `git push --no-verify`), sem depender do Actions. Sem mudança de
+  comportamento do produto.
 - **Anexos em ordens de serviço (release 0.7.3, 23/10/2026):** card de anexos na
   tela da OS reutilizando o módulo genérico `/api/attachments` (upload/download/
   remoção, controle de entidade, `attachments.documents` para documentos, auditoria
@@ -432,11 +435,11 @@
   (upload + download íntegro no chat de suporte). Ver pendência equivalente em
   `TODO.md` (Fase 1 do plano de melhorias concluída).
 - ⬜ **Opcionais do titular (dependem de credenciais/configuração):**
-  - **Billing do GitHub:** desbloquear execuções do CI — a conta está com lock de
-    billing ("account is locked due to a billing issue"), mesmo com 0 minutos
-    usados no plano Free. Adicionar/atualizar cartão em
-    `github.com/settings/billing` → **Payment information** (força nova
-    autorização); se persistir, abrir suporte GitHub (billing).
+  - **Billing do GitHub:** CI do Actions bloqueado por lock de billing
+    ("account is locked due to a billing issue"), mesmo com 0 minutos usados no
+    plano Free. **Fallback ativo:** hook local `.githooks/pre-push` roda
+    `npm run check` antes de todo push (ver `memory/DEPLOY.md`). Destravar o
+    Actions exigiria cartão/suporte; decisão do titular: seguir sem Actions.
   - **Integração outbox:** configurar secrets do Worker `TICKET_INTAKE_KEY` e
     `SERVICENOW_INSTANCE_URL` para o consumidor cron enviar eventos ao destino.
   - **Captcha:** configurar `captcha.enabled`, `captcha.site_key` e
