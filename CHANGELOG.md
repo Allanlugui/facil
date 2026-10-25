@@ -3,6 +3,71 @@
 Todas as alterações relevantes do Facil são registradas aqui. O projeto segue o
 versionamento descrito em `docs/VERSIONAMENTO.md`.
 
+## [0.9.0] — 2026-10-24
+
+Módulo **LGPD** completo (Lei 13.709/2018) para empresas de contabilidade:
+registro próprio de bases legais, operações de tratamento, titulares de dados,
+consentimentos, direitos do titular, encarregado (DPO), medidas de segurança e
+incidentes. Seis migrations aditivas (`0024` a `0029`), nenhuma destrutiva;
+sem tabelas existentes alteradas; não publicado ainda (pendente da decisão do
+titular).
+
+### Adicionado
+
+- **LGPD — Base legal (Art. 7º)** (`src/worker/legal.ts`, `routes/legal.ts`,
+  `client/pages/legal.tsx`): catálogo de bases legais (consentimento, contrato,
+  obrigação legal, interesse legítimo etc.) e operações de tratamento vinculadas
+  a exatamente uma base legal ativa, com finalidade, categorias de dados e
+  titulares, prazo de guarda e controlador. Permissões `legal.view` /
+  `legal.manage`. Migração `0024_legal_basis.sql`.
+- **LGPD — Consentimento (Art. 8º)** (`src/worker/consents.ts`,
+  `routes/consents.ts`, `client/pages/consents.tsx`): titulares de dados e
+  consentimentos vinculados a uma operação e base legal 'Consentimento', com
+  meio, versão do texto, cláusula destacada quando escrito, ônus da prova do
+  controlador e revogação a qualquer momento (nunca apagado). Permissões
+  `consent.view` / `consent.manage`. Migração `0025_consents.sql`.
+- **LGPD — Encarregado (DPO) (Art. 41)** (`src/worker/dpo.ts`,
+  `routes/dpo.ts`, `client/pages/dpo.tsx`): cadastro do encarregado com nome,
+  contato, departamento, período de vigência e ativo/inativo; apenas um
+  encarregado ativo por vez, desativação preserva o histórico. Permissões
+  `dpo.view` / `dpo.manage`. Migração `0026_dpo.sql`.
+- **LGPD — Direitos do titular (Arts. 18/19)** (`src/worker/data_subject_requests.ts`,
+  `routes/dsr.ts`, `client/pages/data-subject-requests.tsx`): solicitações de
+  acesso, correção, eliminação, portabilidade, revogação, informação e
+  consequências, com prazo de 15 dias calculado automaticamente, status e
+  resposta. Permissões `dsr.view` / `dsr.manage`. Migração
+  `0027_data_subject_requests.sql`.
+- **LGPD — Medidas de segurança (Arts. 46/49)** (`src/worker/security_measures.ts`,
+  `routes/sec.ts`, `client/pages/security-measures.tsx`): inventário de medidas
+  técnicas e administrativas com tipo, categoria, status de implementação,
+  responsável, periodicidade de revisão e evidência; nunca apagadas, apenas
+  desativadas com motivo. Permissões `sec.view` / `sec.manage`. Migração
+  `0028_security_measures.sql`.
+- **LGPD — Incidentes de segurança (Art. 48)** (`src/worker/security_incidents.ts`,
+  `routes/incident.ts`, `client/pages/security-incidents.tsx`): registro de
+  incidentes com os seis elementos da comunicação obrigatória (natureza dos
+  dados afetados, titulares envolvidos, medidas de proteção, riscos, motivo da
+  demora e medidas de reversão/mitigação), comunicação à ANPD e aos titulares,
+  gravidade e status. Permissões `incident.view` / `incident.manage`. Migração
+  `0029_security_incidents.sql`.
+- **Rotas da API**: `/api/legal`, `/api/consent`, `/api/dpo`, `/api/dsr`,
+  `/api/sec`, `/api/incident` com validação Zod e `requirePermission`; contrato
+  de API confere 69 caminhos do cliente contra 178 rotas do worker
+  (`check:api` OK).
+- **Qualidade**: `npm run check` verde (typecheck, lint, `check:api`,
+  69×178 rotas); `npm run build` verde; testes de unidade do D1 falham por erro
+  pré-existing de FOREIGN KEY no setup de teste (não relacionado a estas
+  migrations).
+
+### Alterado
+
+- `package.json`, `package-lock.json`: versão `0.8.0` → `0.9.0`.
+- `src/shared/permissions.ts`: 12 novas permissões (`legal`, `consent`, `dpo`,
+  `dsr`, `sec`, `incident` × view/manage); catálogo sobe para 60 permissões.
+- `src/shared/types.ts`: novos tipos TypeScript para todas as entidades LGPD.
+- `src/client/app/router.tsx`: novas rotas `/legal`, `/consent`, `/dpo`, `/dsr`,
+  `/seguranca`, `/incidentes` com guarda de permissão.
+
 ## [0.8.0] — 2026-10-24
 
 Módulo **Patrimônio** completo (a fundação com migration `0023` entrou na 0.7.1):

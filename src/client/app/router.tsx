@@ -43,6 +43,12 @@ const PurchaseDetailPage = lazy(() =>
 const CatalogPage = lazy(() => import("../pages/catalog").then((m) => ({ default: m.CatalogPage })));
 const AssetsPage = lazy(() => import("../pages/assets").then((m) => ({ default: m.AssetsPage })));
 const AssetDetailPage = lazy(() => import("../pages/assets").then((m) => ({ default: m.AssetDetailPage })));
+const LegalPage = lazy(() => import("../pages/legal"));
+const ConsentsPage = lazy(() => import("../pages/consents"));
+const DpoPage = lazy(() => import("../pages/dpo"));
+const DataSubjectRequestsPage = lazy(() => import("../pages/data-subject-requests"));
+const SecurityMeasuresPage = lazy(() => import("../pages/security-measures"));
+const SecurityIncidentsPage = lazy(() => import("../pages/security-incidents"));
 const ReportsPage = lazy(() => import("../pages/reports").then((m) => ({ default: m.ReportsPage })));
 const AuditPage = lazy(() => import("../pages/audit").then((m) => ({ default: m.AuditPage })));
 const UsersPage = lazy(() => import("../pages/users").then((m) => ({ default: m.UsersPage })));
@@ -189,6 +195,42 @@ export const router = createBrowserRouter([
         path: "patrimonio/:id",
         element: (
           <PermissionGate code={PERMISSIONS.ASSETS_VIEW}>{page(<AssetDetailPage />)}</PermissionGate>
+        ),
+      },
+      {
+        path: "legal",
+        element: (
+          <PermissionGate code={PERMISSIONS.LEGAL_VIEW}>{page(<LegalPage />)}</PermissionGate>
+        ),
+      },
+      {
+        path: "consent",
+        element: (
+          <PermissionGate code={PERMISSIONS.CONSENT_VIEW}>{page(<ConsentsPage />)}</PermissionGate>
+        ),
+      },
+      {
+        path: "dpo",
+        element: (
+          <PermissionGate code={PERMISSIONS.DPO_VIEW}>{page(<DpoPage />)}</PermissionGate>
+        ),
+      },
+      {
+        path: "dsr",
+        element: (
+          <PermissionGate code={PERMISSIONS.DSR_VIEW}>{page(<DataSubjectRequestsPage />)}</PermissionGate>
+        ),
+      },
+      {
+        path: "seguranca",
+        element: (
+          <PermissionGate code={PERMISSIONS.SEC_VIEW}>{page(<SecurityMeasuresPage />)}</PermissionGate>
+        ),
+      },
+      {
+        path: "incidentes",
+        element: (
+          <PermissionGate code={PERMISSIONS.INCIDENT_VIEW}>{page(<SecurityIncidentsPage />)}</PermissionGate>
         ),
       },
       {

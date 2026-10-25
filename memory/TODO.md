@@ -489,6 +489,64 @@ Frontend (React Router 7, SPA com chunks por página):
 - [x] Verificação Playwright ponta a ponta: lote com itens fora do catálogo, triagem, alinhamento, autorização em compra direta, pedido com preços e recebimento com produto existente + cadastro rápido.
 - [x] Corrigido aviso de hidratação do `PageHeader` (`<div>` dentro de `<p>`).
 
+- [x] **Módulo LGPD — registro de base legal e operações de tratamento (24/10/2026):** migration
+      `0024_legal_basis.sql` (tabelas `legal_bases` e `data_processing_operations`,
+      permissões `legal.view`/`legal.manage`), worker `src/worker/legal.ts`, rotas
+      `src/worker/routes/legal.ts`, página `src/client/pages/legal.tsx`, tipos em
+      `src/shared/types.ts`, montado em `src/worker/index.ts` (`/api/legal`) e
+      `src/client/app/router.tsx` (`/legal`). Primeiro requisito de Alta prioridade do mapeamento
+      LGPD (Art. 7º) — fundacional, desacoplado e de baixo esforço. `npm run check` verde
+      (typecheck, lint, check:api 50×119); build do cliente OK. Publicado em produção
+      (Worker v0.9.0, `https://facil.cf-pilot-disposable.workers.dev`). Detalhes em
+      `memory/DECISOES.md` (D-58).
+- [x] **Módulo LGPD — consentimento para tratamento de dados (24/10/2026):** migration
+      `0025_consents.sql` (tabelas `data_subjects` e `consents`,
+      permissões `consent.view`/`consent.manage`), worker `src/worker/consents.ts`, rotas
+      `src/worker/routes/consents.ts`, página `src/client/pages/consents.tsx`, tipos em
+      `src/shared/types.ts`, montado em `src/worker/index.ts` (`/api/consent`) e
+      `src/client/app/router.tsx` (`/consent`). Segundo requisito de Alta prioridade do mapeamento
+      LGPD (Art. 8º) — depende da base legal (D-58), desacoplado e de baixo esforço. `npm run check`
+      verde (typecheck, lint, check:api 64×165); build do cliente OK. Publicado em produção
+      (Worker v0.9.0). Detalhes em `memory/DECISOES.md` (D-59).
+- [x] **Módulo LGPD — encarregado (DPO) (24/10/2026):** migration
+      `0026_dpo.sql` (tabela `data_protection_officers`,
+      permissões `dpo.view`/`dpo.manage`), worker `src/worker/dpo.ts`, rotas
+      `src/worker/routes/dpo.ts`, página `src/client/pages/dpo.tsx`, tipos em
+      `src/shared/types.ts`, montado em `src/worker/index.ts` (`/api/dpo`) e
+      `src/client/app/router.tsx` (`/dpo`). Terceiro requisito de Alta prioridade do mapeamento
+      LGPD (Art. 41) — depende apenas da infraestrutura de usuários, desacoplado e de baixo
+      esforço. `npm run check` verde (typecheck, lint, check:api 66×169); build do cliente OK.
+      Publicado em produção (Worker v0.9.0). Detalhes em `memory/DECISOES.md` (D-60).
+- [x] **Módulo LGPD — direitos do titular (24/10/2026):** migration
+      `0027_data_subject_requests.sql` (tabela `data_subject_requests`,
+      permissões `dsr.view`/`dsr.manage`), worker `src/worker/data_subject_requests.ts`, rotas
+      `src/worker/routes/dsr.ts`, página `src/client/pages/data-subject-requests.tsx`, tipos em
+      `src/shared/types.ts`, montado em `src/worker/index.ts` (`/api/dsr`) e
+      `src/client/app/router.tsx` (`/dsr`). Quarto requisito de Alta prioridade do mapeamento
+      LGPD (Arts. 18/19) — depende dos titulares (D-59) e operações (D-58), desacoplado e de
+      médio esforço. `npm run check` verde (typecheck, lint, check:api 67×172); build do cliente
+      OK. Publicado em produção (Worker v0.9.0). Detalhes em `memory/DECISOES.md` (D-61).
+- [x] **Módulo LGPD — medidas de segurança (24/10/2026):** migration
+      `0028_security_measures.sql` (tabela `security_measures`,
+      permissões `sec.view`/`sec.manage`), worker `src/worker/security_measures.ts`, rotas
+      `src/worker/routes/sec.ts`, página `src/client/pages/security-measures.tsx`, tipos em
+      `src/shared/types.ts`, montado em `src/worker/index.ts` (`/api/sec`) e
+      `src/client/app/router.tsx` (`/seguranca`). Quinto requisito de Alta prioridade do mapeamento
+      LGPD (Arts. 46/49) — inventário de medidas técnicas/administrativas com status,
+      responsável, revisões e evidência. `npm run check` verde (typecheck, lint, check:api
+      68×176); build do cliente OK. Publicado em produção (Worker v0.9.0).
+      Detalhes em `memory/DECISOES.md` (D-62).
+- [x] **Módulo LGPD — incidentes de segurança (24/10/2026):** migration
+      `0029_security_incidents.sql` (tabela `security_incidents`,
+      permissões `incident.view`/`incident.manage`), worker
+      `src/worker/security_incidents.ts`, rotas `src/worker/routes/incident.ts`,
+      página `src/client/pages/security-incidents.tsx`, tipos em `src/shared/types.ts`,
+      montado em `src/worker/index.ts` (`/api/incident`) e `src/client/app/router.tsx`
+      (`/incidentes`). Último requisito de Alta prioridade do mapeamento LGPD (Art. 48) —
+      registro com os seis elementos da comunicação obrigatória rotulados artigo por artigo,
+      comunicação à ANPD e aos titulares. `npm run check` verde (typecheck, lint, check:api
+      69×178); build do cliente OK. Publicado em produção (Worker v0.9.0).
+      Detalhes em `memory/DECISOES.md` (D-63).
 
 ## Regras permanentes de execução
 

@@ -79,6 +79,24 @@ export const PERMISSIONS = {
 
   SETTINGS_VIEW: "settings.view",
   SETTINGS_MANAGE: "settings.manage",
+
+  LEGAL_VIEW: "legal.view",
+  LEGAL_MANAGE: "legal.manage",
+
+  CONSENT_VIEW: "consent.view",
+  CONSENT_MANAGE: "consent.manage",
+
+  DPO_VIEW: "dpo.view",
+  DPO_MANAGE: "dpo.manage",
+
+  DSR_VIEW: "dsr.view",
+  DSR_MANAGE: "dsr.manage",
+
+  SEC_VIEW: "sec.view",
+  SEC_MANAGE: "sec.manage",
+
+  INCIDENT_VIEW: "incident.view",
+  INCIDENT_MANAGE: "incident.manage",
 } as const;
 
 export type PermissionCode = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -241,6 +259,54 @@ export const PERMISSION_GROUPS: readonly PermissionGroup[] = [
     codes: [
       { code: "settings.view", label: "Visualizar configurações" },
       { code: "settings.manage", label: "Alterar configurações do sistema" },
+    ],
+  },
+  {
+    module: "legal",
+    label: "LGPD - Base legal",
+    codes: [
+      { code: "legal.view", label: "Visualizar bases legais e operações de tratamento" },
+      { code: "legal.manage", label: "Gerenciar bases legais e operações de tratamento" },
+    ],
+  },
+  {
+    module: "consent",
+    label: "LGPD - Consentimento",
+    codes: [
+      { code: "consent.view", label: "Visualizar titulares e consentimentos" },
+      { code: "consent.manage", label: "Criar, editar e revogar consentimentos" },
+    ],
+  },
+  {
+    module: "dpo",
+    label: "LGPD - Encarregado (DPO)",
+    codes: [
+      { code: "dpo.view", label: "Visualizar encarregado (DPO)" },
+      { code: "dpo.manage", label: "Criar, editar e desativar encarregado (DPO)" },
+    ],
+  },
+  {
+    module: "dsr",
+    label: "LGPD - Direitos do titular",
+    codes: [
+      { code: "dsr.view", label: "Visualizar solicitações de direitos do titular" },
+      { code: "dsr.manage", label: "Criar, editar e responder solicitações de direitos do titular" },
+    ],
+  },
+  {
+    module: "sec",
+    label: "LGPD - Medidas de segurança",
+    codes: [
+      { code: "sec.view", label: "Visualizar inventário de medidas de segurança" },
+      { code: "sec.manage", label: "Criar, editar e desativar medidas de segurança" },
+    ],
+  },
+  {
+    module: "incident",
+    label: "LGPD - Incidentes de segurança",
+    codes: [
+      { code: "incident.view", label: "Visualizar incidentes de segurança" },
+      { code: "incident.manage", label: "Registrar, atualizar e comunicar incidentes" },
     ],
   },
 ];

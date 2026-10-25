@@ -405,3 +405,370 @@ export function parseQtyToMilli(input: string | number): number | null {
   if (!Number.isFinite(value)) return null;
   return toMilli(value);
 }
+
+/* -------------------------------------------------------------------------- */
+/* LGPD - Base legal para tratamento de dados (Art. 7º, Lei 13.709/2018)      */
+/* -------------------------------------------------------------------------- */
+
+export interface LegalBase {
+  id: Id;
+  code: string;
+  name: string;
+  description: string | null;
+  article_ref: string | null;
+  is_active: boolean;
+  created_at: IsoDateTime;
+  updated_at: IsoDateTime;
+}
+
+export interface LegalBaseCreate {
+  code: string;
+  name: string;
+  description?: string | null;
+  article_ref?: string | null;
+}
+
+export interface LegalBaseUpdate {
+  name?: string | null;
+  description?: string | null;
+  article_ref?: string | null;
+  is_active?: boolean | null;
+}
+
+export interface DataProcessingOperation {
+  id: Id;
+  code: string;
+  name: string;
+  description: string | null;
+  legal_base_id: Id;
+  legal_base_code: string | null;
+  legal_base_name: string | null;
+  purpose: string;
+  data_categories: string[];      // JSON armazenado no banco
+  data_subjects: string[];        // JSON armazenado no banco
+  retention_period: string | null;
+  retention_justification: string | null;
+  controller: string | null;
+  dpo_contact: string | null;
+  is_active: boolean;
+  created_by: Id;
+  created_at: IsoDateTime;
+  updated_at: IsoDateTime;
+  deleted_at: string | null;
+  deleted_by: Id | null;
+}
+
+export interface DataProcessingOperationCreate {
+  name: string;
+  description?: string | null;
+  legal_base_id: Id;
+  purpose: string;
+  data_categories: string[];
+  data_subjects: string[];
+  retention_period?: string | null;
+  retention_justification?: string | null;
+  controller?: string | null;
+  dpo_contact?: string | null;
+}
+
+export interface DataProcessingOperationUpdate {
+  name?: string | null;
+  description?: string | null;
+  legal_base_id?: Id | null;
+  purpose?: string | null;
+  data_categories?: string[] | null;
+  data_subjects?: string[] | null;
+  retention_period?: string | null;
+  retention_justification?: string | null;
+  controller?: string | null;
+  dpo_contact?: string | null;
+  is_active?: boolean | null;
+}
+
+/* -------------------------------------------------------------------------- */
+/* LGPD - Titulares de dados e consentimento (Art. 8º, Lei 13.709/2018)       */
+/* -------------------------------------------------------------------------- */
+
+export interface DataSubject {
+  id: Id;
+  code: string;
+  name: string;
+  email: string | null;
+  document: string | null;
+  role: string;
+  is_active: boolean;
+  created_at: IsoDateTime;
+  updated_at: IsoDateTime;
+}
+
+export interface DataSubjectCreate {
+  code: string;
+  name: string;
+  email?: string | null;
+  document?: string | null;
+  role?: string | null;
+}
+
+export interface DataSubjectUpdate {
+  name?: string | null;
+  email?: string | null;
+  document?: string | null;
+  role?: string | null;
+  is_active?: boolean | null;
+}
+
+export interface Consent {
+  id: Id;
+  code: string;
+  data_subject_id: Id;
+  data_subject_code: string | null;
+  data_subject_name: string | null;
+  operation_id: Id;
+  operation_code: string | null;
+  operation_name: string | null;
+  legal_base_id: Id;
+  legal_base_code: string | null;
+  legal_base_name: string | null;
+  medium: string;
+  consented_at: string;
+  consented_by: Id;
+  consented_by_name: string | null;
+  text_version: string;
+  highlighted_clause: boolean;
+  ip_address: string | null;
+  user_agent: string | null;
+  status: string;
+  revoked_at: string | null;
+  revoked_by: Id | null;
+  revoked_by_name: string | null;
+  revocation_reason: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ConsentCreate {
+  data_subject_id: Id;
+  operation_id: Id;
+  legal_base_id: Id;
+  medium: string;
+  text_version: string;
+  highlighted_clause: boolean;
+  ip_address?: string | null;
+  user_agent?: string | null;
+}
+
+export interface ConsentUpdate {
+  medium?: string | null;
+  text_version?: string | null;
+  highlighted_clause?: boolean | null;
+  ip_address?: string | null;
+  user_agent?: string | null;
+  status?: string | null;
+  revocation_reason?: string | null;
+}
+
+export interface ConsentRevoke {
+  revocation_reason?: string | null;
+}
+
+/* -------------------------------------------------------------------------- */
+/* LGPD - Encarregado (DPO) - Art. 41, Lei 13.709/2018                        */
+/* -------------------------------------------------------------------------- */
+
+export interface DataProtectionOfficer {
+  id: Id;
+  code: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  department: string | null;
+  active_from: string;
+  active_until: string | null;
+  is_active: boolean;
+  created_by: Id;
+  created_at: IsoDateTime;
+  updated_at: IsoDateTime;
+  deactivated_at: string | null;
+  deactivated_by: Id | null;
+  deactivation_reason: string | null;
+}
+
+export interface DataProtectionOfficerCreate {
+  code: string;
+  name: string;
+  email: string;
+  phone?: string | null;
+  department?: string | null;
+  active_from: string;
+  active_until?: string | null;
+}
+
+export interface DataProtectionOfficerUpdate {
+  name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  department?: string | null;
+  active_from?: string | null;
+  active_until?: string | null;
+  is_active?: boolean | null;
+}
+
+/* -------------------------------------------------------------------------- */
+/* LGPD - Direitos do titular (Arts. 18 e 19, Lei 13.709/2018)                */
+/* -------------------------------------------------------------------------- */
+
+export interface DataSubjectRequest {
+  id: Id;
+  code: string;
+  data_subject_id: Id;
+  data_subject_code: string | null;
+  data_subject_name: string | null;
+  request_type: string;
+  status: string;
+  requested_at: string;
+  due_date: string;
+  responded_at: string | null;
+  response_summary: string | null;
+  response_details: string | null;
+  responsible_user_id: Id | null;
+  responsible_user_name: string | null;
+  created_by: Id;
+  created_at: IsoDateTime;
+  updated_at: IsoDateTime;
+}
+
+export interface DataSubjectRequestCreate {
+  data_subject_id: Id;
+  request_type: string;
+  requested_at: string;
+  response_summary?: string | null;
+  response_details?: string | null;
+  responsible_user_id?: Id | null;
+}
+
+export interface DataSubjectRequestUpdate {
+  status?: string | null;
+  response_summary?: string | null;
+  response_details?: string | null;
+  responsible_user_id?: Id | null;
+  responded_at?: string | null;
+}
+
+/* -------------------------------------------------------------------------- */
+/* LGPD - Medidas de segurança (Arts. 46 e 49, Lei 13.709/2018)               */
+/* -------------------------------------------------------------------------- */
+
+export interface SecurityMeasure {
+  id: Id;
+  code: string;
+  name: string;
+  description: string | null;
+  type: string;
+  category: string;
+  implementation_status: string;
+  responsible_user_id: Id | null;
+  responsible_user_name: string | null;
+  review_frequency: string | null;
+  last_review_at: string | null;
+  next_review_at: string | null;
+  evidence: string | null;
+  is_active: boolean;
+  deactivated_at: string | null;
+  deactivated_by: Id | null;
+  deactivation_reason: string | null;
+  created_by: Id;
+  created_at: IsoDateTime;
+  updated_at: IsoDateTime;
+}
+
+export interface SecurityMeasureCreate {
+  code: string;
+  name: string;
+  description?: string | null;
+  type: string;
+  category: string;
+  implementation_status?: string | null;
+  responsible_user_id?: Id | null;
+  review_frequency?: string | null;
+  last_review_at?: string | null;
+  next_review_at?: string | null;
+  evidence?: string | null;
+}
+
+export interface SecurityMeasureUpdate {
+  name?: string | null;
+  description?: string | null;
+  type?: string | null;
+  category?: string | null;
+  implementation_status?: string | null;
+  responsible_user_id?: Id | null;
+  review_frequency?: string | null;
+  last_review_at?: string | null;
+  next_review_at?: string | null;
+  evidence?: string | null;
+  is_active?: boolean | null;
+}
+
+/* -------------------------------------------------------------------------- */
+/* LGPD - Incidentes de segurança (Art. 48, Lei 13.709/2018)                  */
+/* -------------------------------------------------------------------------- */
+
+export interface SecurityIncident {
+  id: Id;
+  code: string;
+  title: string;
+  description: string;
+  severity: string;
+  detected_at: string;
+  data_affected: string;
+  subjects_affected: string;
+  security_measures: string | null;
+  risks: string | null;
+  communication_delay_reason: string | null;
+  mitigation_measures: string | null;
+  status: string;
+  anpd_notified_at: string | null;
+  subjects_notified_at: string | null;
+  notification_medium: string | null;
+  responsible_user_id: Id | null;
+  responsible_user_name: string | null;
+  resolved_at: string | null;
+  resolution_summary: string | null;
+  created_by: Id;
+  created_at: IsoDateTime;
+  updated_at: IsoDateTime;
+}
+
+export interface SecurityIncidentCreate {
+  title: string;
+  description: string;
+  severity?: string | null;
+  detected_at: string;
+  data_affected: string;
+  subjects_affected: string;
+  security_measures?: string | null;
+  risks?: string | null;
+  communication_delay_reason?: string | null;
+  mitigation_measures?: string | null;
+  responsible_user_id?: Id | null;
+}
+
+export interface SecurityIncidentUpdate {
+  title?: string | null;
+  description?: string | null;
+  severity?: string | null;
+  detected_at?: string | null;
+  data_affected?: string | null;
+  subjects_affected?: string | null;
+  security_measures?: string | null;
+  risks?: string | null;
+  communication_delay_reason?: string | null;
+  mitigation_measures?: string | null;
+  status?: string | null;
+  anpd_notified_at?: string | null;
+  subjects_notified_at?: string | null;
+  notification_medium?: string | null;
+  responsible_user_id?: Id | null;
+  resolved_at?: string | null;
+  resolution_summary?: string | null;
+}
