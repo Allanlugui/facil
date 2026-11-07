@@ -3,6 +3,20 @@
 - **Criado em:** 16/10/2026 22:36:22 pelo bootstrap global (`D:\DEV\criar-projeto.bat`).
 - **Diretório oficial:** `D:\DEV\Opencode\Facil`
 - **Conhecimento global:** `D:\DEV\memory\Facil\`
+- **Módulos LGPD completos (release 0.9.0, 24/10/2026):** 6 módulos de conformidade LGPD
+  (Lei 13.709/2018) — **Bases legais** (Art. 7º), **Operações de tratamento** (Art. 37),
+  **Consentimento** (Art. 8º), **Encarregado/DPO** (Art. 41), **Direitos do titular** (Arts. 18/19),
+  **Medidas de segurança** (Arts. 46/49) e **Incidentes de segurança** (Art. 48).
+  APIs: `/api/legal`, `/api/consent`, `/api/dpo`, `/api/dsr`, `/api/sec`, `/api/incident`;
+  Telas: `/legal`, `/consent`, `/dpo`, `/dsr`, `/seguranca`, `/incidentes`.
+  Migrations `0024`–`0030` aplicadas no D1 remoto. Perfil `role_dpo` criado.
+  `npm run check` **204/204 em 24 arquivos**, typecheck, lint, contrato (69×178), build;
+  release assinada (Ed25519, **243 arquivos**, tree
+  `6f125c8e55f64f6df9773d44a830a454bcc2a98404c33367ef8c1ec54574220f`, 24/10/2026
+  22:23:29 -03:00), `npm run verify` OK, commit `14b9bc5`, tag `v0.9.0`, Worker
+  `4b1f0dac-158a-4457-9be4-ffcc151d6113`. Produção em 0.9.0
+  (`/build-info.json` e `/api/health`), todas as rotas LGPD respondem 401 sem sessão
+  e chunks dos módulos são servidos.
 - **Módulo Patrimônio completo (release 0.8.0, 24/10/2026):** API `/api/assets`
   (lista/detalhe/criação/edição, resumo, opções, categorias e movimentações de
   transferência, atribuição, situação, condição, manutenção e inventário), telas

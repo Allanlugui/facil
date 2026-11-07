@@ -18,3 +18,8 @@ shots/
 
 # worker-configuration.d.ts e GERADO por `npm run types` (wrangler types) mas e
 # versionado de proposito: o typecheck e o build dependem dele.
+
+# 2026-11-07: scratch SQL local (dumps e testes ad-hoc); migrations reais em migrations/
+/d1_dump.sql
+/d1_*.sql
+/test_*.sql
