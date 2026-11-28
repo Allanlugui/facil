@@ -427,7 +427,7 @@
   (consumidor outbox → 0.7.4; R2 → 0.7.1): preservados como história, não como pendência
   real — não editar o histórico, apenas não os ler como backlog ativo.
 
-## P-26 — Campos saltam para fora da viewport no mobile 390px (EM CORREÇÃO em 28/11/2026)
+## P-26 — Campos saltam para fora da viewport no mobile 390px (RESOLVIDO em 28/11/2026) — VALIDADO
 
 - **Sintoma (relato do usuário):** em dispositivos mobile alguns campos/áreas sem
   responsividade — falta proporcionalidade, campos saltam para fora do campo de visão.

@@ -352,10 +352,11 @@ export function AppShell() {
 
         <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto">
           <main className="mx-auto w-full max-w-7xl px-3 py-5 sm:px-5">
-            {/* Transição de rota (D-64): a chave remonta o invólucro a cada
-                pathname e re-dispara `facil-page-in` (200 ms, só opacidade +
-                subida de 10 px). Troca de query no mesmo pathname não anima. */}
-            <div key={location.pathname} className="facil-page-in">
+            {/* Transição de rota (D-64) + cascata do conteúdo (D-67): a chave
+                remonta o invólucro a cada pathname e re-dispara `facil-page-in`
+                (200 ms) e a cascata `facil-reveal-group` (8 px, 45 ms por item).
+                Troca de query no mesmo pathname não anima. */}
+            <div key={location.pathname} className="facil-page-in facil-reveal-group">
               <Outlet />
             </div>
           </main>

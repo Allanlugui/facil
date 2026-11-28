@@ -3,6 +3,13 @@
 Todas as alterações relevantes do Facil são registradas aqui. O projeto segue o
 versionamento descrito em `docs/VERSIONAMENTO.md`.
 
+## [0.10.3] — 2026-11-28
+
+Cascata de entrada no conteúdo (D-67): cartões, stats, filtros e tabelas entram
+um após o outro (8 px, 45 ms por item, teto no 8º) em todas as rotas do sistema
+— mesmo gesto do login, mais discreto. Só CSS (`opacity` + `transform`), sem
+biblioteca, sem mudança de API/banco. `prefers-reduced-motion` respeitado.
+
 ## [0.10.2] — 2026-11-28
 
 Correção de responsividade mobile (P-26/D-66): 25 pontos em 9 arquivos sem

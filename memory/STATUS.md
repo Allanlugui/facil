@@ -1,9 +1,11 @@
 # Status do Projeto: Facil
 
-- **Correção mobile P-26 — EM VALIDAÇÃO (28/11/2026):** 25 pontos em 9 arquivos
+- **Release 0.10.2 — correção mobile (28/11/2026):** 25 pontos em 9 arquivos
   (LGPD 6 telas + purchases 4 tabelas + support header + structure footers +
-  Pagination). Typecheck, lint, check:api 69×178, build OK; suite completa
-  em execução. Sem mudança de API/banco. Detalhes em P-26/D-66.
+  Pagination). Typecheck, lint, check:api 69×178, build, **204/204 em 24
+  arquivos**, `verify` OK, produção em 0.10.2 (`/build-info.json` confere:
+  tree `793f5777…`, 28/11/2026 08:13:09 −03:00). Commit `a321f57`, tag `v0.10.2`,
+  Worker `48c82c5c-3d49-43ba-9b55-4b2352359eeb`. Detalhes em P-26/D-66.
 
 - **Release 0.10.1 — versão visível (28/11/2026):** rodapé do login e do sistema
   mostram `· vX.Y.Z` via hook `useAppVersion` (lê o `/build-info.json` do build

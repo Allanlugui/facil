@@ -1164,7 +1164,22 @@
 - **Decisão:** hook `useAppVersion` (`src/client/lib/version.tsx`) lê o `/build-info.json` público do build em execução — versão do deploy real, nunca literal descolado do `package.json`. Promise em cache no módulo (um fetch por sessão); falha silenciosa (sem versão, sem tag). Exibido como `· vX.Y.Z` no rodapé do login e no rodapé do `AppShell`.
 - **Evidência:** typecheck + lint + check:api verdes; 204/204; captura do rodapé em `ux-shots/0.10.1-*.png` (login mostra `· v0.10.0` no build local, `· v0.10.1` em produção). Release **0.10.1** publicada: assinatura Ed25519 (216 arquivos, tree `37d20469…`, 27/11/2026 23:46:15 −03:00), `verify` OK, Worker `f7d0649b-bfb9-4ec8-836c-6c418642f9a9`, produção conferida nos dois endpoints. Sem migration.
 
-## D-66 — Responsividade mobile: empilhar no mobile, lado a lado no desktop (28/11/2026) — IMPLEMENTADO
+## D-67 — Cascata de entrada no conteúdo de todas as rotas (28/11/2026) — IMPLEMENTADO
+
+- **Contexto:** pedido do titular — o motion do login (D-64) era o único gesto
+  de entrada do produto; o restante do sistema montava estático após a transição
+  de rota. Pedido: o mesmo gesto (itens surgindo aos poucos) no sistema todo,
+  mais discreto que o login, perceptível sem exagero.
+- **Decisão:** só CSS, sem tocar nas 30 páginas: classe `facil-reveal-group` no
+  invólucro da rota (`layout.tsx`, já remontado por pathname) + regras em
+  `styles.css` que animam filhos diretos e filhos de `space-y-2..5` e `grid`
+  (8 px de subida, 260 ms, 45 ms por degrau com teto no 8º item ≈ 575 ms no
+  total). `prefers-reduced-motion` global já zera tudo. Telas públicas fora do
+  `AppShell` (login, suporte público) mantêm o próprio motion.
+- **Evidência:** typecheck + lint + check:api + build verdes; suite e deploy no
+  fechamento da release. Sem mudança de API/banco.
+
+## D-66 — Responsividade mobile: empilhar no mobile, lado a lado no desktop (28/11/2026) — VALIDADO
 
 - **Contexto:** relato do usuário (P-26) — campos saltam para fora da viewport no
   mobile. Auditoria achou 25 pontos reais em 9 arquivos, concentrados nos módulos
@@ -1175,5 +1190,6 @@
   `overflow-x-auto`, footers sempre com `flex-wrap`, tabelas artesanais sempre com
   wrapper `overflow-x-auto` + `min-w-[...]` (igual ao `.table-scroll` do Table).
   `Dialog wide` mantido — já é bottom-sheet `w-full` no mobile.
-- **Evidência:** typecheck + lint + check:api 69×178 + build verdes; suite completa
-  em execução no fechamento. Sem mudança de API/banco.
+- **Evidência:** typecheck + lint + check:api 69×178 + build verdes; **204/204**,
+  `verify` OK, release **0.10.2** publicada (commit `a321f57`, tag `v0.10.2`).
+  Sem mudança de API/banco.

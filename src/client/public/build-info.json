@@ -1,13 +1,13 @@
 {
   "project": "Facil — Plataforma de Gestão de Facilities",
-  "version": "0.10.2",
+  "version": "0.10.3",
   "author": "Allan Luiz Silveira Lima",
   "alias": "Allanlugui",
   "company": "CorpServices Group",
-  "signedAt": "2026-11-28T08:13:09-03:00",
-  "treeHash": "793f5777302d766790cce1456a5d15582f45350515b2d87718731200ab59bf2d",
+  "signedAt": "2026-11-28T08:21:49-03:00",
+  "treeHash": "5981f490505d1817360a503717b4f26e3235d2128806c68e6fc8ad0b9327a1db",
   "fileCount": 216,
   "algorithm": "Ed25519",
   "keyFingerprint": "65:BE:89:FA:CE:0D:D3:B7:B2:AF:9C:C4:46:A2:01:96:AB:D2:34:48:9C:51:FC:CB:7E:81:F3:47:B2:43:98:50",
-  "signature": "EYCFYTVP2ScTZhYFU1pcP0DfcAH/42tV23HqYENd+XeccomR51x3U1lz3BRk6EdxTz9RvI7UcIYueLght08XCw=="
+  "signature": "1tGn4SlWnnbFAz8U4UwE3Ht3v741w+qDXKkXHjfdrUtZE1ASJ+3vNncOYD+ySbSj+ITvuc8M0C+WZDj1j85dDQ=="
 }
