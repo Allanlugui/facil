@@ -1,5 +1,12 @@
 # Status do Projeto: Facil
 
+- **Revisão de saúde (28/11/2026):** suite verde **204/204 em 24 arquivos** (~204 s),
+  `typecheck` limpo, `lint` limpo, `check:api` **69×178** OK. Produção no Worker 0.9.0
+  confirmado pelo `/api/health` (tree `6f125c…`). Achados novos sem impacto no produto:
+  P-22 (`/build-info.json` estático desatualizado), P-23 (`verify` local falha por drift
+  do `.gitignore` pós-assinatura — esperado), P-24 (D-58 ausente no DECISOES),
+  P-25 (resíduos: ~30 `.sql` ignorados na raiz, `migrations/temp_hold/` vazio,
+  commit docs `297ce6d` à frente de `origin/main`). Detalhes em `PROBLEMAS.md`.
 - **Criado em:** 16/10/2026 22:36:22 pelo bootstrap global (`D:\DEV\criar-projeto.bat`).
 - **Diretório oficial:** `D:\DEV\Opencode\Facil`
 - **Conhecimento global:** `D:\DEV\memory\Facil\`

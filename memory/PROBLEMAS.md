@@ -365,3 +365,56 @@
   `docs/INTEGRACOES.md`; segredo fora do repositório.
 - **Pendente:** configurar o segredo no Worker, implementar o consumidor e definir a política de
   retry/observabilidade. R2, domínio/Access e CI dedicada continuam pendentes.
+  **Nota (revisão 28/11/2026):** o consumidor cron saiu na release 0.7.4 (P-21 parcialmente
+  superado — falta só o destino externo/chaves); R2 saiu na 0.7.1. Ver P-22..P-25 abaixo.
+
+## P-22 — `/build-info.json` estático desatualizado; `/api/health` OK (achado em 28/11/2026) — ABERTO
+
+- **Sintoma:** o `/build-info.json` público em produção declara `signedAt 18:34:08-03:00`,
+  tree `0bbc33…`, `fileCount 214`; o `/api/health` declara `signedAt 22:23:29-03:00`,
+  tree `6f125c…` (confere com o `SIGNATURE.json` local da release 0.9.0, 243 arquivos).
+  O `dist/client/build-info.json` local repete o conteúdo antigo (18:34).
+- **Impacto:** baixo — o Worker em produção é o 0.9.0 correto (prova: `/api/health`);
+  só o artefato estático mente a versão. Mas o `STATUS.md` afirma "Produção em 0.9.0
+  (`/build-info.json` e `/api/health`)" — impreciso enquanto divergirem.
+- **Causa (HIPÓTESE, NÃO VALIDADO):** `release = sign && check && build`; o `sign` gera
+  `src/client/public/build-info.json` + `build-info.generated.ts`. O bundle do Worker
+  embarcou o `.generated.ts` novo, mas o `dist/` carrega um `build-info.json` de um
+  `sign` anterior — sugere `sign` rodado 2× (18:34 e 22:23) com `build` só após o primeiro,
+  ou `dist/` não reconstruído após o segundo `sign`.
+- **Correção:** na próxima release de produto, rodar o pipeline cheio (`sign → check →
+  build → migrate → deploy`) e conferir os DOIS endpoints antes de declarar produção OK.
+
+## P-23 — `npm run verify` falha local por drift pós-assinatura (28/11/2026) — ABERTO, esperado
+
+- **Sintoma:** `npm run verify` → `FALHOU: 0 ausente(s) e 1 alterado(s): .gitignore`.
+- **Causa raiz:** o commit docs `297ce6d` (06/11/2026, à frente de `origin/main`, ainda não
+  empurrado) alterou o `.gitignore` — arquivo coberto pelo manifesto assinado em 24/10.
+  Não é corrupção nem invasão; é drift documental posterior à assinatura.
+- **Decisão:** sem nova assinatura só por isso (memória não exige versão). Re-assinar na
+  próxima release de produto; até lá, `verify` local segue FALHANDO por motivo conhecido.
+  O `/api/health` de produção continua íntegro (tree `6f125c…`).
+
+## P-24 — Numeração em DECISOES.md: cabeçalho D-58 ausente (RESOLVIDO em 28/11/2026) — VALIDADO
+
+- **Sintoma:** a sequência parecia pular de D-57 para D-59. Na inspeção, o conteúdo do
+  D-58 **existia** (8 bullets entre D-59 e D-60), só faltava o cabeçalho `## D-58` —
+  por isso o `grep` por `^## D-` não o achava. TODO/STATUS citavam "D-58" corretamente.
+- **Correção:** cabeçalho
+  `## D-58 — Módulo LGPD: bases legais e operações de tratamento (Arts. 7º e 37)`
+  inserido; linha de rotas corrigida para o real (`GET /api/legal/bases/catalog`,
+  conferido em `src/worker/routes/legal.ts`); bullet da migration `0030` (índices
+  idempotentes, tabela nascida na `0024`) adicionado. Nenhuma renumeração (D-59..D-63
+  intactos).
+
+## P-25 — Resíduos de trabalho no diretório (28/11/2026) — ABERTO, sem urgência
+
+- `~30` arquivos `test_*.sql` / `d1_*.sql` na raiz: ignorados pelo git desde `297ce6d`,
+  não versionados, mas poluindo o diretório. Apagar exige confirmação do titular
+  (podem ser consultas ad-hoc ainda úteis).
+- `migrations/temp_hold/` vazio e não rastreado: resíduo fantasma dentro das migrations.
+  O `wrangler d1 migrations apply` ignora diretórios, mas convém remover.
+- Commit docs `297ce6d` à frente de `origin/main`: empurrar quando o titular autorizar.
+- Seções históricas do TODO (Etapa 2) mantêm checkboxes abertos já superados
+  (consumidor outbox → 0.7.4; R2 → 0.7.1): preservados como história, não como pendência
+  real — não editar o histórico, apenas não os ler como backlog ativo.
