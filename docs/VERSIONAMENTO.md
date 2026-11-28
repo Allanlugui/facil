@@ -178,3 +178,9 @@ A décima oitava entrega foi publicada na versão **0.11.5**, em 28/11/2026:
 **Símbolo puro no modo colapsado (patch)**.
 - Container da brand colapsada `32px` → `28px`: recorte mostra só o círculo "Corp", sem fiapo do "Services".
 - **Sem mudança de API/banco.** Ajuste visual: subiu o **patch**.
+
+A décima nona entrega foi publicada na versão **0.12.0**, em 28/11/2026:
+**Ícones novos + tooltip no modo recolhido (minor)**.
+- Jogo de ícones do menu refeito no mesmo traço (`1.6`): medidor, recibo, prancheta-check, templo, ticket/chave/carrinho/pacote refinados, boia e ajustes.
+- Tooltip no recolhido: hover no ícone exibe o nome; `aria-label` para acessibilidade.
+- **Sem mudança de API/banco.** Funcionalidade nova: subiu o **minor**.

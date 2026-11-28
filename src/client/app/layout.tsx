@@ -170,6 +170,8 @@ export function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
+  // Tooltip do modo recolhido: mostra o nome do item ao passar o mouse.
+  const [navTip, setNavTip] = useState<{ label: string; top: number } | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("facil.sidebarCollapsed") === "true";
@@ -194,8 +196,14 @@ export function AppShell() {
     setSidebarOpen(false);
     setMenuOpen(false);
     setBellOpen(false);
+    setNavTip(null);
     scrollRef.current?.scrollTo({ top: 0 });
   }, [location.pathname]);
+
+  // O tooltip some ao expandir a barra.
+  useEffect(() => {
+    if (!sidebarCollapsed) setNavTip(null);
+  }, [sidebarCollapsed]);
 
   if (mustChangePassword) {
     // O servidor bloqueia as ações de negócio até a troca; a interface acompanha.
@@ -215,6 +223,13 @@ export function AppShell() {
             <NavLink
               to={item.to}
               end={item.end}
+              aria-label={item.label}
+              onMouseEnter={(event) => {
+                if (!sidebarCollapsed) return;
+                const rect = event.currentTarget.getBoundingClientRect();
+                setNavTip({ label: item.label, top: rect.top + rect.height / 2 });
+              }}
+              onMouseLeave={() => setNavTip(null)}
               className={({ isActive }) =>
                 `nav-link flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition ${
                   isActive
@@ -277,6 +292,13 @@ export function AppShell() {
           {version ? <div className="footer-version truncate mt-0.5">v{version}</div> : null}
         </footer>
       </aside>
+
+      {/* Tooltip do modo recolhido: nome do item ao passar o mouse (só desktop colapsado) */}
+      {navTip && sidebarCollapsed ? (
+        <div className="facil-nav-tip" style={{ top: navTip.top }} role="status">
+          {navTip.label}
+        </div>
+      ) : null}
 
       {/* Gaveta no celular */}
       {sidebarOpen ? (

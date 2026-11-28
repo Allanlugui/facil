@@ -686,6 +686,36 @@ body {
 
 /* brand-text REMOVIDO — sidebar não mostra mais nome/subtítulo em nenhum estado */
 
+/* ===== Tooltip do modo recolhido (nome do item no hover) ===== */
+.facil-nav-tip {
+  position: fixed;
+  left: 96px; /* barra 88px + 8px de respiro */
+  transform: translateY(-50%);
+  z-index: 60;
+  background: #1e293b;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  padding: 8px 12px;
+  border-radius: 8px;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 8px 24px rgb(15 23 42 / 0.25);
+  animation: facil-tip-in 120ms ease-out;
+}
+
+@keyframes facil-tip-in {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) translateX(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+  }
+}
+
 /* ===== Nav section title (Operação/Meu dia) — esconde com fade no colapsado ===== */
 .facil-nav-header {
   transition: opacity 200ms ease, max-height 200ms ease, margin 200ms ease, padding 200ms ease;

@@ -3,6 +3,14 @@
 Todas as alterações relevantes do Facil são registradas aqui. O projeto segue o
 versionamento descrito em `docs/VERSIONAMENTO.md`.
 
+## [0.12.0] — 2026-11-28
+
+**Ícones novos + tooltip no modo recolhido**
+
+- **Jogo de ícones refeito** (mesmo traço `1.6`, sem extravagância): Painel vira medidor (gauge), Consumo vira recibo, Inventário vira prancheta com check, Patrimônio vira templo (landmark), Chamados/Ordens/Compras/Estoque refinados (ticket, chave, carrinho, pacote), Suporte vira boia (life-buoy), Configurações vira ajustes (sliders).
+- **Tooltip no recolhido**: passar o mouse no ícone mostra o nome do item (etiqueta fixa à direita da barra, some ao tirar o mouse, trocar de rota ou expandir). `aria-label` nos links para leitor de tela.
+- Sem mudança de API/banco.
+
 ## [0.11.5] — 2026-11-28
 
 **Símbolo puro no modo colapsado**

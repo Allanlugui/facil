@@ -835,18 +835,19 @@ export const HelpIcon = () =>
   icon(
     <>
       <circle cx="12" cy="12" r="9" />
-      <path d="M9.6 9.4a2.5 2.5 0 1 1 3.4 2.2c-.7.3-1 .8-1 1.5v.4" />
-      <path d="M12 16.8h.01" />
+      <circle cx="12" cy="12" r="3.5" />
+      <path d="m5.7 5.7 3.5 3.5" />
+      <path d="m14.8 14.8 3.5 3.5" />
+      <path d="m14.8 9.2 3.5-3.5" />
+      <path d="m5.7 18.3 3.5-3.5" />
     </>,
   );
 
 export const DashboardIcon = () =>
   icon(
     <>
-      <rect x="3" y="3" width="7" height="9" rx="1.5" />
-      <rect x="14" y="3" width="7" height="5" rx="1.5" />
-      <rect x="14" y="12" width="7" height="9" rx="1.5" />
-      <rect x="3" y="16" width="7" height="5" rx="1.5" />
+      <path d="m12 14 4-4" />
+      <path d="M3.3 19a9 9 0 1 1 17.4 0" />
     </>,
   );
 
@@ -862,8 +863,12 @@ export const BoxIcon = () =>
 export const TagIcon = () =>
   icon(
     <>
-      <path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z" />
-      <circle cx="7.5" cy="7.5" r="1" />
+      <path d="M3 21h18" />
+      <path d="M6 21v-8" />
+      <path d="M10 21v-8" />
+      <path d="M14 21v-8" />
+      <path d="M18 21v-8" />
+      <path d="m12 3 9 5H3Z" />
     </>,
   );
 
@@ -890,33 +895,36 @@ export const ChevronIcon = ({ className = "size-4" }: { className?: string }) =>
 export const ClipboardIcon = () =>
   icon(
     <>
-      <path d="M9 4h6a1 1 0 0 1 1 1v1H8V5a1 1 0 0 1 1-1Z" />
-      <path d="M8 6H6.5A1.5 1.5 0 0 0 5 7.5v12A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5v-12A1.5 1.5 0 0 0 17.5 6H16" />
-      <path d="M9 13h6M9 17h4" />
+      <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z" />
+      <path d="M8 7h8" />
+      <path d="M8 11h8" />
+      <path d="M8 15h5" />
     </>,
   );
 
 export const TicketIcon = () =>
   icon(
     <>
-      <path d="M4 8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v1a2 2 0 0 0 0 4v1a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-1a2 2 0 0 0 0-4Z" />
-      <path d="M10 6v12" strokeDasharray="2 3" />
+      <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" />
+      <path d="M13 5v2" />
+      <path d="M13 11v2" />
+      <path d="M13 17v2" />
     </>,
   );
 
 export const WrenchIcon = () =>
   icon(
     <>
-      <path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17v3h3l5.3-5.3a4 4 0 0 0 5.4-5.4l-2.1 2.1-2.5-.6-.6-2.5Z" />
+      <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76Z" />
     </>,
   );
 
 export const CartIcon = () =>
   icon(
     <>
-      <circle cx="9" cy="20" r="1.4" />
-      <circle cx="17" cy="20" r="1.4" />
-      <path d="M3 3h2l2.4 12.2a1.5 1.5 0 0 0 1.5 1.3h7.9a1.5 1.5 0 0 0 1.5-1.2L21 7H6" />
+      <circle cx="8" cy="20" r="1.2" />
+      <circle cx="18" cy="20" r="1.2" />
+      <path d="M2 2h2l2.6 12.4a2 2 0 0 0 2 1.6h8.7a2 2 0 0 0 2-1.6L21 6H6" />
     </>,
   );
 
@@ -950,8 +958,15 @@ export const ShieldIcon = () =>
 export const GearIcon = () =>
   icon(
     <>
-      <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
-      <circle cx="12" cy="12" r="3" />
+      <path d="M21 4h-7" />
+      <path d="M10 4H3" />
+      <path d="M21 12h-9" />
+      <path d="M8 12H3" />
+      <path d="M21 20h-5" />
+      <path d="M12 20H3" />
+      <path d="M14 2v4" />
+      <path d="M8 10v4" />
+      <path d="M16 18v4" />
     </>,
   );
 
@@ -967,10 +982,9 @@ export const BellIcon = ({ className }: { className?: string }) =>
 export const BoxesIcon = () =>
   icon(
     <>
-      <rect x="3" y="3" width="8" height="8" rx="1.5" />
-      <rect x="13" y="3" width="8" height="8" rx="1.5" />
-      <rect x="3" y="13" width="8" height="8" rx="1.5" />
-      <rect x="13" y="13" width="8" height="8" rx="1.5" />
+      <rect x="8" y="2" width="8" height="4" rx="1" />
+      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+      <path d="m9 14 2 2 4-4" />
     </>,
   );
 
