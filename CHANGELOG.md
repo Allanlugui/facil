@@ -3,6 +3,15 @@
 Todas as alterações relevantes do Facil são registradas aqui. O projeto segue o
 versionamento descrito em `docs/VERSIONAMENTO.md`.
 
+## [0.11.3] — 2026-11-28
+
+**Logo da sidebar sem distorção (proporção preservada)**
+
+- **Causa**: `.brand-logo img` forçava `36×36` quadrado numa logo horizontal `1200×580` — esmagava a marca no modo expandido.
+- **Expandido**: altura fixa `32px`, largura automática, `max-width 180px`, `object-contain` alinhado à esquerda — logo horizontal exibida por inteiro.
+- **Colapsado**: container `32px` com `overflow hidden` mostra só o símbolo (círculo "Corp"), sem esticar; `28px` de altura.
+- **Brand**: `Logo` usa `h-8 w-auto max-w-full object-left`; drawer mobile herda o modo expandido. Sem mudança de API/banco.
+
 ## [0.11.2] — 2026-11-28
 
 **Ajuste fino da Brand colapsada: só logo, tamanho de ícone**

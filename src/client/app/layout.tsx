@@ -396,9 +396,9 @@ export function AppShell() {
 function Brand() {
   const dark = useDarkSurface();
   return (
-    <Link to="/" className="flex items-center justify-center px-4 py-4 brand-link" aria-label="Facil - Página inicial" title="Facil">
+    <Link to="/" className="flex items-center justify-start px-4 py-4 brand-link" aria-label="Facil - Página inicial" title="Facil">
       <span className="brand-logo flex-shrink-0" aria-hidden="true">
-        <Logo dark={dark} className="object-contain" />
+        <Logo dark={dark} className="h-8 w-auto max-w-full object-contain object-left" />
       </span>
     </Link>
   );

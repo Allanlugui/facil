@@ -159,3 +159,10 @@ A décima quinta entrega foi publicada na versão **0.11.2**, em 28/11/2026:
 - **Modo expandido**: inalterado (logo 36px + "Facil" + "Gestão de Facilities").
 - **Transição**: logo anima suavemente entre 36px ↔ 24px junto com a barra (350ms, mesma curva), sem alterar tempos/delays do fechar/abrir já aprovados.
 - **Acessibilidade**: `alt`/`title` da logo mantidos; `prefers-reduced-motion` respeitado; mobile inalterado. Ajuste visual cirúrgico: subiu o **patch**.
+
+A décima sexta entrega foi publicada na versão **0.11.3**, em 28/11/2026:
+**Logo da sidebar sem distorção (patch)**.
+- **Causa**: `.brand-logo img` forçava `36×36` quadrado numa logo horizontal `1200×580` — esmagava a marca no modo expandido.
+- **Expandido**: altura fixa `32px`, largura automática, `max-width 180px`, `object-contain` à esquerda — logo por inteiro, sem esmagar.
+- **Colapsado**: container `32px` com `overflow hidden` exibe só o símbolo (círculo "Corp"), `28px` de altura, sem esticar.
+- **Sem mudança de API/banco.** Correção visual: subiu o **patch**.
