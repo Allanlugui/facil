@@ -492,7 +492,7 @@ function NotificationsBell({ open, onToggle }: { open: boolean; onToggle: () => 
       {open ? (
         <div
           role="menu"
-          className="facil-pop-in absolute right-0 mt-1 w-[22rem] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-xl border border-slate-200 bg-surface shadow-lg"
+          className="facil-pop-in fixed inset-x-3 top-[3.75rem] z-50 overflow-hidden rounded-xl border border-slate-200 bg-surface shadow-lg sm:absolute sm:inset-x-auto sm:right-0 sm:top-auto sm:mt-1 sm:w-[22rem] sm:max-w-[calc(100vw-1.5rem)]"
         >
           <header className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
             <p className="text-sm font-semibold text-slate-800">Notificações</p>

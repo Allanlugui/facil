@@ -3,6 +3,13 @@
 Todas as alterações relevantes do Facil são registradas aqui. O projeto segue o
 versionamento descrito em `docs/VERSIONAMENTO.md`.
 
+## [0.10.4] — 2026-11-28
+
+Painel de notificações responsivo (P-27): no mobile o dropdown da campainha
+passa a ocupar a largura da tela (`fixed inset-x-3`) em vez de ancorar 352 px
+à direita do ícone e sair pela borda esquerda; no desktop continua igual.
+Sem mudança de API/banco.
+
 ## [0.10.3] — 2026-11-28
 
 Cascata de entrada no conteúdo (D-67): cartões, stats, filtros e tabelas entram

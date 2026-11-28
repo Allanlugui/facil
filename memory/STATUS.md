@@ -1,11 +1,18 @@
 # Status do Projeto: Facil
 
+- **Release 0.10.3 — cascata de entrada (28/11/2026):** conteúdo das rotas entra
+  em cascata (8 px, 45 ms/item, teto no 8º) — `facil-reveal-group` no invólucro
+  da rota + regras em `styles.css`, sem tocar nas páginas. Typecheck, lint,
+  check:api 69×178, build, **204/204 em 24 arquivos**, `verify` OK, produção em
+  0.10.3 (`/build-info.json`: tree `5981f490…`, 08:21:49 −03:00). Commit
+  `a29ada9`, tag `v0.10.3`, Worker `df210f83`. Detalhe em D-67.
+
 - **Release 0.10.2 — correção mobile (28/11/2026):** 25 pontos em 9 arquivos
   (LGPD 6 telas + purchases 4 tabelas + support header + structure footers +
   Pagination). Typecheck, lint, check:api 69×178, build, **204/204 em 24
-  arquivos**, `verify` OK, produção em 0.10.2 (`/build-info.json` confere:
-  tree `793f5777…`, 28/11/2026 08:13:09 −03:00). Commit `a321f57`, tag `v0.10.2`,
-  Worker `48c82c5c-3d49-43ba-9b55-4b2352359eeb`. Detalhes em P-26/D-66.
+  arquivos**, `verify` OK, produção em 0.10.2 (`/build-info.json`: tree
+  `793f5777…`, 08:13:09 −03:00). Commit `a321f57`, tag `v0.10.2`, Worker
+  `48c82c5c`. Detalhes em P-26/D-66.
 
 - **Release 0.10.1 — versão visível (28/11/2026):** rodapé do login e do sistema
   mostram `· vX.Y.Z` via hook `useAppVersion` (lê o `/build-info.json` do build

@@ -444,17 +444,27 @@
   `overflow-x-auto pb-px`, footers com `flex-wrap`, tabelas com
   `overflow-x-auto` + `min-w-[520/560/640px]`, Pagination em
   `flex-col sm:flex-row` (ui.tsx).
-- **Falsos positivos descartados:** 14x `Dialog wide` — o Dialog já é bottom-sheet
+- **Falsos positivos descartados:** `Dialog wide` — o Dialog já é bottom-sheet
   `w-full` no mobile (`sm:max-w-lg/3xl` só ≥640px); `reports.tsx:1470` (truncate+nowrap
   correto); `dashboard.tsx:820 lg:grid-cols-5` (mobile 1 coluna, correto).
-- **Validação:** typecheck limpo, lint limpo, check:api 69×178 OK, build OK.
-  Suite completa pendente no fechamento.
+- **Validação:** typecheck, lint, check:api 69×178, build, **204/204**, `verify` OK,
+  release **0.10.2** publicada (commit `a321f57`, tag `v0.10.2`, Worker `48c82c5c`).
 - **Incidente 28/11/2026 (esclarecido com o titular):** o subagente de auditoria
   foi autorizado pelo titular em chat direto por engano (pensou estar falando no
   chat principal). A pedido do titular, todas as 13 remoções de `wide` foram
   revertidas e o trabalho seguiu só a partir do relatório: cada item validado
-  contra o código antes de aplicar. `wide` segue classificado como falso
-  positivo com evidência (`ui.tsx`: Dialog já é bottom-sheet `w-full` no mobile;
-  `wide` só afeta `sm:max-w` ≥640px). Diff final em `src/` contém só as 25
-  correções aprovadas. Lição: autorizações a subagentes valem como ordem —
-  confirmar escopo no chat principal antes.
+  contra o código antes de aplicar. Lição: autorizações a subagentes valem como
+  ordem — confirmar escopo no chat principal antes.
+
+## P-27 — Painel de notificações sai da tela no mobile (EM CORREÇÃO em 28/11/2026)
+
+- **Sintoma (relato do usuário):** o card onde as notificações são exibidas
+  dentro do sistema não tem responsividade.
+- **Causa raiz:** o dropdown da campainha (`NotificationsBell` em `layout.tsx`)
+  era `absolute right-0 w-[22rem]` ancorado no ícone: com o ícone a ~50 px da
+  borda direita, os 352 px avançavam pela borda esquerda em telas de 390 px
+  (`max-w` limitava a largura, não a posição).
+- **Correção (release 0.10.4):** no mobile o painel é `fixed inset-x-3 top-[3.75rem]`
+  (largura da tela, abaixo do topbar); no desktop (`sm:`) volta a `absolute`
+  ancorado ao ícone com `w-[22rem]`. Itens internos já eram seguros
+  (`min-w-0` + `truncate`).
