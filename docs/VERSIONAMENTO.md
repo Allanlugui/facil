@@ -173,3 +173,8 @@ A décima sétima entrega foi publicada na versão **0.11.4**, em 28/11/2026:
 - **Abrir**: barra expande (350ms), depois palavras entram em cascata (250ms cada, 80ms por posição) — inalterado.
 - **Ordem**: Configurações continua a numeração do menu principal (`--nav-order`) — entra por último nos dois sentidos.
 - **Sem mudança de API/banco.** Ajuste de interface: subiu o **patch**.
+
+A décima oitava entrega foi publicada na versão **0.11.5**, em 28/11/2026:
+**Símbolo puro no modo colapsado (patch)**.
+- Container da brand colapsada `32px` → `28px`: recorte mostra só o círculo "Corp", sem fiapo do "Services".
+- **Sem mudança de API/banco.** Ajuste visual: subiu o **patch**.

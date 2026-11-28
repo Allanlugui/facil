@@ -638,8 +638,10 @@ body {
 }
 
 .facil-sidebar.collapsed .brand-link {
-  padding-left: 8px;
-  padding-right: 8px;
+  /* Sem padding próprio: o px-3 da barra já dá o respiro; com 0 aqui,
+     logo (28) + toggle (28) cabem nos 64px do conteúdo sem encolher. */
+  padding-left: 0;
+  padding-right: 0;
   justify-content: center;
 }
 
@@ -666,12 +668,14 @@ body {
     max-width 350ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
-/* Logo colapsada: mostra só o símbolo (círculo "Corp") — o container de 32px
+/* Logo colapsada: mostra só o símbolo (círculo "Corp") — o container de 28px
    recorta o texto "Services" via overflow hidden, sem distorcer a imagem. */
 .facil-sidebar.collapsed .brand-logo {
-  width: 32px;
-  max-width: 32px;
-  justify-content: center;
+  width: 28px;
+  max-width: 28px;
+  /* À esquerda: mostra os primeiros 28px da arte (o círculo "Corp");
+     centralizar aqui exibiria o meio (texto "Services"). */
+  justify-content: flex-start;
 }
 
 .facil-sidebar.collapsed .brand-logo img {

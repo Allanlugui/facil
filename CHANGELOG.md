@@ -3,6 +3,13 @@
 Todas as alterações relevantes do Facil são registradas aqui. O projeto segue o
 versionamento descrito em `docs/VERSIONAMENTO.md`.
 
+## [0.11.5] — 2026-11-28
+
+**Símbolo puro no modo colapsado**
+
+- Container da brand colapsada `32px` → `28px` (igual à altura do logo): o recorte mostra só o círculo "Corp", sem fiapo do texto "Services".
+- Sem mudança de API/banco.
+
 ## [0.11.4] — 2026-11-28
 
 **Nova coreografia da sidebar: fechar esconde tudo, ícones voltam em cascata**
