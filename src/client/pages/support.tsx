@@ -935,35 +935,37 @@ export function SupportThreadPage() {
 
   return (
     <div className="space-y-4">
-      <Link to="/ajuda" className="inline-flex items-center gap-1 text-sm text-brand-700 hover:underline">
-        <ArrowLeftIcon className="size-3.5" /> Voltar ao suporte
-      </Link>
-
-      <header className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-xl font-semibold tracking-tight text-slate-900">Atendimento {request.code}</h1>
-          <StatusBadge status={request.status} />
-          <Badge tone="slate">{KIND_LABEL[request.kind] ?? request.kind}</Badge>
-        </div>
-        {staff ? (
-          <div className="flex flex-wrap items-center gap-2">
-            {request.status === "queued" ? (
-              <Button variant="secondary" loading={changingStatus} onClick={() => changeStatus("in_progress")}>
-                Marcar em atendimento
-              </Button>
-            ) : null}
-            {!resolved ? (
-              <Button loading={changingStatus} onClick={() => setConfirmResolve(true)}>
-                Marcar como resolvido
-              </Button>
-            ) : (
-              <Button variant="secondary" loading={changingStatus} onClick={() => changeStatus("queued")}>
-                Reabrir na fila
-              </Button>
-            )}
-          </div>
-        ) : null}
-      </header>
+      <PageHeader
+        title={`Atendimento ${request.code}`}
+        description={
+          <>
+            <StatusBadge status={request.status} />
+            <Badge tone="slate">{KIND_LABEL[request.kind] ?? request.kind}</Badge>
+          </>
+        }
+        backTo="/ajuda"
+        backLabel="Voltar ao suporte"
+        actions={
+          staff ? (
+            <div className="flex flex-wrap items-center gap-2">
+              {request.status === "queued" ? (
+                <Button variant="secondary" loading={changingStatus} onClick={() => changeStatus("in_progress")}>
+                  Marcar em atendimento
+                </Button>
+              ) : null}
+              {!resolved ? (
+                <Button loading={changingStatus} onClick={() => setConfirmResolve(true)}>
+                  Marcar como resolvido
+                </Button>
+              ) : (
+                <Button variant="secondary" loading={changingStatus} onClick={() => changeStatus("queued")}>
+                  Reabrir na fila
+                </Button>
+              )}
+            </div>
+          ) : null
+        }
+      />
 
       <section className="grid gap-3 rounded-xl border border-slate-200 bg-surface p-4 text-sm shadow-sm sm:grid-cols-3">
         <div>

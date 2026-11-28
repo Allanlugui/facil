@@ -107,6 +107,8 @@ export function CatalogPage() {
       <PageHeader
         title="Catálogo"
         description="Produtos, categorias, unidades de medida e fornecedores usados por todo o sistema."
+        backTo="/configuracoes/administracao"
+        backLabel="Voltar à administração"
       />
       <Tabs
         tabs={[

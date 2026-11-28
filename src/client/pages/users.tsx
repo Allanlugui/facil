@@ -96,6 +96,8 @@ export function UsersPage() {
       <PageHeader
         title="Usuários e permissões"
         description="Contas de acesso, setores, gestores responsáveis e a matriz de permissões aplicada pelo servidor em cada requisição."
+        backTo="/configuracoes/administracao"
+        backLabel="Voltar à administração"
       />
       <Tabs
         tabs={[

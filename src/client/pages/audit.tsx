@@ -168,6 +168,8 @@ export function AuditPage() {
       <PageHeader
         title="Auditoria"
         description="Trilha imutável de ações: quem fez, quando, o que mudou e o que foi negado."
+        backTo="/configuracoes/administracao"
+        backLabel="Voltar à administração"
       />
 
       <Card padded={false}>

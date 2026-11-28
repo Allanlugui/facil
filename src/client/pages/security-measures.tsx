@@ -203,6 +203,8 @@ export default function SecurityMeasuresPage() {
       <PageHeader
         title="LGPD - Medidas de segurança"
         description="Inventário de medidas técnicas e administrativas (Arts. 46 e 49, Lei 13.709/2018)"
+        backTo="/configuracoes/administracao"
+        backLabel="Voltar à administração"
       />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">

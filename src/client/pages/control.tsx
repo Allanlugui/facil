@@ -163,6 +163,8 @@ export function ControlPage() {
       <PageHeader
         title="Controle do sistema"
         description="Exclua cadastros com prévia de impacto. O histórico nunca é apagado: registros em uso são arquivados e continuam visíveis como “(excluído)”."
+        backTo="/configuracoes/administracao"
+        backLabel="Voltar à administração"
       />
 
       {entitiesState.loading ? <LoadingBlock /> : null}

@@ -13,6 +13,7 @@ import {
   type SelectHTMLAttributes,
   type TextareaHTMLAttributes,
 } from "react";
+import { Link } from "react-router-dom";
 import { useEscape } from "./hooks";
 
 /**
@@ -317,19 +318,79 @@ export function PageHeader({
   title,
   description,
   actions,
+  backTo,
+  backLabel = "Voltar",
 }: {
   title: string;
   description?: ReactNode;
   actions?: ReactNode;
+  backTo?: string;
+  backLabel?: string;
 }) {
   return (
     <header className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-      <div className="min-w-0">
-        <h1 className="text-xl font-semibold tracking-tight text-slate-900">{title}</h1>
-        {description ? <div className="mt-1 text-sm text-slate-600">{description}</div> : null}
+      <div className="min-w-0 flex items-center gap-3">
+        {backTo ? (
+          <BackButton to={backTo} label={backLabel} />
+        ) : null}
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight text-slate-900">{title}</h1>
+          {description ? <div className="mt-1 text-sm text-slate-600">{description}</div> : null}
+        </div>
       </div>
       {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
     </header>
+  );
+}
+
+/**
+ * Botão "Voltar" reutilizável.
+ * - Se `to` for fornecido, usa `<Link>` (navegação SPA).
+ * - Senão, usa `history.back()` com fallback para "/".
+ * Acessível: ícone + label, aria-label, foco visível.
+ */
+export function BackButton({
+  to,
+  label = "Voltar",
+}: {
+  to?: string;
+  label?: string;
+}) {
+  const handleClick = (event: React.MouseEvent<HTMLAnchorElement | HTMLButtonElement>) => {
+    if (!to) {
+      event.preventDefault();
+      if (window.history.length > 1) {
+        window.history.back();
+      } else {
+        window.location.href = "/";
+      }
+    }
+  };
+
+  if (to) {
+    return (
+      <Link
+        to={to}
+        onClick={handleClick}
+        className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-brand-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-700 transition-colors"
+        aria-label={label}
+      >
+        <ArrowLeftIcon className="size-4" />
+        {label}
+      </Link>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-brand-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-700 transition-colors"
+      aria-label={label}
+    >
+      <ArrowLeftIcon className="size-4" />
+      {label}
+    </button>
   );
 }
 

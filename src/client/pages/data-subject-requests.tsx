@@ -170,6 +170,8 @@ export default function DataSubjectRequestsPage() {
       <PageHeader
         title="LGPD - Direitos do titular"
         description="Solicitações de exercício de direitos (Arts. 18 e 19, Lei 13.709/2018)"
+        backTo="/configuracoes/administracao"
+        backLabel="Voltar à administração"
       />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">

@@ -233,7 +233,17 @@ export function SettingsPage() {
   if (!section) {
     body = <OverviewSection />;
   } else if (section === "administracao") {
-    body = <AdministrationSection />;
+    body = (
+      <div>
+        <PageHeader
+          title="Administração"
+          description="Acesso às áreas administrativas do sistema."
+          backTo="/configuracoes"
+          backLabel="Voltar às configurações"
+        />
+        <AdministrationSection />
+      </div>
+    );
   } else if (!settingsSection) {
     body = (
       <Card>
@@ -251,11 +261,41 @@ export function SettingsPage() {
   } else if (!canViewSettings) {
     body = <RestrictedCard />;
   } else if (settingsSection.id === "aparencia") {
-    body = <AppearanceSection />;
+    body = (
+      <div>
+        <PageHeader
+          title={settingsSection.label}
+          description={settingsSection.description}
+          backTo="/configuracoes"
+          backLabel="Voltar às configurações"
+        />
+        <AppearanceSection />
+      </div>
+    );
   } else if (settingsSection.id === "categorias") {
-    body = <TicketCategoriesTab />;
+    body = (
+      <div>
+        <PageHeader
+          title={settingsSection.label}
+          description={settingsSection.description}
+          backTo="/configuracoes"
+          backLabel="Voltar às configurações"
+        />
+        <TicketCategoriesTab />
+      </div>
+    );
   } else {
-    body = <SettingsSectionEditor section={settingsSection.id} />;
+    body = (
+      <div>
+        <PageHeader
+          title={settingsSection.label}
+          description={settingsSection.description}
+          backTo="/configuracoes"
+          backLabel="Voltar às configurações"
+        />
+        <SettingsSectionEditor section={settingsSection.id} />
+      </div>
+    );
   }
 
   return (
@@ -263,6 +303,8 @@ export function SettingsPage() {
       <PageHeader
         title="Configurações"
         description="Regras do sistema, aparência e áreas administrativas em um só lugar."
+        backTo="/"
+        backLabel="Voltar ao painel"
       />
 
       <div className="mb-4 flex gap-1 overflow-x-auto border-b border-slate-200 pb-px" role="tablist">

@@ -148,6 +148,8 @@ export default function DpoPage() {
       <PageHeader
         title="LGPD - Encarregado (DPO)"
         description="Encarregado pelo tratamento de dados pessoais (Art. 41, Lei 13.709/2018)"
+        backTo="/configuracoes/administracao"
+        backLabel="Voltar à administração"
       />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">

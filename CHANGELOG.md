@@ -3,6 +3,16 @@
 Todas as alterações relevantes do Facil são registradas aqui. O projeto segue o
 versionamento descrito em `docs/VERSIONAMENTO.md`.
 
+## [0.11.0] — 2026-11-28
+
+**Navegação consistente + sidebar colapsável desktop**
+
+- **Botão "Voltar" universal** (`PageHeader.backTo` + `BackButton`): todas as rotas de detalhe (`:id`) e subseções (`/configuracoes/<secao>`, `/controle`, `/catalogo`, `/estrutura`, `/usuarios`, `/relatorios`, `/auditoria`, `/perfil`, `/ajuda/:id`, `/patrimonio/:id`, módulos LGPD) ganham botão de volta acessível (ícone `ArrowLeftIcon`, `aria-label`, fallback `history.back()` → `/`). Páginas-nível-topo do sidebar (`/`, `/estoque`, `/consumo`, `/inventario`, `/chamados`, `/ordens`, `/compras`, `/patrimonio`, `/ajuda`) não recebem Voltar (navegação via sidebar).
+- **Sidebar desktop retrátil** (lg+): botão seta (`ChevronIcon`) colapsa/expande (256 px → 72 px, só ícones, labels com tooltip), motion 180–220 ms `ease-out-soft`, itens em cascata sutil (stagger ~30 ms, translate 6 px + fade), estado persistido em `localStorage.facil.sidebarCollapsed` (default expandido). Mobile drawer inalterado.
+- **Motion reutilizado**: tokens `--motion-fast/base/slow`, `--ease-out-soft`, classes `facil-sidebar`, `facil-sidebar-nav`, `facil-sidebar-nav-item` — sem nova biblioteca, respeita `prefers-reduced-motion` (sem delay/stagger).
+- **Acessibilidade**: foco visível, `aria-expanded`/`aria-label` no toggle, alvo ≥44 px, navegação por teclado funciona colapsado.
+- **Nenhuma rota logada prende o usuário**: validação em 100% das rotas do router.tsx.
+
 ## [0.10.5] — 2026-11-28
 
 Correção raiz de dialogs cortados no mobile (P-28): as animações usavam

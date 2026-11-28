@@ -13,6 +13,7 @@ import {
   BoxIcon,
   Button,
   CartIcon,
+  ChevronIcon,
   ClipboardIcon,
   CloseIcon,
   DashboardIcon,
@@ -169,6 +170,12 @@ export function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("facil.sidebarCollapsed") === "true";
+    }
+    return false;
+  });
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
@@ -176,6 +183,11 @@ export function AppShell() {
   const closeBell = useCallback(() => setBellOpen(false), []);
   const menuRef = useClickOutside(closeMenu, menuOpen);
   const bellRef = useClickOutside(closeBell, bellOpen);
+
+  // Persist sidebar collapsed state
+  useEffect(() => {
+    localStorage.setItem("facil.sidebarCollapsed", String(sidebarCollapsed));
+  }, [sidebarCollapsed]);
 
   // Os menus fecham e a rolagem do conteúdo volta ao topo ao trocar de rota.
   useEffect(() => {
@@ -191,11 +203,11 @@ export function AppShell() {
   }
 
   const renderNav = (items: NavItem[]) => (
-    <ul className="space-y-0.5">
+    <ul className="space-y-0.5 facil-sidebar-nav">
       {items
         .filter((item) => !item.permission || can(item.permission))
         .map((item) => (
-          <li key={item.to}>
+          <li key={item.to} className="facil-sidebar-nav-item">
             <NavLink
               to={item.to}
               end={item.end}
@@ -207,8 +219,8 @@ export function AppShell() {
                 }`
               }
             >
-              <span className="text-slate-400">{item.icon}</span>
-              {item.label}
+              <span className="text-slate-400 flex-shrink-0">{item.icon}</span>
+              <span className="truncate">{item.label}</span>
             </NavLink>
           </li>
         ))}
@@ -220,27 +232,40 @@ export function AppShell() {
     navigate("/login", { replace: true });
   };
 
+  const sidebarWidth = sidebarCollapsed ? "w-[72px]" : "w-[256px]";
+  const sidebarClasses = `hidden shrink-0 flex-col border-r border-slate-200 bg-surface lg:flex facil-sidebar ${sidebarCollapsed ? "collapsed" : "expanded"} ${sidebarWidth}`;
+
   return (
     <div className="flex h-full overflow-hidden bg-slate-50">
-      {/* Menu lateral fixo a partir de lg */}
-      <aside className="hidden w-64 shrink-0 flex-col border-r border-slate-200 bg-surface lg:flex">
+      {/* Menu lateral fixo a partir de lg — colapsável */}
+      <aside className={sidebarClasses}>
         <Brand />
         <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-4">
-          <div>
-            <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+          <div className="flex items-center justify-between px-3 pb-1">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 truncate">
               {nav.title}
             </p>
-            {renderNav(nav.items)}
+            <button
+              type="button"
+              onClick={() => setSidebarCollapsed((prev) => !prev)}
+              className="facil-sidebar-toggle rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 flex-shrink-0"
+              aria-label={sidebarCollapsed ? "Expandir menu lateral" : "Colapsar menu lateral"}
+              aria-expanded={!sidebarCollapsed}
+              title={sidebarCollapsed ? "Expandir menu lateral" : "Colapsar menu lateral"}
+            >
+              <ChevronIcon className="size-4" />
+            </button>
           </div>
+          {renderNav(nav.items)}
           {canAny(SETTINGS_ACCESS) ? (
             <div className="border-t border-slate-100 pt-3">
               {renderNav(SETTINGS_NAV)}
             </div>
           ) : null}
         </nav>
-        <footer className="border-t border-slate-100 px-4 py-3 text-xs text-slate-500">
-          {app.companyName ?? "Facil"} · {app.timezone}
-          {version ? ` · v${version}` : null}
+        <footer className="border-t border-slate-100 px-3 py-3 text-xs text-slate-500 facil-sidebar-nav-item">
+          <div className="truncate">{app.companyName ?? "Facil"} · {app.timezone}</div>
+          {version ? <div className="truncate mt-0.5">v{version}</div> : null}
         </footer>
       </aside>
 

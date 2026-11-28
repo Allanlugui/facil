@@ -79,6 +79,8 @@ export default function StructurePage() {
       <PageHeader
         title="Estrutura"
         description="Unidades, tipos de local e hierarquia de ambientes da empresa."
+        backTo="/configuracoes/administracao"
+        backLabel="Voltar à administração"
       />
       <Tabs
         tabs={[

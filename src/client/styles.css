@@ -476,6 +476,110 @@ body {
   animation-delay: 315ms;
 }
 
+/* -------------------------------------------------------------------------- */
+/* Sidebar colapsável (desktop)                                               */
+/* -------------------------------------------------------------------------- */
+
+.facil-sidebar {
+  transition: width var(--motion-base) var(--ease-out-soft);
+}
+
+.facil-sidebar.collapsed {
+  width: 72px;
+}
+
+.facil-sidebar.expanded {
+  width: 256px;
+}
+
+.facil-sidebar-nav {
+  transition: opacity var(--motion-fast) var(--ease-out-soft),
+    transform var(--motion-fast) var(--ease-out-soft);
+}
+
+.facil-sidebar.collapsed .facil-sidebar-nav {
+  opacity: 0;
+  transform: translateX(-8px);
+  pointer-events: none;
+}
+
+.facil-sidebar.expanded .facil-sidebar-nav {
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: auto;
+}
+
+/* Cascata dos itens do menu ao expandir */
+.facil-sidebar-nav-item {
+  transition: opacity var(--motion-fast) var(--ease-out-soft),
+    transform var(--motion-fast) var(--ease-out-soft);
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.facil-sidebar.collapsed .facil-sidebar-nav-item {
+  opacity: 0;
+  transform: translateX(-6px);
+}
+
+.facil-sidebar.expanded .facil-sidebar-nav-item:nth-child(1) { transition-delay: 0ms; }
+.facil-sidebar.expanded .facil-sidebar-nav-item:nth-child(2) { transition-delay: 30ms; }
+.facil-sidebar.expanded .facil-sidebar-nav-item:nth-child(3) { transition-delay: 60ms; }
+.facil-sidebar.expanded .facil-sidebar-nav-item:nth-child(4) { transition-delay: 90ms; }
+.facil-sidebar.expanded .facil-sidebar-nav-item:nth-child(5) { transition-delay: 120ms; }
+.facil-sidebar.expanded .facil-sidebar-nav-item:nth-child(6) { transition-delay: 150ms; }
+.facil-sidebar.expanded .facil-sidebar-nav-item:nth-child(7) { transition-delay: 180ms; }
+.facil-sidebar.expanded .facil-sidebar-nav-item:nth-child(8) { transition-delay: 210ms; }
+.facil-sidebar.expanded .facil-sidebar-nav-item:nth-child(9) { transition-delay: 240ms; }
+.facil-sidebar.expanded .facil-sidebar-nav-item:nth-child(10) { transition-delay: 270ms; }
+.facil-sidebar.expanded .facil-sidebar-nav-item:nth-child(11) { transition-delay: 300ms; }
+.facil-sidebar.expanded .facil-sidebar-nav-item:nth-child(12) { transition-delay: 330ms; }
+.facil-sidebar.expanded .facil-sidebar-nav-item:nth-child(13) { transition-delay: 360ms; }
+.facil-sidebar.expanded .facil-sidebar-nav-item:nth-child(14) { transition-delay: 390ms; }
+.facil-sidebar.expanded .facil-sidebar-nav-item:nth-child(15) { transition-delay: 420ms; }
+.facil-sidebar.expanded .facil-sidebar-nav-item:nth-child(16) { transition-delay: 450ms; }
+.facil-sidebar.expanded .facil-sidebar-nav-item:nth-child(17) { transition-delay: 480ms; }
+.facil-sidebar.expanded .facil-sidebar-nav-item:nth-child(18) { transition-delay: 510ms; }
+
+/* Ícone do botão de colapsar */
+.facil-sidebar-toggle {
+  transition: transform var(--motion-base) var(--ease-out-soft);
+}
+
+.facil-sidebar.collapsed .facil-sidebar-toggle {
+  transform: rotate(180deg);
+}
+
+/* Tooltip para labels colapsados */
+.facil-sidebar-tooltip {
+  position: relative;
+}
+
+.facil-sidebar-tooltip::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--color-slate-900);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity var(--motion-fast) var(--ease-out-soft),
+    visibility var(--motion-fast) var(--ease-out-soft);
+  z-index: 50;
+}
+
+.facil-sidebar.collapsed .facil-sidebar-tooltip:hover::after {
+  opacity: 1;
+  visibility: visible;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

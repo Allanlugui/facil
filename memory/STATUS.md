@@ -1,11 +1,17 @@
 # Status do Projeto: Facil
 
+- **Release 0.10.5 — dialogs cortados (28/11/2026):** `fill-mode: both` retinha
+  `transform` no contêiner da rota e quebrava `position: fixed` (ficha de
+  chamado com topo fora da tela). Troca para `backwards` em todas as animações.
+  Typecheck, lint, check:api 69×178, build, **204/204**, `verify` OK, produção
+  em 0.10.5 (tree `b6e52ab8…`, 08:44:02 −03:00). Commit `d501f48`, tag `v0.10.5`,
+  Worker `f3629266`. Detalhe em P-28.
+
 - **Release 0.10.4 — notificações responsivas (28/11/2026):** dropdown da
   campainha ocupa a largura da tela no mobile (`fixed inset-x-3`) e segue
   ancorado no desktop. Typecheck, lint, check:api 69×178, build, **204/204**,
-  `verify` OK, produção em 0.10.4 (`/build-info.json`: tree `88edd2ca…`,
-  08:30:39 −03:00). Commit `0c76861`, tag `v0.10.4`, Worker `79f173ed`.
-  Detalhe em P-27.
+  `verify` OK, produção em 0.10.4 (tree `88edd2ca…`, 08:30:39 −03:00).
+  Commit `0c76861`, tag `v0.10.4`, Worker `79f173ed`. Detalhe em P-27.
 
 - **Release 0.10.3 — cascata de entrada (28/11/2026):** conteúdo das rotas entra
   em cascata (8 px, 45 ms/item, teto no 8º) — `facil-reveal-group` no invólucro

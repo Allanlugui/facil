@@ -238,6 +238,8 @@ export default function SecurityIncidentsPage() {
       <PageHeader
         title="LGPD - Incidentes de segurança"
         description="Comunicação de incidentes à ANPD e aos titulares (Art. 48, Lei 13.709/2018)"
+        backTo="/configuracoes/administracao"
+        backLabel="Voltar à administração"
       />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">

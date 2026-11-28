@@ -471,3 +471,21 @@
 - **Validação:** typecheck, lint, check:api 69×178, build, **204/204**, `verify`
   OK, release **0.10.4** publicada (commit `0c76861`, tag `v0.10.4`, Worker
   `79f173ed`).
+
+## P-28 — Ficha de abertura de chamado com o topo cortado no mobile (RESOLVIDO em 28/11/2026) — VALIDADO
+
+- **Sintoma (relato do usuário + print 390 px):** com credencial de colaborador,
+  a ficha de abertura de chamado aparece parcialmente cortada — título e início
+  do formulário fora da tela, só o rodapé visível.
+- **Causa raiz:** as animações de entrada usavam `animation-fill-mode: both`,
+  que retém `transform: translateY(0)` no contêiner da rota após terminar —
+  e qualquer `transform` retido quebra todo `position: fixed` dos descendentes
+  (o Dialog `fixed inset-0` passava a se ancorar no contêiner em vez da
+  viewport). Introduzido na D-64 (0.10.0, `facil-page-in`) e ampliado na D-67
+  (0.10.3, cascata `facil-reveal-group`).
+- **Correção (release 0.10.5):** `both` → `backwards` em todas as animações de
+  `styles.css` — visual idêntico (o `from` continua valendo no atraso), sem
+  `transform` retido após o fim.
+- **Validação:** typecheck, lint, check:api 69×178, build, **204/204**, `verify`
+  OK, release **0.10.5** publicada (commit `d501f48`, tag `v0.10.5`, Worker
+  `f3629266`).

@@ -220,6 +220,8 @@ export function ReportsPage() {
       <PageHeader
         title="Relatórios"
         description="Leituras agregadas de estoque, consumo, atendimento e compras. Exportação em CSV quando disponível."
+        backTo="/configuracoes/administracao"
+        backLabel="Voltar à administração"
       />
       <Tabs
         tabs={TABS}

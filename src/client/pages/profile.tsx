@@ -19,7 +19,7 @@ export function ProfilePage() {
 
   return (
     <div>
-      <PageHeader title="Meu perfil" description="Seus dados de acesso e permissões efetivas." />
+      <PageHeader title="Meu perfil" description="Seus dados de acesso e permissões efetivas." backTo="/" backLabel="Voltar ao painel" />
 
       <div className="grid gap-5 lg:grid-cols-2">
         <div className="space-y-5">

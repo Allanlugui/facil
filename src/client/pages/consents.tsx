@@ -259,6 +259,8 @@ export default function ConsentsPage() {
       <PageHeader
         title="LGPD - Consentimento"
         description="Titulares de dados e consentimentos (Art. 8º, Lei 13.709/2018)"
+        backTo="/configuracoes/administracao"
+        backLabel="Voltar à administração"
       />
 
       {/* Tabs */}

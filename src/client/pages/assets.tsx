@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   ASSET_ACTIVE_STATUSES,
   ASSET_CONDITION_LABELS,
@@ -27,7 +27,6 @@ import { AttachmentsCard } from "../lib/attachments-card";
 import { useSession } from "../lib/session";
 import {
   Alert,
-  ArrowLeftIcon,
   Badge,
   Button,
   Card,
@@ -502,7 +501,7 @@ export function AssetDetailPage() {
   if (detail.loading && !detail.data) {
     return (
       <div>
-        <BackLink />
+        <PageHeader title="Patrimônio" backTo="/patrimonio" backLabel="Voltar ao patrimônio" />
         <LoadingBlock label="Carregando ativo..." />
       </div>
     );
@@ -510,7 +509,7 @@ export function AssetDetailPage() {
   if (detail.error || !detail.data) {
     return (
       <div>
-        <BackLink />
+        <PageHeader title="Patrimônio" backTo="/patrimonio" backLabel="Voltar ao patrimônio" />
         <ErrorBlock message={detail.error ?? "Ativo não encontrado."} onRetry={detail.reload} />
       </div>
     );
@@ -559,8 +558,6 @@ export function AssetDetailPage() {
 
   return (
     <div>
-      <BackLink />
-
       <PageHeader
         title={asset.name}
         description={
@@ -574,6 +571,8 @@ export function AssetDetailPage() {
             </Badge>
           </span>
         }
+        backTo="/patrimonio"
+        backLabel="Voltar ao patrimônio"
         actions={
           <>
             {manage ? (
@@ -754,18 +753,6 @@ export function AssetDetailPage() {
         />
       ) : null}
     </div>
-  );
-}
-
-function BackLink() {
-  return (
-    <Link
-      to="/patrimonio"
-      className="mb-3 inline-flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-brand-800"
-    >
-      <ArrowLeftIcon className="size-4" />
-      Voltar para o patrimônio
-    </Link>
   );
 }
 

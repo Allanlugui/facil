@@ -525,11 +525,10 @@ export function TicketDetailPage() {
             ) : null}
           </span>
         }
+        backTo="/chamados"
+        backLabel="Voltar aos chamados"
         actions={
           <>
-            <Link to="/chamados">
-              <Button variant="secondary">Voltar</Button>
-            </Link>
             {can(PERMISSIONS.TICKETS_ASSIGN) && active ? (
               <Button variant="secondary" onClick={() => setAssigning(true)}>
                 {ticket.assigneeId ? "Alterar responsável" : "Atribuir"}

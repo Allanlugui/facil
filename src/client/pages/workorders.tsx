@@ -604,11 +604,10 @@ export function WorkOrderDetailPage() {
             {workOrder.requiresMaterial ? <Badge tone="amber">Depende de material</Badge> : null}
           </span>
         }
+        backTo="/ordens"
+        backLabel="Voltar às ordens"
         actions={
           <>
-            <Link to="/ordens">
-              <Button variant="secondary">Voltar</Button>
-            </Link>
             {can(PERMISSIONS.WORKORDERS_EXECUTE) && active ? (
               <>
                 <Button variant="secondary" onClick={() => setAssigning(true)}>

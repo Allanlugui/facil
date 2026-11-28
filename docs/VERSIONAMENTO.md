@@ -135,3 +135,11 @@ categorias e aba **Categorias de patrimônio** na Central de Controle. Ativos n�
 são excluídos: baixa/descarte são terminais e preservam o histórico. Sem migration
 nova (a `0023_assets.sql` já estava aplicada). Funcionalidade nova para o usuário
 final: subiu o **minor**.
+
+A décima quarta entrega foi publicada na versão **0.11.0**, em 28/11/2026:
+**Volta consistente em todo o sistema + sidebar desktop colapsável com motion**.
+- `PageHeader` ganha `backTo`/`backLabel`; componente `BackButton` reutilizável (`<Link>` ou `history.back()` com fallback). Cobertura 100%: todas as rotas de detalhe (`:id`), subseções `/configuracoes/<secao>`, páginas administrativas (`/controle`, `/catalogo`, `/estrutura`, `/usuarios`, `/relatorios`, `/auditoria`), `/perfil`, `/ajuda/:id`, `/patrimonio/:id`, módulos LGPD (`/legal`, `/consent`, `/dpo`, `/dsr`, `/seguranca`, `/incidentes`). Páginas-nível-topo do sidebar (`/`, `/estoque`, `/consumo`, `/inventario`, `/chamados`, `/ordens`, `/compras`, `/patrimonio`, `/ajuda`) não recebem Voltar (navegação via sidebar).
+- Sidebar desktop (lg+): botão seta (`ChevronIcon`, `aria-expanded`, `aria-label`) colapsa 256 px → 72 px (ícones + tooltip), motion 180–220 ms `ease-out-soft`, itens em cascata (stagger ~30 ms, translate 6 px + fade), estado em `localStorage.facil.sidebarCollapsed` (default expandido). Mobile drawer inalterado.
+- Motion reutilizado: tokens `--motion-fast/base/slow`, `--ease-out-soft`, classes CSS `facil-sidebar*`, sem nova biblioteca. Respeita `prefers-reduced-motion` (sem delay/stagger).
+- Acessibilidade: foco visível, alvo ≥44 px, navegação por teclado colapsado.
+- Nenhuma rota logada prende o usuário. Funcionalidade nova + mudança de comportamento: subiu o **minor**.

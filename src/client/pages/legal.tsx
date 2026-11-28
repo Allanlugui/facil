@@ -284,6 +284,8 @@ export default function LegalPage() {
       <PageHeader
         title="LGPD - Base legal"
         description="Registro de bases legais e operações de tratamento (Art. 7º, Lei 13.709/2018)"
+        backTo="/configuracoes/administracao"
+        backLabel="Voltar à administração"
       />
 
       {/* Tabs simples */}

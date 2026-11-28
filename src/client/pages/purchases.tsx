@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { locationLabel } from "@shared/locations";
 import { PERMISSIONS } from "@shared/permissions";
 import {
@@ -1666,11 +1666,10 @@ export function PurchaseDetailPage() {
             </div>
           </div>
         }
+        backTo="/compras"
+        backLabel="Voltar às compras"
         actions={
           <>
-            <Link to="/compras">
-              <Button variant="secondary">Voltar</Button>
-            </Link>
             {canSubmit && !request.returned ? (
               <Button onClick={() => void submitForApproval()}>Enviar para Compras</Button>
             ) : null}

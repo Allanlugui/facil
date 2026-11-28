@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { locationLabel } from "@shared/locations";
 import { PERMISSIONS } from "@shared/permissions";
 import {
@@ -571,11 +571,10 @@ export function InventoryDetailPage() {
             <Badge tone={STATUS_TONE[inventory.status]}>{INVENTORY_STATUS_LABEL[inventory.status]}</Badge>
           </>
         }
+        backTo="/inventario"
+        backLabel="Voltar aos inventários"
         actions={
           <>
-            <Link to="/inventario">
-              <Button variant="secondary">Voltar</Button>
-            </Link>
             {open && can(PERMISSIONS.INVENTORY_CREATE) ? (
               <Button variant="secondary" loading={syncing} onClick={() => void syncItems()}>
                 Incluir produtos novos
