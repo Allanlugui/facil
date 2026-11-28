@@ -239,22 +239,24 @@ export function AppShell() {
     <div className="flex h-full overflow-hidden bg-slate-50">
       {/* Menu lateral fixo a partir de lg — colapsável */}
       <aside className={sidebarClasses}>
-        <Brand />
+        <div className="flex items-center justify-between px-3 py-2">
+          <Brand />
+          <button
+            type="button"
+            onClick={() => setSidebarCollapsed((prev) => !prev)}
+            className="facil-sidebar-toggle rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 flex-shrink-0"
+            aria-label={sidebarCollapsed ? "Expandir menu lateral" : "Colapsar menu lateral"}
+            aria-expanded={!sidebarCollapsed}
+            title={sidebarCollapsed ? "Expandir menu lateral" : "Colapsar menu lateral"}
+          >
+            <ChevronIcon className="size-4" />
+          </button>
+        </div>
         <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-4">
-          <div className="flex items-center justify-between px-3 pb-1 facil-nav-header">
+          <div className="px-3 pb-1 facil-nav-header">
             <p className="nav-section-title text-[11px] font-semibold uppercase tracking-wider text-slate-400 truncate">
               {nav.title}
             </p>
-            <button
-              type="button"
-              onClick={() => setSidebarCollapsed((prev) => !prev)}
-              className="facil-sidebar-toggle rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 flex-shrink-0"
-              aria-label={sidebarCollapsed ? "Expandir menu lateral" : "Colapsar menu lateral"}
-              aria-expanded={!sidebarCollapsed}
-              title={sidebarCollapsed ? "Expandir menu lateral" : "Colapsar menu lateral"}
-            >
-              <ChevronIcon className="size-4" />
-            </button>
           </div>
           {renderNav(nav.items)}
           {canAny(SETTINGS_ACCESS) ? (
@@ -394,13 +396,9 @@ export function AppShell() {
 function Brand() {
   const dark = useDarkSurface();
   return (
-    <Link to="/" className="flex items-center gap-2 px-4 py-4 brand-link">
+    <Link to="/" className="flex items-center justify-center px-4 py-4 brand-link" aria-label="Facil - Página inicial" title="Facil">
       <span className="brand-logo flex-shrink-0" aria-hidden="true">
-        <Logo dark={dark} className="h-9 w-9 object-contain" />
-      </span>
-      <span className="brand-text flex flex-col min-w-0">
-        <span className="brand-name text-sm font-semibold text-slate-900 truncate">Facil</span>
-        <span className="brand-subtitle text-[11px] text-slate-500 truncate">Gestão de Facilities</span>
+        <Logo dark={dark} className="object-contain" />
       </span>
     </Link>
   );

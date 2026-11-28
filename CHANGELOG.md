@@ -3,6 +3,15 @@
 Todas as alterações relevantes do Facil são registradas aqui. O projeto segue o
 versionamento descrito em `docs/VERSIONAMENTO.md`.
 
+## [0.11.2] — 2026-11-28
+
+**Ajuste fino da Brand colapsada: só logo, tamanho de ícone**
+
+- **Brand no modo colapsado**: mantém **apenas o logotipo**, sem nome do sistema ("Facil") nem subtítulo ("Gestão de Facilities"). Logo reduzida ao tamanho dos ícones do menu (24px / `size-6`), centralizada na barra de 88px com padding simétrico. Sem espremer, deformar ou cortar (`object-contain`, `flex-shrink-0`, aspect-ratio preservado).
+- **Modo expandido**: inalterado (logo 36px + "Facil" + "Gestão de Facilities").
+- **Transição**: logo anima suavemente entre 36px ↔ 24px junto com a barra (350ms, mesma curva), sem alterar tempos/delays do fechar/abrir já aprovados.
+- **Acessibilidade**: `alt`/`title` da logo mantidos; `prefers-reduced-motion` respeitado; mobile inalterado.
+
 ## [0.11.1] — 2026-11-28
 
 **Sidebar colapsável: fechar espelha abrir + Brand/footer colapsados**

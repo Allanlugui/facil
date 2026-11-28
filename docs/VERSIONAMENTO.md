@@ -152,3 +152,10 @@ A décima quarta entrega corrigida foi publicada na versão **0.11.1**, em 28/11
 - Footer colapsado: esconde company/timezone; mantém versão curta centralizada.
 - Velocidade: fechar total ~1.4s (labels ~1s + barra 350ms), sutil e rápido — não demorado.
 - Abertura inalterada: barra 350ms + labels cascata 250ms/80ms gap (~1.8s total). Correção de interface: subiu o **patch**.
+
+A décima quinta entrega foi publicada na versão **0.11.2**, em 28/11/2026:
+**Ajuste fino da Brand colapsada: só logo, tamanho de ícone (patch)**.
+- **Brand no modo colapsado**: mantém **apenas o logotipo**, sem nome do sistema ("Facil") nem subtítulo ("Gestão de Facilities"). Logo reduzida ao tamanho dos ícones do menu (24px / `size-6`), centralizada na barra de 88px com padding simétrico. Sem espremer, deformar ou cortar (`object-contain`, `flex-shrink-0`, aspect-ratio preservado).
+- **Modo expandido**: inalterado (logo 36px + "Facil" + "Gestão de Facilities").
+- **Transição**: logo anima suavemente entre 36px ↔ 24px junto com a barra (350ms, mesma curva), sem alterar tempos/delays do fechar/abrir já aprovados.
+- **Acessibilidade**: `alt`/`title` da logo mantidos; `prefers-reduced-motion` respeitado; mobile inalterado. Ajuste visual cirúrgico: subiu o **patch**.
