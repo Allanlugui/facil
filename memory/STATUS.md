@@ -1,5 +1,17 @@
 # Status do Projeto: Facil
 
+- **Release 0.10.0 — motion de verdade (28/11/2026):** entrada animada do login
+  (cartão 420 ms + stagger 70 ms + logo com pop), transição entre rotas (200 ms),
+  `Field` com `style?` opcional, `prefers-reduced-motion` sem atrasos. Só CSS,
+  sem biblioteca nova, sem migration. `npm run check` **204/204 em 24 arquivos**,
+  typecheck, lint, contrato (69×178), build; release assinada (Ed25519,
+  **215 arquivos**, tree `6da63985…`, 27/11/2026 23:26:25 −03:00), `npm run verify`
+  OK, Worker `cd9abfc8-989a-4916-9b3a-abf6457391f5`. Produção em 0.10.0
+  **nos dois endpoints** (`/build-info.json` e `/api/health`). Playwright local:
+  login desktop/mobile/reduced-motion/erro, dashboard pós-login, sem overflow.
+  Conta local `motion.qa@facil.local` (admin, senha de desenvolvimento) criada
+  para a verificação — remover quando não for mais útil.
+
 - **Revisão de saúde (28/11/2026):** suite verde **204/204 em 24 arquivos** (~204 s),
   `typecheck` limpo, `lint` limpo, `check:api` **69×178** OK. Produção no Worker 0.9.0
   confirmado pelo `/api/health` (tree `6f125c…`). Achados novos sem impacto no produto:

@@ -364,11 +364,42 @@ body {
 .facil-toast-in { animation: facil-toast-in var(--motion-base) var(--ease-out-soft) both; }
 .facil-toast-out { animation: facil-toast-out var(--motion-fast) var(--ease-in-soft) both; }
 
+/* Entradas de página e do login (D-64). Só montagem: opacidade + transformação,
+   nunca layout. O atraso do stagger vem de `--reveal-i` (70 ms por degrau). */
+@keyframes facil-page-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes facil-login-card-in {
+  from { opacity: 0; transform: translateY(18px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes facil-login-item-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes facil-logo-in {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.facil-page-in { animation: facil-page-in 200ms var(--ease-out-soft) both; }
+.facil-login-card { animation: facil-login-card-in 420ms var(--ease-out-soft) both; }
+.facil-login-item {
+  animation: facil-login-item-in 300ms var(--ease-out-soft) both;
+  animation-delay: calc(var(--reveal-i, 0) * 70ms);
+}
+.facil-logo-in { animation: facil-logo-in 450ms var(--ease-out-soft) both; }
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;

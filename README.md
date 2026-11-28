@@ -7,7 +7,7 @@ e adjudicação, relatórios, usuários/permissões e auditoria.
 **Autor:** Allan Luiz Silveira Lima (Allanlugui)  
 **Licença:** proprietária, todos os direitos reservados (ver `LICENSE`).  
 **Assinatura:** cada release é assinada com Ed25519 (ver `docs/ASSINATURA.md`).  
-**Versão atual:** `0.8.0` (módulo Patrimônio completo: cadastro, movimentações auditadas, histórico e categorias; a 0.7.5 adicionou captcha no login e chamados públicos; a 0.7.4 adicionou o consumidor do outbox com cron; a 0.7.3 adicionou anexos em ordens de serviço; a 0.7.2 adicionou o CI no GitHub Actions).
+**Versão atual:** `0.10.0` (motion de verdade: entrada animada do login com stagger, transição entre rotas e `Field` com `style`; a 0.9.0 trouxe o LGPD completo; a 0.8.0 o Patrimônio; a 0.7.5 o captcha; a 0.7.4 o consumidor do outbox com cron; a 0.7.3 anexos em ordens de serviço; a 0.7.2 o CI no GitHub Actions).
 
 > A autoria é registrada apenas pelo nome. CPF e e-mail pessoal do autor não são
 > armazenados nem exibidos pelo sistema, pela documentação ou pelo repositório.

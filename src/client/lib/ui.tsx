@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
   type ButtonHTMLAttributes,
+  type CSSProperties,
   type InputHTMLAttributes,
   type ReactNode,
   type SelectHTMLAttributes,
@@ -191,6 +192,7 @@ export function Field({
   htmlFor,
   children,
   className = "",
+  style,
 }: {
   label: string;
   hint?: ReactNode;
@@ -199,9 +201,10 @@ export function Field({
   htmlFor?: string;
   children: ReactNode;
   className?: string;
+  style?: CSSProperties;
 }) {
   return (
-    <div className={className}>
+    <div className={className} style={style}>
       <label htmlFor={htmlFor} className="mb-1 block text-sm font-medium text-slate-700">
         {label}
         {required ? <span className="ml-0.5 text-red-600">*</span> : null}

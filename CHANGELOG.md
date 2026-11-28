@@ -3,6 +3,14 @@
 Todas as alterações relevantes do Facil são registradas aqui. O projeto segue o
 versionamento descrito em `docs/VERSIONAMENTO.md`.
 
+## [0.10.0] — 2026-11-28
+
+Motion de verdade no produto (decisão D-64): entrada animada da página de login
+(cartão 420 ms + stagger de 70 ms por campo + logo com pop), transição curta
+entre rotas (200 ms, só opacidade + subida) e `prefers-reduced-motion` sem
+atrasos de stagger. Sem biblioteca nova: só CSS (`transform` + `opacity`).
+Sem mudança de banco.
+
 ## [0.9.0] — 2026-10-24
 
 Módulo **LGPD** completo (Lei 13.709/2018) para empresas de contabilidade:

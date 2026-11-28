@@ -6,15 +6,15 @@
   "payload": {
     "schema": "facil.signature.v1",
     "project": "Facil — Plataforma de Gestão de Facilities",
-    "version": "0.9.0",
+    "version": "0.10.0",
     "author": "Allan Luiz Silveira Lima",
     "alias": "Allanlugui",
     "company": "CorpServices Group",
-    "signedAt": "2026-10-24T22:23:29-03:00",
-    "treeHash": "6f125c8e55f64f6df9773d44a830a454bcc2a98404c33367ef8c1ec54574220f",
-    "fileCount": 243
+    "signedAt": "2026-11-27T23:26:25-03:00",
+    "treeHash": "6da6398576cc2458a184e525e9caddb0ec1ed6e10d64e4206e0af928575b8f0c",
+    "fileCount": 215
   },
-  "signature": "hvFfumSLC2rX0HmKLi/hKY9JDCm0lMtfXpAYu21PyLeMCPoLN9TAVQESgoIxzCnPSbrtleYS2wt6iSQnZLnqDQ==",
+  "signature": "n5Cx+ICstNdgLfkF/aHFTpQLmEnauiaUypyDh5u5mcDVI3N0KaIxoN0TzSUB72igCWuzdauBdUjajnsNinNYAg==",
   "verify": "node scripts/verify-release.mjs",
   "files": [
     {
@@ -34,8 +34,8 @@
     },
     {
       "path": ".gitignore",
-      "sha256": "97607ff87499923234439ccf54ae7e8162e8f3f3ec021da5f5b719b606ef640e",
-      "bytes": 317
+      "sha256": "30197c1121a61969f14e3be05c346033c89387121cfa64d58d0d80967262cc44",
+      "bytes": 447
     },
     {
       "path": "AGENTS.md",
@@ -49,8 +49,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "bf5850b190593f56a87c298e1140c41dde78f593bdf7e8b4ced8018d39ecd0e4",
-      "bytes": 32458
+      "sha256": "cf4601d4a3b40863bad9df2b4ef477ba7368246b174b764485e3ae2a62e33076",
+      "bytes": 32824
     },
     {
       "path": "LICENSE",
@@ -59,7 +59,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "4bac21f793b51f69db09c726cc1010462826ae45d7022e23a41096c3ef1546f8",
+      "sha256": "5dcd04306da1412fa4455d091cb5c610753a761978bd02edd826e184abc542d8",
       "bytes": 20004
     },
     {
@@ -106,21 +106,6 @@
       "path": "branding/splash.png",
       "sha256": "af8ed58e6ab28df3e0672a8b470204eb52156ed10942141838c4af1b241bd74a",
       "bytes": 1695656
-    },
-    {
-      "path": "d1_dump.sql",
-      "sha256": "7f14cd3354e91964870a03050e2ad075d5fb6b8e29eb042136837f604a8a398d",
-      "bytes": 103778
-    },
-    {
-      "path": "d1_lgpd_0025_0030.sql",
-      "sha256": "bed097293d27d63b78479f3c6bb566a636183475f00155436527042786fa08c2",
-      "bytes": 23810
-    },
-    {
-      "path": "d1_lgpd_only.sql",
-      "sha256": "d4d77adfe4bc872d623cf74f2282ec981c0019bab92bf2a73b76de81e7cfc878",
-      "bytes": 28474
     },
     {
       "path": "docs/ASSINATURA.md",
@@ -324,13 +309,13 @@
     },
     {
       "path": "package-lock.json",
-      "sha256": "0b4c8cefe78bed54e74fd2baa223aadfd1d048101ca88e61371c88f4b8c797b6",
-      "bytes": 193386
+      "sha256": "cc190b77ea00d2b3e98becef5e916bc9e96037e1ec5fc1fdffa3e192e19c0e20",
+      "bytes": 193388
     },
     {
       "path": "package.json",
-      "sha256": "a35b5d1537aab67086fa0aec1ee55d6b35b12bdb6a148549e063f8a20e679fec",
-      "bytes": 1861
+      "sha256": "37bb2c78ba71758009c522023892673cdde31699f5536a611dc6c365f3476b01",
+      "bytes": 1862
     },
     {
       "path": "scripts/check-api-paths.mjs",
@@ -374,8 +359,8 @@
     },
     {
       "path": "src/client/app/layout.tsx",
-      "sha256": "a17e574ca43d7f0572a1f7cbda47f5c620d2ed16b6beb7caa5a0fc77b8c520a2",
-      "bytes": 21845
+      "sha256": "6918f9e759394206a9fec13f9fd824ae484787c0c2160347614062a5cef03be4",
+      "bytes": 22176
     },
     {
       "path": "src/client/app/router.tsx",
@@ -454,8 +439,8 @@
     },
     {
       "path": "src/client/lib/ui.tsx",
-      "sha256": "9340d27f263f4ecc94b8610cd48d671994017c5fe035758762e0e42de06ee6ad",
-      "bytes": 29558
+      "sha256": "83902fc4cc9ee535f8ab5ab689cac719e5adb17851b733f538129c8b505068e8",
+      "bytes": 29628
     },
     {
       "path": "src/client/main.tsx",
@@ -524,8 +509,8 @@
     },
     {
       "path": "src/client/pages/login.tsx",
-      "sha256": "4dd60d25535d357d170c54f06d1538077efc6271ce165f333f1b3dfcde85b133",
-      "bytes": 3749
+      "sha256": "04f1e8f84fc5a194eb877d1ca54aaefacfd134b657ebac3f4355fb7002b3c2c9",
+      "bytes": 4345
     },
     {
       "path": "src/client/pages/not-found.tsx",
@@ -649,8 +634,8 @@
     },
     {
       "path": "src/client/styles.css",
-      "sha256": "1bd87a2fa81c3628965d35152eac34f892498acb2fa9feb6defbf14e01b2dc83",
-      "bytes": 11404
+      "sha256": "2bd85817bd425558c7e353b5568aa5219f9533bc92c53e5a2dea0d71d0d3afa7",
+      "bytes": 12526
     },
     {
       "path": "src/shared/assets.ts",
@@ -941,131 +926,6 @@
       "path": "src/worker/util.ts",
       "sha256": "2765a6fcda738f2445c16c2a5fc7ef3dbb3325c6ea6ff49776897f1c3a1be59d",
       "bytes": 8475
-    },
-    {
-      "path": "test_0026_dpo_table.sql",
-      "sha256": "39eaee2d8e0b9f9d569e5ddfc81f04014ad6c4692b32485681e911a107b363c6",
-      "bytes": 757
-    },
-    {
-      "path": "test_0027_dsr.sql",
-      "sha256": "abd9591a4643df2435157e1ab31d28f41fd5f7f93b302c023a34a621de302cd5",
-      "bytes": 1884
-    },
-    {
-      "path": "test_0028_security_measures.sql",
-      "sha256": "e89af487e9e3c49b87cb98ddebccd84bc672d01012c53c19a428964d70bedf11",
-      "bytes": 2068
-    },
-    {
-      "path": "test_0029_security_incidents.sql",
-      "sha256": "2cb2188780ccb726ef8c8d9930fbf564193215e3711887c31462cb86e91b9e90",
-      "bytes": 1950
-    },
-    {
-      "path": "test_0030_data_processing_operations.sql",
-      "sha256": "de76820b7146557329e1574a223357d6f0a922d9e69db395da62fc948e8fbf69",
-      "bytes": 926
-    },
-    {
-      "path": "test_consents.sql",
-      "sha256": "6037c0d915a0fd9f62f877123025f4f87a793b96c49dd76f2bce49efb8e2450d",
-      "bytes": 604
-    },
-    {
-      "path": "test_consents_admin.sql",
-      "sha256": "83d878b73961a6102245ef98fc1e8ccaf753b3e9c432d4df3571ebc8f7d30a14",
-      "bytes": 137
-    },
-    {
-      "path": "test_consents_all_perms.sql",
-      "sha256": "8b6102b8cb504f2e16d4721ee381ced7208de980bb2ff01c7638a2e6f76b37ea",
-      "bytes": 528
-    },
-    {
-      "path": "test_consents_dpo.sql",
-      "sha256": "6d50fea763c90574d5fb0f692512cd046ec5f6a5deb9498e569f5eb7d1430884",
-      "bytes": 136
-    },
-    {
-      "path": "test_consents_full.sql",
-      "sha256": "01694ac1f095c78f6c0d3604a6434d55f3a2b3ae86b3e87ec32d6f8746c61ead",
-      "bytes": 1147
-    },
-    {
-      "path": "test_consents_full_table.sql",
-      "sha256": "c95de3ea28827205beded36add44294b1b10c28e6f6a3f99d6bfa205897e6980",
-      "bytes": 1149
-    },
-    {
-      "path": "test_consents_manager.sql",
-      "sha256": "563543a40ed0c868656d8cbbe5eb9dde7ceb0d548fadc6ec6bacf79fd6bbad82",
-      "bytes": 144
-    },
-    {
-      "path": "test_consents_permissions.sql",
-      "sha256": "ed2bfba5f2918d55d87bb2639b09ffbd62909670362544171ef3c7720ec8a507",
-      "bytes": 778
-    },
-    {
-      "path": "test_consents_perms.sql",
-      "sha256": "a4f4bb992e7a6eec223c55127e213b4f363699fd1cb1badfb0904146bafd5a13",
-      "bytes": 245
-    },
-    {
-      "path": "test_consents_role_permissions.sql",
-      "sha256": "8b6102b8cb504f2e16d4721ee381ced7208de980bb2ff01c7638a2e6f76b37ea",
-      "bytes": 528
-    },
-    {
-      "path": "test_data_subjects.sql",
-      "sha256": "32f5262fe16c2b89f3df3ff2c225c8438e1a1b6a6d68a8a3cd2c33da46c8cd41",
-      "bytes": 302
-    },
-    {
-      "path": "test_dpo_permissions.sql",
-      "sha256": "69a9afd6b354ae4e8013a8f497b67cc6dbc748e4f468d112ebb8d022f295665d",
-      "bytes": 736
-    },
-    {
-      "path": "test_insert_role_dpo.sql",
-      "sha256": "b775286862f743f60c50eda896638d39d3614eb6290140bbe69b54fcbf49d0ee",
-      "bytes": 268
-    },
-    {
-      "path": "test_legal_bases.sql",
-      "sha256": "c67401aa2d1e2da96e183235663b744b20d895a7d0f5527b69b69c8aae3c2371",
-      "bytes": 266
-    },
-    {
-      "path": "test_legal_bases_full.sql",
-      "sha256": "830ac8bae7eb71125ee528e229f283835d7f81e878f4278a55a5f4666aba1f56",
-      "bytes": 2670
-    },
-    {
-      "path": "test_legal_bases_inserts.sql",
-      "sha256": "dc0ffb0e895b1572f7cc374d156b362b8d784164c888701773e4c642a68b8f94",
-      "bytes": 536
-    },
-    {
-      "path": "test_legal_permissions.sql",
-      "sha256": "015339a372e6595dfe45ce849dedc5d166a8be316b4b583081bae428a180c780",
-      "bytes": 753
-    },
-    {
-      "path": "test_permissions_only.sql",
-      "sha256": "a4f4bb992e7a6eec223c55127e213b4f363699fd1cb1badfb0904146bafd5a13",
-      "bytes": 245
-    },
-    {
-      "path": "test_roles.sql",
-      "sha256": "e401b8c5c194c72381c9479c58c6e54dc628248648f74f8611c85a2e21c9361e",
-      "bytes": 72
-    },
-    {
-      "path": "test_simple.sql",
-      "sha256": "fb5fe302780a73f04c6d63ff46b21a1f55214c6ad077f2bde1d1dcd8cc09941f",
-      "bytes": 85
     },
     {
       "path": "tests/01-auth.spec.ts",

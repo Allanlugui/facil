@@ -349,7 +349,12 @@ export function AppShell() {
 
         <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto">
           <main className="mx-auto w-full max-w-7xl px-3 py-5 sm:px-5">
-            <Outlet />
+            {/* Transição de rota (D-64): a chave remonta o invólucro a cada
+                pathname e re-dispara `facil-page-in` (200 ms, só opacidade +
+                subida de 10 px). Troca de query no mesmo pathname não anima. */}
+            <div key={location.pathname} className="facil-page-in">
+              <Outlet />
+            </div>
           </main>
         </div>
       </div>

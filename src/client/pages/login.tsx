@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { apiErrorMessage } from "../lib/api";
 import { useSession } from "../lib/session";
@@ -50,16 +50,24 @@ export function LoginPage() {
       <div className="relative w-full max-w-sm">
         <form
           onSubmit={submit}
-          className="space-y-4 rounded-xl border border-slate-200 bg-surface p-5 shadow-xl"
+          className="facil-login-card space-y-4 rounded-xl border border-slate-200 bg-surface p-5 shadow-xl"
         >
-          <div className="flex flex-col items-center gap-1 pb-1">
+          <div className="facil-logo-in flex flex-col items-center gap-1 pb-1">
             <Logo dark={dark} className="h-12 w-auto" />
             <p className="text-sm text-slate-600">Facil — Gestão de Facilities</p>
           </div>
-          {startupError && !error ? <Alert tone="amber">{startupError}</Alert> : null}
-          {error ? <Alert tone="red">{error}</Alert> : null}
+          {startupError && !error ? (
+            <div key={startupError} className="facil-pop-in">
+              <Alert tone="amber">{startupError}</Alert>
+            </div>
+          ) : null}
+          {error ? (
+            <div key={error} className="facil-pop-in">
+              <Alert tone="red">{error}</Alert>
+            </div>
+          ) : null}
 
-          <Field label="E-mail" required htmlFor="email">
+          <Field label="E-mail" required htmlFor="email" className="facil-login-item" style={{ "--reveal-i": 1 } as CSSProperties}>
             <Input
               id="email"
               type="email"
@@ -72,7 +80,7 @@ export function LoginPage() {
             />
           </Field>
 
-          <Field label="Senha" required htmlFor="password">
+          <Field label="Senha" required htmlFor="password" className="facil-login-item" style={{ "--reveal-i": 2 } as CSSProperties}>
             <Input
               id="password"
               type="password"
@@ -83,12 +91,12 @@ export function LoginPage() {
             />
           </Field>
 
-          <Button type="submit" className="w-full" loading={submitting}>
+          <Button type="submit" className="facil-login-item w-full" style={{ "--reveal-i": 3 } as CSSProperties} loading={submitting}>
             Entrar
           </Button>
         </form>
 
-        <p className="mt-4 text-center text-xs text-white/90">
+        <p className="facil-login-item mt-4 text-center text-xs text-white/90" style={{ "--reveal-i": 4 } as CSSProperties}>
           Esqueceu a senha?{" "}
           <Link to="/suporte?tipo=senha" className="font-medium text-white hover:underline">
             Clique aqui
@@ -98,7 +106,7 @@ export function LoginPage() {
             Instalação inicial
           </Link>
         </p>
-        <p className="mt-6 text-center text-[11px] text-white/80 [text-shadow:0_1px_3px_rgba(0,0,0,0.55)]">
+        <p className="facil-login-item mt-6 text-center text-[11px] text-white/80 [text-shadow:0_1px_3px_rgba(0,0,0,0.55)]" style={{ "--reveal-i": 5 } as CSSProperties}>
           © 2026 {app.companyName ?? "CorpServices Group"} · desenvolvimento assinado por Allan Luiz Silveira Lima
         </p>
       </div>
