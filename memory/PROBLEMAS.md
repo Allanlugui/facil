@@ -411,7 +411,11 @@
   idempotentes, tabela nascida na `0024`) adicionado. Nenhuma renumeração (D-59..D-63
   intactos).
 
-## P-25 — Resíduos de trabalho no diretório (28/11/2026) — ABERTO, sem urgência
+## P-25 — Resíduos de trabalho no diretório (RESOLVIDO em 28/11/2026) — VALIDADO
+
+- **Decisão:** backup único em `%TEMP%\opencode\facil-scratch-sql-2026-11-28` (28 arquivos,
+  consultas ad-hoc + dumps de 24/10/2026, todos reproduzíveis via wrangler/D1) e remoção
+  da raiz + `migrations/temp_hold/` vazio. `git status` limpo; nada versionado foi tocado.
 
 - `~30` arquivos `test_*.sql` / `d1_*.sql` na raiz: ignorados pelo git desde `297ce6d`,
   não versionados, mas poluindo o diretório. Apagar exige confirmação do titular
