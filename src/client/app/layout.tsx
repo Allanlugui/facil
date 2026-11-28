@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { PERMISSIONS } from "@shared/permissions";
 import type { Paginated } from "@shared/types";
@@ -202,12 +202,16 @@ export function AppShell() {
     return <Navigate to="/trocar-senha" replace />;
   }
 
-  const renderNav = (items: NavItem[]) => (
+  const renderNav = (items: NavItem[], startOrder = 0) => (
     <ul className="space-y-0.5 facil-sidebar-nav">
       {items
         .filter((item) => !item.permission || can(item.permission))
-        .map((item) => (
-          <li key={item.to} className="facil-sidebar-nav-item">
+        .map((item, index) => (
+          <li
+            key={item.to}
+            className="facil-sidebar-nav-item"
+            style={{ "--nav-order": startOrder + index } as CSSProperties}
+          >
             <NavLink
               to={item.to}
               end={item.end}
@@ -234,6 +238,9 @@ export function AppShell() {
 
   const sidebarWidth = sidebarCollapsed ? "w-[72px]" : "w-[256px]";
   const sidebarClasses = `hidden shrink-0 flex-col border-r border-slate-200 bg-surface lg:flex facil-sidebar ${sidebarCollapsed ? "collapsed" : "expanded"} ${sidebarWidth}`;
+  // Ordem global da cascata: Configurações continua a numeração do menu
+  // principal — por isso entra por último nos dois sentidos.
+  const mainVisibleCount = nav.items.filter((item) => !item.permission || can(item.permission)).length;
 
   return (
     <div className="flex h-full overflow-hidden bg-slate-50">
@@ -261,7 +268,7 @@ export function AppShell() {
           {renderNav(nav.items)}
           {canAny(SETTINGS_ACCESS) ? (
             <div className="border-t border-slate-100 pt-3">
-              {renderNav(SETTINGS_NAV)}
+              {renderNav(SETTINGS_NAV, mainVisibleCount)}
             </div>
           ) : null}
         </nav>

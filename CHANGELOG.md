@@ -3,6 +3,15 @@
 Todas as alterações relevantes do Facil são registradas aqui. O projeto segue o
 versionamento descrito em `docs/VERSIONAMENTO.md`.
 
+## [0.11.4] — 2026-11-28
+
+**Nova coreografia da sidebar: fechar esconde tudo, ícones voltam em cascata**
+
+- **Fechar**: tudo some junto (150ms) → barra recolhe (350ms) → ícones reaparecem em cascata de cima para baixo na barra já fechada (200ms cada, 60ms por posição), já clicáveis (link só arma junto com o próprio ícone).
+- **Abrir**: inalterado — barra expande (350ms), depois palavras entram em cascata (250ms cada, 80ms por posição).
+- **Ordem**: Configurações continua a numeração do menu principal (`--nav-order`) — entra por último nos dois sentidos (antes o `nth-child` a colocava primeiro).
+- Sem mudança de API/banco.
+
 ## [0.11.3] — 2026-11-28
 
 **Logo da sidebar sem distorção (proporção preservada)**

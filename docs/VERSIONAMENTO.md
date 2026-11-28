@@ -166,3 +166,10 @@ A décima sexta entrega foi publicada na versão **0.11.3**, em 28/11/2026:
 - **Expandido**: altura fixa `32px`, largura automática, `max-width 180px`, `object-contain` à esquerda — logo por inteiro, sem esmagar.
 - **Colapsado**: container `32px` com `overflow hidden` exibe só o símbolo (círculo "Corp"), `28px` de altura, sem esticar.
 - **Sem mudança de API/banco.** Correção visual: subiu o **patch**.
+
+A décima sétima entrega foi publicada na versão **0.11.4**, em 28/11/2026:
+**Nova coreografia da sidebar (patch)**.
+- **Fechar**: tudo some junto (150ms) → barra recolhe (350ms) → ícones reaparecem em cascata de cima para baixo na barra já fechada (200ms cada, 60ms por posição), já clicáveis.
+- **Abrir**: barra expande (350ms), depois palavras entram em cascata (250ms cada, 80ms por posição) — inalterado.
+- **Ordem**: Configurações continua a numeração do menu principal (`--nav-order`) — entra por último nos dois sentidos.
+- **Sem mudança de API/banco.** Ajuste de interface: subiu o **patch**.

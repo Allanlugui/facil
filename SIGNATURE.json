@@ -6,15 +6,15 @@
   "payload": {
     "schema": "facil.signature.v1",
     "project": "Facil — Plataforma de Gestão de Facilities",
-    "version": "0.11.3",
+    "version": "0.11.4",
     "author": "Allan Luiz Silveira Lima",
     "alias": "Allanlugui",
     "company": "CorpServices Group",
-    "signedAt": "2026-11-28T14:58:35-03:00",
-    "treeHash": "f80a9137dd3bf4dbf50fca653b0853176e361585308b8c826ae07cda3b440f53",
+    "signedAt": "2026-11-28T15:09:40-03:00",
+    "treeHash": "feb0ffaf83d761e9935afbae65cf7e4cae4cb428bbf99e4843a2bdcce43f5d1c",
     "fileCount": 216
   },
-  "signature": "XTCESFkeRdU8Wb/e6ShzcxZaTZjKfBL/thKzYuoyacNYXhbFycvIxLn3ujsCsYytcbOAHupeEnf0MqNM0htYDw==",
+  "signature": "bDdeDGPrl5Ed9MuqAvrihvNN1c7tHjc30hz8aqK2YoILsgU0/OkLwR4f1LE9+YWzx0gNl2xzlqWpz1digrUpAQ==",
   "verify": "node scripts/verify-release.mjs",
   "files": [
     {
@@ -49,8 +49,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "8be532203afcbee3d1eab600e79d36ec8825d5a9b47cdb390bff30f079043443",
-      "bytes": 38505
+      "sha256": "7bb49d0bd09916e89aafe022502f8f2d6826a1a4be15c3c39758f7c83c7aada0",
+      "bytes": 39164
     },
     {
       "path": "LICENSE",
@@ -59,8 +59,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "2dc927856129171a26e936e908c6b9625edbbbe7d0036c90d416ed2d382cd652",
-      "bytes": 20124
+      "sha256": "024e7487336b072115e7582b6ff96924d3a44eb69a5edc8d31909f877e22377c",
+      "bytes": 20145
     },
     {
       "path": "branding/README.md",
@@ -134,8 +134,8 @@
     },
     {
       "path": "docs/VERSIONAMENTO.md",
-      "sha256": "4ac646fbaa169ee1c189efc861bce27a57cc17ac424407a69a11faf1c3a91802",
-      "bytes": 10928
+      "sha256": "f429d837485bc8802e3a369700685d353c6ba24e7c28a70f9e105657cace8769",
+      "bytes": 11555
     },
     {
       "path": "docs/anexos-suporte.md",
@@ -309,12 +309,12 @@
     },
     {
       "path": "package-lock.json",
-      "sha256": "19c98c43a8741eb6a1b37a1828600a246bb44f2d881fed2a247e020361bccb41",
+      "sha256": "7100980a82029af9091b0862a15247e9e9cd53465a2193e3b8cef198d28ebe20",
       "bytes": 193388
     },
     {
       "path": "package.json",
-      "sha256": "82294e56329bbddcad0cbab8bd6764e49a8e2ee18a495722d182d3bec9432269",
+      "sha256": "df540ec0f4ad111e0b82fa9e0cc7cb8dad96d69ec56cfa9472bd25a4e67112a1",
       "bytes": 1862
     },
     {
@@ -359,8 +359,8 @@
     },
     {
       "path": "src/client/app/layout.tsx",
-      "sha256": "59a1e80f4ac0174011dc49a50cbd1b20b5f970f523ce34299bf1f3a8481ea2e4",
-      "bytes": 23967
+      "sha256": "468f77c49d069f134a3537f2bdfd75632d4ec11303b5c5eb20fe3947f8d92bbd",
+      "bytes": 24384
     },
     {
       "path": "src/client/app/router.tsx",
@@ -639,8 +639,8 @@
     },
     {
       "path": "src/client/styles.css",
-      "sha256": "7c9fc3cc586c33623244a1ed84f29c1a23c3b59196640f424bf4510662b753f6",
-      "bytes": 25288
+      "sha256": "d106cc10606ad100a2b588297ac5c4db629dba652babb1e82769e3bc3b8e5021",
+      "bytes": 22469
     },
     {
       "path": "src/shared/assets.ts",

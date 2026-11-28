@@ -7,7 +7,7 @@ e adjudicação, relatórios, usuários/permissões e auditoria.
 **Autor:** Allan Luiz Silveira Lima (Allanlugui)  
 **Licença:** proprietária, todos os direitos reservados (ver `LICENSE`).  
 **Assinatura:** cada release é assinada com Ed25519 (ver `docs/ASSINATURA.md`).  
-**Versão atual:** `0.11.3` (Logo da sidebar sem distorção: expandido altura 32px/largura auto, colapsado só símbolo Corp 32px recortado; a 0.11.2 brand só-logo 24px; a 0.11.1 fechar espelha abrir; a 0.11.0 volta consistente + sidebar colapsável; a 0.10.5 fix dialogs mobile; a 0.10.4 notificações responsivas; a 0.10.3 cascata; a 0.10.2 mobile P-26; a 0.10.1 versão visível; a 0.10.0 motion; a 0.9.0 LGPD; a 0.8.0 Patrimônio).
+**Versão atual:** `0.11.4` (Sidebar: fechar esconde tudo, ícones voltam em cascata na barra fechada, Configurações por último; a 0.11.3 logo sem distorção; a 0.11.2 brand só-logo 24px; a 0.11.1 fechar espelha abrir; a 0.11.0 volta consistente + sidebar colapsável; a 0.10.5 fix dialogs mobile; a 0.10.4 notificações responsivas; a 0.10.3 cascata; a 0.10.2 mobile P-26; a 0.10.1 versão visível; a 0.10.0 motion; a 0.9.0 LGPD; a 0.8.0 Patrimônio).
 
 > A autoria é registrada apenas pelo nome. CPF e e-mail pessoal do autor não são
 > armazenados nem exibidos pelo sistema, pela documentação ou pelo repositório.
