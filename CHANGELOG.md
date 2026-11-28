@@ -3,6 +3,14 @@
 Todas as alterações relevantes do Facil são registradas aqui. O projeto segue o
 versionamento descrito em `docs/VERSIONAMENTO.md`.
 
+## [0.10.5] — 2026-11-28
+
+Correção raiz de dialogs cortados no mobile (P-28): as animações usavam
+`fill-mode: both`, que mantém `transform` no contêiner da rota e quebra todo
+`position: fixed` dentro dele (diálogos abriam com o topo fora da tela). Troca
+para `backwards` em todas as animações — visual idêntico, sem `transform`
+retido. Sem mudança de API/banco.
+
 ## [0.10.4] — 2026-11-28
 
 Painel de notificações responsivo (P-27): no mobile o dropdown da campainha

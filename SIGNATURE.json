@@ -6,15 +6,15 @@
   "payload": {
     "schema": "facil.signature.v1",
     "project": "Facil — Plataforma de Gestão de Facilities",
-    "version": "0.10.4",
+    "version": "0.10.5",
     "author": "Allan Luiz Silveira Lima",
     "alias": "Allanlugui",
     "company": "CorpServices Group",
-    "signedAt": "2026-11-28T08:30:39-03:00",
-    "treeHash": "88edd2ca8cc24c42eb3220e7f6be7c81ddc28e62c14f28aaf09fc82e332e2c47",
+    "signedAt": "2026-11-28T08:44:02-03:00",
+    "treeHash": "b6e52ab89f890c793e382d8bfe1676ec3efab6aa995fda346d14ff3570d1241d",
     "fileCount": 216
   },
-  "signature": "sJ9+qHRoJGorM8BwdBN6QKtCeL1iaiWtVwFDKllyDJx/8xVlsckOBBC+Vz/tZb0MW2/XXpekxooDLLHShKGGCQ==",
+  "signature": "Yxpr3inDDY67My0jBjBA/67h6vjQGgE8c5VQpnoVt3j1Kyshu5Z/ppJ/RfNQntKZqoThajneWdzzOmHeqqtdDg==",
   "verify": "node scripts/verify-release.mjs",
   "files": [
     {
@@ -49,8 +49,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "c235123b6305c548edba95c686a107dcca2fb95ac891096de2c44011019c2beb",
-      "bytes": 34162
+      "sha256": "7d084c477bdef2223fa1d34dbf2e7445f63ca94a94779a576b318888f835f7d2",
+      "bytes": 34540
     },
     {
       "path": "LICENSE",
@@ -59,8 +59,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "9dd94aa63012a7027b9375107b8c60640a3502c2d6289c0dcf01684ae7000eb1",
-      "bytes": 19921
+      "sha256": "78e75e1bd4e01e4a628145481669c0975bf24f2aac33b8d7e33fd634bfe2d293",
+      "bytes": 19936
     },
     {
       "path": "branding/README.md",
@@ -309,12 +309,12 @@
     },
     {
       "path": "package-lock.json",
-      "sha256": "6d976a91d245d8f883db4980c8810fd49a8d175fe0e8da9756dd36f1cb6ce26a",
+      "sha256": "a546be335355a02614182a06bca05154b61a9ba6550f8eaac98a0ad0eacf7b53",
       "bytes": 193388
     },
     {
       "path": "package.json",
-      "sha256": "cca78d50a31a48d75560497d4b2824cb519ceb707f793547e40c2815fff99304",
+      "sha256": "fb350074271f2cd568096e67c0091652148a98fad7479126ef96d9cf09246800",
       "bytes": 1862
     },
     {
@@ -639,8 +639,8 @@
     },
     {
       "path": "src/client/styles.css",
-      "sha256": "320618cff98ebb215b0e8f8bf773650daaeb365e978333f489be70bcefc96441",
-      "bytes": 15509
+      "sha256": "6a5b891dbe1e5c943bdf8c545654a986fa5ff4091187f9b886afce03def1c472",
+      "bytes": 15564
     },
     {
       "path": "src/shared/assets.ts",

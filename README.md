@@ -7,7 +7,7 @@ e adjudicação, relatórios, usuários/permissões e auditoria.
 **Autor:** Allan Luiz Silveira Lima (Allanlugui)  
 **Licença:** proprietária, todos os direitos reservados (ver `LICENSE`).  
 **Assinatura:** cada release é assinada com Ed25519 (ver `docs/ASSINATURA.md`).  
-**Versão atual:** `0.10.4` (notificações responsivas; a 0.10.3 trouxe a cascata de entrada; a 0.10.2 corrigiu o mobile P-26; a 0.10.1 a versão visível no rodapé; a 0.10.0 o motion do login; a 0.9.0 o LGPD; a 0.8.0 o Patrimônio).
+**Versão atual:** `0.10.5` (fix raiz dos dialogs no mobile; a 0.10.4 trouxe as notificações responsivas; a 0.10.3 a cascata de entrada; a 0.10.2 o mobile P-26; a 0.10.1 a versão visível; a 0.10.0 o motion; a 0.9.0 o LGPD; a 0.8.0 o Patrimônio).
 
 > A autoria é registrada apenas pelo nome. CPF e e-mail pessoal do autor não são
 > armazenados nem exibidos pelo sistema, pela documentação ou pelo repositório.

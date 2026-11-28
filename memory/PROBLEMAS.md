@@ -456,7 +456,7 @@
   contra o código antes de aplicar. Lição: autorizações a subagentes valem como
   ordem — confirmar escopo no chat principal antes.
 
-## P-27 — Painel de notificações sai da tela no mobile (EM CORREÇÃO em 28/11/2026)
+## P-27 — Painel de notificações sai da tela no mobile (RESOLVIDO em 28/11/2026) — VALIDADO
 
 - **Sintoma (relato do usuário):** o card onde as notificações são exibidas
   dentro do sistema não tem responsividade.
@@ -468,3 +468,6 @@
   (largura da tela, abaixo do topbar); no desktop (`sm:`) volta a `absolute`
   ancorado ao ícone com `w-[22rem]`. Itens internos já eram seguros
   (`min-w-0` + `truncate`).
+- **Validação:** typecheck, lint, check:api 69×178, build, **204/204**, `verify`
+  OK, release **0.10.4** publicada (commit `0c76861`, tag `v0.10.4`, Worker
+  `79f173ed`).

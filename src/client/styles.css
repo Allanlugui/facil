@@ -357,12 +357,12 @@ body {
   to { opacity: 0; transform: translateY(6px) scale(0.98); }
 }
 
-.facil-fade-in { animation: facil-fade-in var(--motion-base) var(--ease-out-soft) both; }
-.facil-dialog-in { animation: facil-dialog-in var(--motion-slow) var(--ease-out-soft) both; }
-.facil-drawer-in { animation: facil-drawer-in var(--motion-slow) var(--ease-out-soft) both; }
-.facil-pop-in { animation: facil-pop-in var(--motion-fast) var(--ease-out-soft) both; }
-.facil-toast-in { animation: facil-toast-in var(--motion-base) var(--ease-out-soft) both; }
-.facil-toast-out { animation: facil-toast-out var(--motion-fast) var(--ease-in-soft) both; }
+.facil-fade-in { animation: facil-fade-in var(--motion-base) var(--ease-out-soft) backwards; }
+.facil-dialog-in { animation: facil-dialog-in var(--motion-slow) var(--ease-out-soft) backwards; }
+.facil-drawer-in { animation: facil-drawer-in var(--motion-slow) var(--ease-out-soft) backwards; }
+.facil-pop-in { animation: facil-pop-in var(--motion-fast) var(--ease-out-soft) backwards; }
+.facil-toast-in { animation: facil-toast-in var(--motion-base) var(--ease-out-soft) backwards; }
+.facil-toast-out { animation: facil-toast-out var(--motion-fast) var(--ease-in-soft) backwards; }
 
 /* Entradas de página e do login (D-64). Só montagem: opacidade + transformação,
    nunca layout. O atraso do stagger vem de `--reveal-i` (70 ms por degrau). */
@@ -386,13 +386,13 @@ body {
   to { opacity: 1; transform: scale(1); }
 }
 
-.facil-page-in { animation: facil-page-in 200ms var(--ease-out-soft) both; }
-.facil-login-card { animation: facil-login-card-in 420ms var(--ease-out-soft) both; }
+.facil-page-in { animation: facil-page-in 200ms var(--ease-out-soft) backwards; }
+.facil-login-card { animation: facil-login-card-in 420ms var(--ease-out-soft) backwards; }
 .facil-login-item {
-  animation: facil-login-item-in 300ms var(--ease-out-soft) both;
+  animation: facil-login-item-in 300ms var(--ease-out-soft) backwards;
   animation-delay: calc(var(--reveal-i, 0) * 70ms);
 }
-.facil-logo-in { animation: facil-logo-in 450ms var(--ease-out-soft) both; }
+.facil-logo-in { animation: facil-logo-in 450ms var(--ease-out-soft) backwards; }
 
 /* Entrada do conteúdo por rota (D-67): cascata discreta, mais contida que o
    login (8 px de subida, 45 ms por degrau, teto no 8º item). Só opacity +
@@ -410,7 +410,7 @@ body {
 .facil-reveal-group .space-y-4 > *,
 .facil-reveal-group .space-y-5 > *,
 .facil-reveal-group .grid > * {
-  animation: facil-reveal-in var(--motion-slow) var(--ease-out-soft) both;
+  animation: facil-reveal-in var(--motion-slow) var(--ease-out-soft) backwards;
 }
 
 .facil-reveal-group > *:nth-child(2),
