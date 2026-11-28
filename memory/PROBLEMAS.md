@@ -368,7 +368,7 @@
   **Nota (revisão 28/11/2026):** o consumidor cron saiu na release 0.7.4 (P-21 parcialmente
   superado — falta só o destino externo/chaves); R2 saiu na 0.7.1. Ver P-22..P-25 abaixo.
 
-## P-22 — `/build-info.json` estático desatualizado; `/api/health` OK (achado em 28/11/2026) — ABERTO
+## P-22 — `/build-info.json` estático desatualizado; `/api/health` OK (RESOLVIDO em 28/11/2026) — VALIDADO
 
 - **Sintoma:** o `/build-info.json` público em produção declara `signedAt 18:34:08-03:00`,
   tree `0bbc33…`, `fileCount 214`; o `/api/health` declara `signedAt 22:23:29-03:00`,
@@ -382,8 +382,12 @@
   embarcou o `.generated.ts` novo, mas o `dist/` carrega um `build-info.json` de um
   `sign` anterior — sugere `sign` rodado 2× (18:34 e 22:23) com `build` só após o primeiro,
   ou `dist/` não reconstruído após o segundo `sign`.
-- **Correção:** na próxima release de produto, rodar o pipeline cheio (`sign → check →
-  build → migrate → deploy`) e conferir os DOIS endpoints antes de declarar produção OK.
+- **Correção (28/11/2026):** `npm run build` + `npx wrangler deploy` (sem nova assinatura,
+  versão ou schema — só o asset estático). Produção agora serve `signedAt 22:23:29`,
+  tree `6f125c…`, `fileCount 243` nos DOIS endpoints; Worker version
+  `8cca5474-3a3d-4c1d-b206-bbe6877e3954`. Causa confirmada: `dist/` não reconstruído
+  após o segundo `sign`. Regra: na próxima release, conferir os DOIS endpoints antes
+  de declarar produção OK.
 
 ## P-23 — `npm run verify` falha local por drift pós-assinatura (28/11/2026) — ABERTO, esperado
 
