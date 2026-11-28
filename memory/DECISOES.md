@@ -1157,3 +1157,9 @@
 - **Transição de rota:** invólucro com key por pathname sobre o Outlet no AppShell; mesma pathname (só query) não re-anima. Remonta o que a troca de rota já remontaria — sem custo extra.
 - **Evidência:** npm run check verde (typecheck, lint, check:api 69×178, 204/204 em 24 arquivos); vite build OK; capturas Playwright do login (desktop, mobile 390 px, reduced-motion, erro, dashboard pós-login) em ux-shots/0.10.0-*.png, sem overflow. Release 0.10.0 publicada: assinatura Ed25519 (215 arquivos, tree 6da63985, 27/11/2026 23:26:25 -03:00), verify OK, Worker cd9abfc8, produção conferida nos dois endpoints. Sem migration.
 - **Higiene:** bloco original chegou com escapes/controles (append via shell interpretou crases) e o arquivo misturava latin-1/UTF-8; normalizado para UTF-8 puro em 28/11. Memória operacional não exige versão.
+
+## D-65 — Versão visível no rodapé do login e do sistema (28/11/2026) — VALIDADO
+
+- **Contexto:** a versão só existia na API (`/build-info.json`, `/api/health`); quem abre o sistema não tinha como saber em qual release está.
+- **Decisão:** hook `useAppVersion` (`src/client/lib/version.tsx`) lê o `/build-info.json` público do build em execução — versão do deploy real, nunca literal descolado do `package.json`. Promise em cache no módulo (um fetch por sessão); falha silenciosa (sem versão, sem tag). Exibido como `· vX.Y.Z` no rodapé do login e no rodapé do `AppShell`.
+- **Evidência:** typecheck + lint + check:api verdes; 204/204; captura do rodapé em `ux-shots/0.10.1-*.png` (login mostra `· v0.10.0` no build local, `· v0.10.1` em produção). Release **0.10.1** publicada: assinatura Ed25519 (216 arquivos, tree `37d20469…`, 27/11/2026 23:46:15 −03:00), `verify` OK, Worker `f7d0649b-bfb9-4ec8-836c-6c418642f9a9`, produção conferida nos dois endpoints. Sem migration.

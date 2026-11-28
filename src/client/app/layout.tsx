@@ -6,6 +6,7 @@ import { apiGet, apiPost, apiDelete, apiErrorMessage } from "../lib/api";
 import { formatRelative } from "../lib/format";
 import { useSession } from "../lib/session";
 import { Logo, useDarkSurface } from "../lib/brand";
+import { useAppVersion } from "../lib/version";
 import {
   BellIcon,
   BoxesIcon,
@@ -164,6 +165,7 @@ export function AppShell() {
   const nav = navForRole(user?.roleCode);
   const navigate = useNavigate();
   const location = useLocation();
+  const version = useAppVersion();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
@@ -238,6 +240,7 @@ export function AppShell() {
         </nav>
         <footer className="border-t border-slate-100 px-4 py-3 text-xs text-slate-500">
           {app.companyName ?? "Facil"} · {app.timezone}
+          {version ? ` · v${version}` : null}
         </footer>
       </aside>
 

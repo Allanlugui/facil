@@ -1,5 +1,14 @@
 # Status do Projeto: Facil
 
+- **Release 0.10.1 — versão visível (28/11/2026):** rodapé do login e do sistema
+  mostram `· vX.Y.Z` via hook `useAppVersion` (lê o `/build-info.json` do build
+  em execução; falha silenciosa). `npm run check` **204/204 em 24 arquivos**,
+  typecheck, lint, contrato (69×178), build; release assinada (Ed25519,
+  **216 arquivos**, tree `37d20469…`, 27/11/2026 23:46:15 −03:00), `npm run verify`
+  OK, Worker `f7d0649b-bfb9-4ec8-836c-6c418642f9a9`. Produção em 0.10.1
+  **nos dois endpoints**. Playwright local: rodapé com `· v0.10.0` (build local)
+  em `ux-shots/0.10.1-login-versao.png`.
+
 - **Release 0.10.0 — motion de verdade (28/11/2026):** entrada animada do login
   (cartão 420 ms + stagger 70 ms + logo com pop), transição entre rotas (200 ms),
   `Field` com `style?` opcional, `prefers-reduced-motion` sem atrasos. Só CSS,

@@ -3,6 +3,12 @@
 Todas as alterações relevantes do Facil são registradas aqui. O projeto segue o
 versionamento descrito em `docs/VERSIONAMENTO.md`.
 
+## [0.10.1] — 2026-11-28
+
+Versão visível no produto (decisão D-65): o rodapé do login e o rodapé do
+sistema mostram `· vX.Y.Z` lendo o `/build-info.json` público do build em
+execução (hook `useAppVersion`, falha silenciosa). Sem mudança de banco.
+
 ## [0.10.0] — 2026-11-28
 
 Motion de verdade no produto (decisão D-64): entrada animada da página de login

@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { apiErrorMessage } from "../lib/api";
 import { useSession } from "../lib/session";
 import { Logo, useDarkSurface } from "../lib/brand";
+import { useAppVersion } from "../lib/version";
 import { Alert, Button, Field, Input } from "../lib/ui";
 
 interface LocationState {
@@ -11,6 +12,7 @@ interface LocationState {
 
 export function LoginPage() {
   const { login, startupError, app } = useSession();
+  const version = useAppVersion();
   const dark = useDarkSurface();
   const navigate = useNavigate();
   const location = useLocation();
@@ -108,6 +110,7 @@ export function LoginPage() {
         </p>
         <p className="facil-login-item mt-6 text-center text-[11px] text-white/80 [text-shadow:0_1px_3px_rgba(0,0,0,0.55)]" style={{ "--reveal-i": 5 } as CSSProperties}>
           © 2026 {app.companyName ?? "CorpServices Group"} · desenvolvimento assinado por Allan Luiz Silveira Lima
+          {version ? ` · v${version}` : null}
         </p>
       </div>
     </div>
