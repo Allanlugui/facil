@@ -205,7 +205,7 @@ export default function SecurityMeasuresPage() {
         description="Inventário de medidas técnicas e administrativas (Arts. 46 e 49, Lei 13.709/2018)"
       />
 
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
         <Stat label="Medidas ativas" value={secState.data?.items.filter((r) => r.is_active).length ?? 0} />
         {canManage && (
           <Button variant="primary" onClick={openCreate}>
@@ -322,7 +322,7 @@ export default function SecurityMeasuresPage() {
           <Field label="Periodicidade de revisão" hint="Ex: anual, trimestral, semestral">
             <Input value={form.review_frequency} onChange={(e) => setForm({ ...form, review_frequency: e.target.value })} />
           </Field>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Última revisão">
               <Input type="date" value={form.last_review_at} onChange={(e) => setForm({ ...form, last_review_at: e.target.value })} />
             </Field>
@@ -345,7 +345,7 @@ export default function SecurityMeasuresPage() {
               Desativar medida
             </Button>
           )}
-          <div className="dialog-footer flex justify-end gap-2">
+          <div className="dialog-footer flex flex-wrap justify-end gap-2">
             <Button type="button" variant="secondary" onClick={() => setOpenDialog(false)}>
               Cancelar
             </Button>

@@ -172,7 +172,7 @@ export default function DataSubjectRequestsPage() {
         description="Solicitações de exercício de direitos (Arts. 18 e 19, Lei 13.709/2018)"
       />
 
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
         <Stat label="Solicitações" value={dsrState.data?.items.length ?? 0} />
         {canManage && (
           <Button variant="primary" onClick={openCreate}>
@@ -274,7 +274,7 @@ export default function DataSubjectRequestsPage() {
           <Field label="Data da resposta">
             <Input type="date" value={form.responded_at} onChange={(e) => setForm({ ...form, responded_at: e.target.value })} />
           </Field>
-          <div className="dialog-footer flex justify-end gap-2">
+          <div className="dialog-footer flex flex-wrap justify-end gap-2">
             <Button type="button" variant="secondary" onClick={() => setOpenDialog(false)}>
               Cancelar
             </Button>

@@ -240,7 +240,7 @@ export default function SecurityIncidentsPage() {
         description="Comunicação de incidentes à ANPD e aos titulares (Art. 48, Lei 13.709/2018)"
       />
 
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
         <Stat label="Incidentes registrados" value={incidentsState.data?.items.length ?? 0} />
         {canManage && (
           <Button variant="primary" onClick={openCreate}>
@@ -319,7 +319,7 @@ export default function SecurityIncidentsPage() {
           <Field label="Descrição da natureza do incidente" required>
             <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
           </Field>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Gravidade" required>
               <Select value={form.severity} onChange={(e) => setForm({ ...form, severity: e.target.value })}>
                 <option value="low">Baixa</option>
@@ -365,7 +365,7 @@ export default function SecurityIncidentsPage() {
                   <option value="resolved">Resolvido</option>
                 </Select>
               </Field>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field label="Comunicação à ANPD (data)">
                   <Input type="date" value={form.anpd_notified_at} onChange={(e) => setForm({ ...form, anpd_notified_at: e.target.value })} />
                 </Field>
@@ -387,7 +387,7 @@ export default function SecurityIncidentsPage() {
               </Field>
             </>
           )}
-          <div className="dialog-footer flex justify-end gap-2">
+          <div className="dialog-footer flex flex-wrap justify-end gap-2">
             <Button type="button" variant="secondary" onClick={() => setOpenDialog(false)}>
               Cancelar
             </Button>

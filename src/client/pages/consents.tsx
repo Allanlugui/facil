@@ -262,7 +262,7 @@ export default function ConsentsPage() {
       />
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b border-slate-200 mb-4">
+      <div className="flex gap-2 overflow-x-auto border-b border-slate-200 mb-4 pb-px">
         <Button
           variant={activeTab === "subjects" ? "primary" : "ghost"}
           onClick={() => setActiveTab("subjects")}
@@ -280,7 +280,7 @@ export default function ConsentsPage() {
       {/* Aba: Titulares de dados */}
       {activeTab === "subjects" && (
         <>
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
             <Stat label="Titulares cadastrados" value={subjectsState.data?.items.length ?? 0} />
             {canManage && (
               <Button variant="primary" onClick={openCreateSubject}>
@@ -337,7 +337,7 @@ export default function ConsentsPage() {
       {/* Aba: Consentimentos */}
       {activeTab === "consents" && (
         <>
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
             <Stat label="Consentimentos" value={consentsState.data?.items.length ?? 0} />
             {canManage && (
               <Button variant="primary" onClick={openCreateConsent}>
@@ -417,7 +417,7 @@ export default function ConsentsPage() {
           <Field label="Função">
             <Input value={subjectForm.role} onChange={(e) => setSubjectForm({ ...subjectForm, role: e.target.value })} />
           </Field>
-          <div className="dialog-footer flex justify-end gap-2">
+          <div className="dialog-footer flex flex-wrap justify-end gap-2">
             <Button type="button" variant="secondary" onClick={() => setOpenSubjectDialog(false)}>
               Cancelar
             </Button>
@@ -496,7 +496,7 @@ export default function ConsentsPage() {
           <Field label="User-Agent">
             <Input value={consentForm.user_agent} onChange={(e) => setConsentForm({ ...consentForm, user_agent: e.target.value })} />
           </Field>
-          <div className="dialog-footer flex justify-end gap-2">
+          <div className="dialog-footer flex flex-wrap justify-end gap-2">
             <Button type="button" variant="secondary" onClick={() => setOpenConsentDialog(false)}>
               Cancelar
             </Button>

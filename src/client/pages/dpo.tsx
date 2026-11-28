@@ -150,7 +150,7 @@ export default function DpoPage() {
         description="Encarregado pelo tratamento de dados pessoais (Art. 41, Lei 13.709/2018)"
       />
 
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
         <Stat label="Encarregado ativo" value={activeState.data?.item ? "Sim" : "Não"} />
         {canManage && (
           <Button variant="primary" onClick={openCreate}>
@@ -258,7 +258,7 @@ export default function DpoPage() {
               onChange={(e) => setForm({ ...form, active_until: e.target.value })}
             />
           </Field>
-          <div className="dialog-footer flex justify-end gap-2">
+          <div className="dialog-footer flex flex-wrap justify-end gap-2">
             <Button type="button" variant="secondary" onClick={() => setOpenDialog(false)}>
               Cancelar
             </Button>

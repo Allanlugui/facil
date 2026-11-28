@@ -6,15 +6,15 @@
   "payload": {
     "schema": "facil.signature.v1",
     "project": "Facil — Plataforma de Gestão de Facilities",
-    "version": "0.10.1",
+    "version": "0.10.2",
     "author": "Allan Luiz Silveira Lima",
     "alias": "Allanlugui",
     "company": "CorpServices Group",
-    "signedAt": "2026-11-27T23:46:15-03:00",
-    "treeHash": "37d20469d1a06da2a964dcf47c19340c23515ec72b71fea98196d668395ec889",
+    "signedAt": "2026-11-28T08:13:09-03:00",
+    "treeHash": "793f5777302d766790cce1456a5d15582f45350515b2d87718731200ab59bf2d",
     "fileCount": 216
   },
-  "signature": "K91hF//Pa+5/WGZ6e9ZzYGDo1XbAd6j9NJN6Zymd5OcacS7EYirCiUnnrDQ1odBH7cDqlifhI3ij0cDQEy06Dg==",
+  "signature": "EYCFYTVP2ScTZhYFU1pcP0DfcAH/42tV23HqYENd+XeccomR51x3U1lz3BRk6EdxTz9RvI7UcIYueLght08XCw==",
   "verify": "node scripts/verify-release.mjs",
   "files": [
     {
@@ -49,8 +49,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "49520f697f796be655cdf8f20cf266b13b7a92d7a02df0fb5aa1c2ad95598398",
-      "bytes": 33084
+      "sha256": "d6f2caa84d6c7ec374634dc5d1d32dad6333e414a073379e835fd9face6461eb",
+      "bytes": 33525
     },
     {
       "path": "LICENSE",
@@ -59,8 +59,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "066dfe9c08ac65215a4bbfd798d5581e10d9c34bab8737720f7583817eb9cf5c",
-      "bytes": 20004
+      "sha256": "4dbfc419b447f6ea646e37866168945b70bb3b2319b81d64dc6eb4b37b522574",
+      "bytes": 20017
     },
     {
       "path": "branding/README.md",
@@ -309,12 +309,12 @@
     },
     {
       "path": "package-lock.json",
-      "sha256": "604093a2b48c406225e347307189ef1c6a08b504e0ad5d9afef25109338615c0",
+      "sha256": "829816ad711f65c3cbd92c6e80e5354b4e498ae5ed93742abac6d46ee497e90c",
       "bytes": 193388
     },
     {
       "path": "package.json",
-      "sha256": "caea956b07ec569054284718133240ef24245ba628b39c5a2fca4b519068d55d",
+      "sha256": "3df34cea51c3d8ce8f5d5b6d1e497fb18ee89835284d646565fb7c625862264b",
       "bytes": 1862
     },
     {
@@ -439,8 +439,8 @@
     },
     {
       "path": "src/client/lib/ui.tsx",
-      "sha256": "83902fc4cc9ee535f8ab5ab689cac719e5adb17851b733f538129c8b505068e8",
-      "bytes": 29628
+      "sha256": "e10e1060db6cf1987666ad3ad3d55c04668b62ab737abff93210281dfeaefe36",
+      "bytes": 29655
     },
     {
       "path": "src/client/lib/version.tsx",
@@ -474,8 +474,8 @@
     },
     {
       "path": "src/client/pages/consents.tsx",
-      "sha256": "cf7d99a2750e0856983441741555b7ead20171d56ef2092ea1cb06fcacb11c1d",
-      "bytes": 18237
+      "sha256": "0ef574e2c6b9ea2d1d2f45abb96b18eb3a3dc309d5ba9acbb4494227e6be4373",
+      "bytes": 18345
     },
     {
       "path": "src/client/pages/consumption.tsx",
@@ -494,13 +494,13 @@
     },
     {
       "path": "src/client/pages/data-subject-requests.tsx",
-      "sha256": "3274c263100f19aec0adf86674f0e6b7ac1222745b591a7fdf119f450e5769f7",
-      "bytes": 10273
+      "sha256": "4125a6634064921343b59f3b7028040ee60bcd03151ab58c68c35a4a1cb9c757",
+      "bytes": 10316
     },
     {
       "path": "src/client/pages/dpo.tsx",
-      "sha256": "0a7f8b2c1dcb010b4dd282da301a92387be4a31afb69f8393587082d1f3dbcc2",
-      "bytes": 8746
+      "sha256": "0fd498e703cfc6fb1a3f4eac8dd89da2a0d6c165ced748590f0afbe425a0fd79",
+      "bytes": 8789
     },
     {
       "path": "src/client/pages/inventory.tsx",
@@ -509,8 +509,8 @@
     },
     {
       "path": "src/client/pages/legal.tsx",
-      "sha256": "131348ff5a617615c87074107f6e3529dac59f0cbd5eafe1b427a46cccfd244e",
-      "bytes": 18956
+      "sha256": "dfd493130bcccc3424fda8fba55381a11f1a4bc27bccb4be5823c35e7dfddc27",
+      "bytes": 19064
     },
     {
       "path": "src/client/pages/login.tsx",
@@ -529,8 +529,8 @@
     },
     {
       "path": "src/client/pages/purchases.tsx",
-      "sha256": "db7dd3b07142730a91e854a665ab0d566261c163ef5bf4918353f46d832109b7",
-      "bytes": 190114
+      "sha256": "e3097eee03ea6c798b6e5aca91b1b01f4baa6fd28fe040b20ce0bb30f4fe55e4",
+      "bytes": 190170
     },
     {
       "path": "src/client/pages/reports.tsx",
@@ -539,13 +539,13 @@
     },
     {
       "path": "src/client/pages/security-incidents.tsx",
-      "sha256": "62caaa85d0c55ea7d29c792a3b6a94a1153d58ff348b48fa93ac2eaad584bd12",
-      "bytes": 15004
+      "sha256": "f3f59eafbe0bb2bfa01f76b0d263797b8fccd76f58e88df592a5d4ada097424c",
+      "bytes": 15077
     },
     {
       "path": "src/client/pages/security-measures.tsx",
-      "sha256": "83dd2234b1153361f1e6eb851fd4ddd219f252e12b01fee40582370f3b4d6c2f",
-      "bytes": 12934
+      "sha256": "ed183a0cae5386c6580939e13ae68a7ef3971648bb9e875ab82a61467785a6ea",
+      "bytes": 12992
     },
     {
       "path": "src/client/pages/settings.tsx",
@@ -564,8 +564,8 @@
     },
     {
       "path": "src/client/pages/structure.tsx",
-      "sha256": "5064ff3bb47638befb81bfe69ce4579f92e2a9bd2909e8c76c6341d94bdb7150",
-      "bytes": 27956
+      "sha256": "2f10dfa718334a2285181cf75ba258d49ac3fbe0c9acbaa8bc2f5e32cc07d2ad",
+      "bytes": 27986
     },
     {
       "path": "src/client/pages/support-public.tsx",
@@ -574,8 +574,8 @@
     },
     {
       "path": "src/client/pages/support.tsx",
-      "sha256": "ab4455e460ee60b7cd233b0ddf5454dac3d29640bd4d2290bc114d60e6caf70b",
-      "bytes": 37745
+      "sha256": "8620f6e5e665afc0a20ba02ca4fc7670adc522c6952670333b759de65846e38d",
+      "bytes": 37772
     },
     {
       "path": "src/client/pages/tickets.tsx",

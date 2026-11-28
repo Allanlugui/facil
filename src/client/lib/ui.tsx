@@ -529,7 +529,7 @@ export function Pagination({
   const from = (page - 1) * pageSize + 1;
   const to = Math.min(total, page * pageSize);
   return (
-    <nav className="flex items-center justify-between gap-3 border-t border-slate-100 px-1 pt-3 text-sm text-slate-600">
+    <nav className="flex flex-col gap-2 border-t border-slate-100 px-1 pt-3 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
       <span className="tabular-nums">
         {from}-{to} de {total}
       </span>

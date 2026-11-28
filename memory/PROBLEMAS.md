@@ -426,3 +426,35 @@
 - Seções históricas do TODO (Etapa 2) mantêm checkboxes abertos já superados
   (consumidor outbox → 0.7.4; R2 → 0.7.1): preservados como história, não como pendência
   real — não editar o histórico, apenas não os ler como backlog ativo.
+
+## P-26 — Campos saltam para fora da viewport no mobile 390px (EM CORREÇÃO em 28/11/2026)
+
+- **Sintoma (relato do usuário):** em dispositivos mobile alguns campos/áreas sem
+  responsividade — falta proporcionalidade, campos saltam para fora do campo de visão.
+- **Causa raiz (auditoria 28/11/2026):** módulos LGPD 0.9.0 (legal, consents, dpo,
+  dsr, segurança, incidentes) nunca passaram por varredura mobile; padrões desktop:
+  `grid grid-cols-2` incondicional (3x em dialogs), `flex justify-between items-center`
+  Stat+botão lado a lado (8x), tabs `flex gap-2 border-b` sem scroll (2x),
+  `dialog-footer flex justify-end` sem wrap (8x), tabelas de compras com wrapper
+  `overflow-hidden` em vez de `overflow-x-auto` (4x em purchases.tsx), header
+  `flex items-center justify-between` no support (1x), footers de diálogo no
+  structure sem wrap (3x). Total: 25 correções em 9 arquivos.
+- **Correção:** `grid-cols-1 sm:grid-cols-2`, headers em
+  `flex-col sm:flex-row sm:items-center sm:justify-between`, tabs com
+  `overflow-x-auto pb-px`, footers com `flex-wrap`, tabelas com
+  `overflow-x-auto` + `min-w-[520/560/640px]`, Pagination em
+  `flex-col sm:flex-row` (ui.tsx).
+- **Falsos positivos descartados:** 14x `Dialog wide` — o Dialog já é bottom-sheet
+  `w-full` no mobile (`sm:max-w-lg/3xl` só ≥640px); `reports.tsx:1470` (truncate+nowrap
+  correto); `dashboard.tsx:820 lg:grid-cols-5` (mobile 1 coluna, correto).
+- **Validação:** typecheck limpo, lint limpo, check:api 69×178 OK, build OK.
+  Suite completa pendente no fechamento.
+- **Incidente 28/11/2026 (esclarecido com o titular):** o subagente de auditoria
+  foi autorizado pelo titular em chat direto por engano (pensou estar falando no
+  chat principal). A pedido do titular, todas as 13 remoções de `wide` foram
+  revertidas e o trabalho seguiu só a partir do relatório: cada item validado
+  contra o código antes de aplicar. `wide` segue classificado como falso
+  positivo com evidência (`ui.tsx`: Dialog já é bottom-sheet `w-full` no mobile;
+  `wide` só afeta `sm:max-w` ≥640px). Diff final em `src/` contém só as 25
+  correções aprovadas. Lição: autorizações a subagentes valem como ordem —
+  confirmar escopo no chat principal antes.

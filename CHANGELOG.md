@@ -3,6 +3,14 @@
 Todas as alterações relevantes do Facil são registradas aqui. O projeto segue o
 versionamento descrito em `docs/VERSIONAMENTO.md`.
 
+## [0.10.2] — 2026-11-28
+
+Correção de responsividade mobile (P-26/D-66): 25 pontos em 9 arquivos sem
+mudança de API/banco. Módulos LGPD empilham no mobile (`flex-col`/`grid-cols-1`,
+tabs com scroll, footers com wrap), 4 tabelas de compras rolam dentro do diálogo
+(`overflow-x-auto` + `min-w`), header do suporte e footers da estrutura ajustados,
+`Pagination` empilha no mobile. `Dialog wide` mantido (já é bottom-sheet no mobile).
+
 ## [0.10.1] — 2026-11-28
 
 Versão visível no produto (decisão D-65): o rodapé do login e o rodapé do

@@ -232,7 +232,7 @@ function UnitDialog({
             </Select>
           </Field>
         ) : null}
-        <div className="flex justify-end gap-2">
+        <div className="flex flex-wrap justify-end gap-2">
           <Button variant="ghost" onClick={onClose} disabled={busy}>
             Cancelar
           </Button>
@@ -387,7 +387,7 @@ function TypeDialog({
             </Select>
           </Field>
         ) : null}
-        <div className="flex justify-end gap-2">
+        <div className="flex flex-wrap justify-end gap-2">
           <Button variant="ghost" onClick={onClose} disabled={busy}>
             Cancelar
           </Button>
@@ -793,7 +793,7 @@ function LocationDialog({
             </Select>
           </Field>
         ) : null}
-        <div className="flex justify-end gap-2">
+        <div className="flex flex-wrap justify-end gap-2">
           <Button variant="ghost" onClick={onClose} disabled={busy}>
             Cancelar
           </Button>

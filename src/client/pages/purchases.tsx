@@ -1861,8 +1861,8 @@ export function PurchaseDetailPage() {
                         ) : null}
                       </div>
                       {expandedQuote === quote.id ? (
-                        <div className="mt-2 overflow-hidden rounded-md border border-slate-100">
-                          <table className="w-full text-sm">
+                        <div className="mt-2 overflow-x-auto rounded-md border border-slate-100">
+                          <table className="w-full min-w-[520px] text-sm">
                             <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                               <tr>
                                 <th className="px-3 py-1.5 text-left font-medium">Item</th>
@@ -3251,8 +3251,8 @@ function WorkflowDecisionDialog({
                 : "A triagem de Compras pode autorizar compra direta ou devolver à Direção para análise de orçamento."}
         </div>
         {editItems ? (
-          <div className="overflow-hidden rounded-lg border border-slate-200">
-            <table className="w-full text-sm">
+          <div className="overflow-x-auto rounded-lg border border-slate-200">
+            <table className="w-full min-w-[640px] text-sm">
               <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                 <tr>
                   <th className="px-3 py-2 text-left font-medium">Item</th>
@@ -3463,8 +3463,8 @@ function AwardDialog({
         {candidates.length === 0 ? (
           <Alert tone="amber">Não há itens em cotação pendentes de adjudicação.</Alert>
         ) : (
-          <div className="overflow-hidden rounded-lg border border-slate-200">
-            <table className="w-full text-sm">
+          <div className="overflow-x-auto rounded-lg border border-slate-200">
+            <table className="w-full min-w-[560px] text-sm">
               <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                 <tr>
                   <th className="px-3 py-2 text-left font-medium">Item</th>
@@ -3645,8 +3645,8 @@ function MultiOrderDialog({
             />
           </Field>
         </div>
-        <div className="overflow-hidden rounded-lg border border-slate-200">
-          <table className="w-full text-sm">
+        <div className="overflow-x-auto rounded-lg border border-slate-200">
+          <table className="w-full min-w-[560px] text-sm">
             <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
               <tr>
                 <th className="px-3 py-2 text-left font-medium">Item</th>

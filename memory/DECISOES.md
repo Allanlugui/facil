@@ -1163,3 +1163,17 @@
 - **Contexto:** a versão só existia na API (`/build-info.json`, `/api/health`); quem abre o sistema não tinha como saber em qual release está.
 - **Decisão:** hook `useAppVersion` (`src/client/lib/version.tsx`) lê o `/build-info.json` público do build em execução — versão do deploy real, nunca literal descolado do `package.json`. Promise em cache no módulo (um fetch por sessão); falha silenciosa (sem versão, sem tag). Exibido como `· vX.Y.Z` no rodapé do login e no rodapé do `AppShell`.
 - **Evidência:** typecheck + lint + check:api verdes; 204/204; captura do rodapé em `ux-shots/0.10.1-*.png` (login mostra `· v0.10.0` no build local, `· v0.10.1` em produção). Release **0.10.1** publicada: assinatura Ed25519 (216 arquivos, tree `37d20469…`, 27/11/2026 23:46:15 −03:00), `verify` OK, Worker `f7d0649b-bfb9-4ec8-836c-6c418642f9a9`, produção conferida nos dois endpoints. Sem migration.
+
+## D-66 — Responsividade mobile: empilhar no mobile, lado a lado no desktop (28/11/2026) — IMPLEMENTADO
+
+- **Contexto:** relato do usuário (P-26) — campos saltam para fora da viewport no
+  mobile. Auditoria achou 25 pontos reais em 9 arquivos, concentrados nos módulos
+  LGPD 0.9.0 (sem varredura mobile na release) + 4 tabelas de compras com
+  `overflow-hidden` + header do support + footers do structure.
+- **Decisão:** padrão mobile-first em todo header/form/tabela novo:
+  `flex-col sm:flex-row`, `grid-cols-1 sm:grid-cols-2`, tabs sempre com
+  `overflow-x-auto`, footers sempre com `flex-wrap`, tabelas artesanais sempre com
+  wrapper `overflow-x-auto` + `min-w-[...]` (igual ao `.table-scroll` do Table).
+  `Dialog wide` mantido — já é bottom-sheet `w-full` no mobile.
+- **Evidência:** typecheck + lint + check:api 69×178 + build verdes; suite completa
+  em execução no fechamento. Sem mudança de API/banco.

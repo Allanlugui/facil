@@ -287,7 +287,7 @@ export default function LegalPage() {
       />
 
       {/* Tabs simples */}
-      <div className="flex gap-2 border-b border-slate-200 mb-4">
+      <div className="flex gap-2 overflow-x-auto border-b border-slate-200 mb-4 pb-px">
         <Button
           variant={activeTab === "bases" ? "primary" : "ghost"}
           onClick={() => setActiveTab("bases")}
@@ -305,7 +305,7 @@ export default function LegalPage() {
       {/* Aba: Bases legais */}
       {activeTab === "bases" && (
         <>
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
             <Stat label="Bases legais cadastradas" value={basesState.data?.items.length ?? 0} />
             {canManage && (
               <Button variant="primary" onClick={openCreateBase}>
@@ -364,7 +364,7 @@ export default function LegalPage() {
       {/* Aba: Operações de tratamento */}
       {activeTab === "operations" && (
         <>
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
             <Stat label="Operações de tratamento" value={opsState.data?.items.length ?? 0} />
             {canManage && (
               <Button variant="primary" onClick={openCreateOp}>
@@ -449,7 +449,7 @@ export default function LegalPage() {
           <Field label="Referência (Artigo LGPD)" hint="Ex: Art. 7º, I">
             <Input value={baseForm.article_ref} onChange={(e) => setBaseForm({ ...baseForm, article_ref: e.target.value })} />
           </Field>
-          <div className="dialog-footer flex justify-end gap-2">
+          <div className="dialog-footer flex flex-wrap justify-end gap-2">
             <Button type="button" variant="secondary" onClick={() => setOpenBaseDialog(false)}>
               Cancelar
             </Button>
@@ -508,7 +508,7 @@ export default function LegalPage() {
           <Field label="Contato do encarregado (DPO)">
             <Input value={opForm.dpo_contact} onChange={(e) => setOpForm({ ...opForm, dpo_contact: e.target.value })} />
           </Field>
-          <div className="dialog-footer flex justify-end gap-2">
+          <div className="dialog-footer flex flex-wrap justify-end gap-2">
             <Button type="button" variant="secondary" onClick={() => setOpenOpDialog(false)}>
               Cancelar
             </Button>
