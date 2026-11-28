@@ -9,6 +9,7 @@
   commit docs `297ce6d` à frente de `origin/main`). Detalhes em `PROBLEMAS.md`.
   P-22 RESOLVIDO em 28/11/2026 (rebuild + redeploy; `/build-info.json` e
   `/api/health` conferem: 22:23:29, tree `6f125c…`, 243 arquivos).
+  `npm run check` verde em 28/11/2026 23:10 (typecheck + lint + 69×178 + 204/204).
 - **Criado em:** 16/10/2026 22:36:22 pelo bootstrap global (`D:\DEV\criar-projeto.bat`).
 - **Diretório oficial:** `D:\DEV\Opencode\Facil`
 - **Conhecimento global:** `D:\DEV\memory\Facil\`
