@@ -1,5 +1,6 @@
 # Status do Projeto: Facil
 
+- **Release 0.11.0 — Voltar global + sidebar retrátil (28/11/2026):** PageHeader com `backTo` + BackButton reutilizável; Voltar em 27 rotas (detalhes :id, /configuracoes/*, /controle, /catalogo, /estrutura, /usuarios, /relatorios, /auditoria, LGPD, /perfil, /ajuda/:id). Sidebar desktop retrátil 256px→88px com seta, barra 800ms + cascata lenta visível (200ms/item expandir, 150ms/item recolher reverso, ~4s total), ícones centrados no colapsado, persistida em localStorage, reduced-motion zerado. Redeploy 11:34 motion lento (BackButton discreto mantido). Typecheck, lint, check:api 69×178, build, **204/204**, deploy 0.11.0 confirmado em /build-info.json (tree `89cde325…`, 11:34:46 −03:00). Commit `11afd83`, tag `v0.11.0`. NÃO VALIDADO: QA visual Playwright (pacote não instalado, sem ux-shots/voltar-audit-*).
 - **Release 0.10.5 — dialogs cortados (28/11/2026):** `fill-mode: both` retinha
   `transform` no contêiner da rota e quebrava `position: fixed` (ficha de
   chamado com topo fora da tela). Troca para `backwards` em todas as animações.

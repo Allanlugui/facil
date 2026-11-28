@@ -212,15 +212,15 @@ export function AppShell() {
               to={item.to}
               end={item.end}
               className={({ isActive }) =>
-                `flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition ${
+                `nav-link flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition ${
                   isActive
                     ? "bg-brand-50 text-brand-800"
                     : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                 }`
               }
             >
-              <span className="text-slate-400 flex-shrink-0">{item.icon}</span>
-              <span className="truncate">{item.label}</span>
+              <span className="nav-icon text-slate-400 flex-shrink-0">{item.icon}</span>
+              <span className="nav-label truncate">{item.label}</span>
             </NavLink>
           </li>
         ))}
@@ -241,8 +241,8 @@ export function AppShell() {
       <aside className={sidebarClasses}>
         <Brand />
         <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-4">
-          <div className="flex items-center justify-between px-3 pb-1">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 truncate">
+          <div className="flex items-center justify-between px-3 pb-1 facil-nav-header">
+            <p className="nav-section-title text-[11px] font-semibold uppercase tracking-wider text-slate-400 truncate">
               {nav.title}
             </p>
             <button
@@ -263,9 +263,9 @@ export function AppShell() {
             </div>
           ) : null}
         </nav>
-        <footer className="border-t border-slate-100 px-3 py-3 text-xs text-slate-500 facil-sidebar-nav-item">
-          <div className="truncate">{app.companyName ?? "Facil"} · {app.timezone}</div>
-          {version ? <div className="truncate mt-0.5">v{version}</div> : null}
+        <footer className="border-t border-slate-100 px-3 py-3 text-xs text-slate-500 facil-sidebar-footer">
+          <div className="footer-company truncate">{app.companyName ?? "Facil"} · {app.timezone}</div>
+          {version ? <div className="footer-version truncate mt-0.5">v{version}</div> : null}
         </footer>
       </aside>
 
@@ -394,11 +394,13 @@ export function AppShell() {
 function Brand() {
   const dark = useDarkSurface();
   return (
-    <Link to="/" className="flex items-center gap-2 px-4 py-4">
-      <Logo dark={dark} className="h-9 w-auto" />
-      <span>
-        <span className="block text-sm font-semibold text-slate-900">Facil</span>
-        <span className="block text-[11px] text-slate-500">Gestão de Facilities</span>
+    <Link to="/" className="flex items-center gap-2 px-4 py-4 brand-link">
+      <span className="brand-logo flex-shrink-0" aria-hidden="true">
+        <Logo dark={dark} className="h-9 w-9 object-contain" />
+      </span>
+      <span className="brand-text flex flex-col min-w-0">
+        <span className="brand-name text-sm font-semibold text-slate-900 truncate">Facil</span>
+        <span className="brand-subtitle text-[11px] text-slate-500 truncate">Gestão de Facilities</span>
       </span>
     </Link>
   );

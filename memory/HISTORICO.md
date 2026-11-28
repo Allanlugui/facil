@@ -561,3 +561,10 @@ em produção.
 - **Item futuro (não é das 5 fases):** Patrimônio — rotas e interface (migration
   `0023` já publicada; falta API `/api/assets`, telas, aba no `/controle`, testes).
 
+## H-28 — Voltar global + sidebar retrátil 0.11.0 (28/11/2026)
+
+- Pedido do titular: sem Voltar em /configuracoes/<secao> (preso sem refresh/menu); sidebar fixa sem colapso. Reforço: varredura total, não só uma área, com Playwright.
+- Entrega dev (ses_dddb0dff4ffemzmLq5RSZ6stuB): PageHeader.backTo + BackButton; Voltar em 27 rotas (detalhes, configuracoes/*, controle/catalogo/estrutura/usuarios/relatorios/auditoria/LGPD/perfil/ajuda/:id); sidebar desktop 256→72px com seta, motion 180-220ms + cascata 30ms, localStorage, reduced-motion zerado.
+- Produção 0.11.0 confirmada em /build-info.json (tree ff6d9dc4…, 10:37:14 −03:00). Typecheck/lint/check:api 69×178/build/204/204 OK. Commit 11afd83 tag v0.11.0.
+- NÃO VALIDADO: QA visual Playwright (pacote não instalado, sem ux-shots/voltar-audit-*). Topo sem Voltar justificado: /, /estoque, /consumo, /inventario, /chamados, /ordens, /compras, /patrimonio, /ajuda.
+

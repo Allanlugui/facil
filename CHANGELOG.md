@@ -3,6 +3,17 @@
 Todas as alterações relevantes do Facil são registradas aqui. O projeto segue o
 versionamento descrito em `docs/VERSIONAMENTO.md`.
 
+## [0.11.1] — 2026-11-28
+
+**Sidebar colapsável: fechar espelha abrir + Brand/footer colapsados**
+
+- **Fechamento da sidebar (desktop)**: espelha a abertura aprovada — **Fase 1**: labels somem em cascata reversa (último some primeiro) com fade + slide leve (250ms, gap 60ms), ícones **permanecem visíveis** o tempo todo; **Fase 2**: barra recolhe para 88px (350ms) só DEPOIS dos labels. Nav continua clicável no modo só-ícones (title nativo para tooltip). Sem `opacity: 0` brusco no nav inteiro, sem `display: none` seco nos labels.
+- **Brand colapsada**: logo centralizado (h-9 w-9, `object-contain`, `flex-shrink-0`) sem deformação; textos (nome + subtítulo) somem com fade rápido; padding ajustado.
+- **Cabeçalho da seção** ("Operação"/"Meu dia"): esconde com fade no colapsado.
+- **Footer colapsado**: esconde company/timezone; mantém versão curta centralizada.
+- **Velocidade**: fechar total ~1.4s (labels ~1s + barra 350ms), sutil e rápido — não demorado.
+- **Abertura inalterada**: barra 350ms + labels cascata 250ms/80ms gap (~1.8s total).
+
 ## [0.11.0] — 2026-11-28
 
 **Navegação consistente + sidebar colapsável desktop**

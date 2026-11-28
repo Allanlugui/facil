@@ -344,7 +344,7 @@ export function PageHeader({
 }
 
 /**
- * Botão "Voltar" reutilizável.
+ * Botão "Voltar" reutilizável — discreto.
  * - Se `to` for fornecido, usa `<Link>` (navegação SPA).
  * - Senão, usa `history.back()` com fallback para "/".
  * Acessível: ícone + label, aria-label, foco visível.
@@ -372,10 +372,10 @@ export function BackButton({
       <Link
         to={to}
         onClick={handleClick}
-        className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-brand-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-700 transition-colors"
+        className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-sm font-medium text-slate-500 hover:text-slate-700 hover:bg-slate-100/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-700 transition-colors"
         aria-label={label}
       >
-        <ArrowLeftIcon className="size-4" />
+        <ArrowLeftIcon className="size-3.5" />
         {label}
       </Link>
     );
@@ -385,10 +385,10 @@ export function BackButton({
     <button
       type="button"
       onClick={handleClick}
-      className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-brand-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-700 transition-colors"
+      className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-sm font-medium text-slate-500 hover:text-slate-700 hover:bg-slate-100/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-700 transition-colors"
       aria-label={label}
     >
-      <ArrowLeftIcon className="size-4" />
+      <ArrowLeftIcon className="size-3.5" />
       {label}
     </button>
   );

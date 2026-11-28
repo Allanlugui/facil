@@ -143,3 +143,12 @@ A décima quarta entrega foi publicada na versão **0.11.0**, em 28/11/2026:
 - Motion reutilizado: tokens `--motion-fast/base/slow`, `--ease-out-soft`, classes CSS `facil-sidebar*`, sem nova biblioteca. Respeita `prefers-reduced-motion` (sem delay/stagger).
 - Acessibilidade: foco visível, alvo ≥44 px, navegação por teclado colapsado.
 - Nenhuma rota logada prende o usuário. Funcionalidade nova + mudança de comportamento: subiu o **minor**.
+
+A décima quarta entrega corrigida foi publicada na versão **0.11.1**, em 28/11/2026:
+**Sidebar colapsável: fechar espelha abrir + Brand/footer colapsados (patch)**.
+- Fechamento da sidebar (desktop): espelha a abertura aprovada — **Fase 1**: labels somem em cascata reversa (último some primeiro) com fade + slide leve (250ms, gap 60ms), ícones **permanecem visíveis** o tempo todo; **Fase 2**: barra recolhe para 88px (350ms) só DEPOIS dos labels. Nav continua clicável no modo só-ícones (title nativo para tooltip). Sem `opacity: 0` brusco no nav inteiro, sem `display: none` seco nos labels.
+- Brand colapsada: logo centralizado (h-9 w-9, `object-contain`, `flex-shrink-0`) sem deformação; textos (nome + subtítulo) somem com fade rápido; padding ajustado.
+- Cabeçalho da seção ("Operação"/"Meu dia"): esconde com fade no colapsado.
+- Footer colapsado: esconde company/timezone; mantém versão curta centralizada.
+- Velocidade: fechar total ~1.4s (labels ~1s + barra 350ms), sutil e rápido — não demorado.
+- Abertura inalterada: barra 350ms + labels cascata 250ms/80ms gap (~1.8s total). Correção de interface: subiu o **patch**.
